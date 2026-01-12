@@ -307,7 +307,9 @@ func downloadConfigRepositories(config *Config) error {
 
 	for name, _ := range config.Repositories {
 		cmd := exec.Command(binary, name)
+		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
 
 		err := cmd.Run()
 		if err != nil {

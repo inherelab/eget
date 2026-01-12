@@ -434,6 +434,38 @@ func performUpgrade(entry InstalledEntry, newTag string) error {
 		args = append(args, "--quiet")
 	}
 
+	if assets, ok := opts["asset"].([]interface{}); ok && len(assets) > 0 {
+		for _, asset := range assets {
+			if assetStr, ok := asset.(string); ok {
+				args = append(args, "--asset", assetStr)
+			}
+		}
+	}
+
+	if output, ok := opts["output"].(string); ok && output != "" {
+		args = append(args, "--to", output)
+	}
+
+	if dlOnly, ok := opts["download_only"].(bool); ok && dlOnly {
+		args = append(args, "--download-only")
+	}
+
+	if verify, ok := opts["verify"].(string); ok && verify != "" {
+		args = append(args, "--verify-sha256", verify)
+	}
+
+	if disableSSL, ok := opts["disable_ssl"].(bool); ok && disableSSL {
+		args = append(args, "--disable-ssl")
+	}
+
+	if hash, ok := opts["hash"].(bool); ok && hash {
+		args = append(args, "--sha256")
+	}
+
+	if upgradeOnly, ok := opts["upgrade_only"].(bool); ok && upgradeOnly {
+		args = append(args, "--upgrade-only")
+	}
+
 	// Get the path to eget binary
 	egetPath, err := os.Executable()
 	if err != nil {
@@ -444,6 +476,7 @@ func performUpgrade(entry InstalledEntry, newTag string) error {
 	cmd := exec.Command(egetPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	return cmd.Run()
 }
