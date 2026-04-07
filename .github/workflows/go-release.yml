@@ -22,12 +22,33 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: stable
-      # More assembly might be required: Docker logins, GPG, etc.
-      # It all depends on your needs.
+
+      - name: Set release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          # Extract version from tag (remove 'refs/tags/' prefix and 'v' prefix if present)
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Setting release version: $VERSION"
+          # Update version.go to remove +src suffix
+          sed -i 's/var Version = ".*"/var Version = "'"$VERSION"'"/' version.go
+          cat version.go
+
+      - name: Commit release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.go
+          git commit -m "chore: set version to ${{ env.RELEASE_VERSION }} for release"
+          git push
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -40,3 +61,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
+      - name: Bump to next dev version
+        if: startsWith(github.ref, 'refs/tags/') && success()
+        run: |
+          # Parse current version (format: major.minor.patch)
+          CURRENT_VERSION=${{ env.RELEASE_VERSION }}
+          # Extract parts
+          MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
+          # Increment minor version
+          NEW_MINOR=$((MINOR + 1))
+          NEW_VERSION="${MAJOR}.${NEW_MINOR}.0+src"
+          echo "Bumping to next dev version: $NEW_VERSION"
+          # Update version.go
+          sed -i 's/var Version = ".*"/var Version = "'"$NEW_VERSION"'"/' version.go
+          cat version.go
+
+      - name: Commit next dev version
+        if: startsWith(github.ref, 'refs/tags/') && success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.go
+          git commit -m "chore: bump to next dev version"
+          git push
