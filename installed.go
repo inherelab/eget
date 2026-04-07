@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/sahilm/fuzzy"
 )
 
 type InstalledEntry struct {
@@ -96,7 +98,7 @@ func saveInstalledConfig(config *InstalledConfig) error {
 
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -566,22 +568,128 @@ type packageSelectModel struct {
 	cursor     int
 	selected   map[int]bool
 	done       bool
+
+	// fuzzy search related fields
+	searchInput textinput.Model
+	searching   bool
+	filtered    []int
 }
 
-func (m packageSelectModel) Init() tea.Cmd {
+func (m *packageSelectModel) Init() tea.Cmd {
+	// Initialize search input with placeholder
+	m.searchInput = textinput.New()
+	m.searchInput.Placeholder = "Search packages..."
 	return nil
 }
 
-func (m packageSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+// findOrInitFiltered ensures a filtered list exists and resets cursor
+func (m *packageSelectModel) findOrInitFiltered() {
+	if m.filtered == nil {
+		m.filtered = make([]int, len(m.candidates))
+		for i := range m.candidates {
+			m.filtered[i] = i
+		}
+	}
+	m.cursor = 0
+}
+
+// applySearchFilter updates the filtered list based on searchInput value
+func (m *packageSelectModel) applySearchFilter() {
+	query := strings.TrimSpace(m.searchInput.Value())
+	if query == "" {
+		m.filtered = make([]int, len(m.candidates))
+		for i := range m.candidates {
+			m.filtered[i] = i
+		}
+		m.cursor = 0
+		return
+	}
+	targets := make([]string, len(m.candidates))
+	for i, c := range m.candidates {
+		targets[i] = c.Repo
+	}
+	matches := fuzzy.Find(query, targets)
+	m.filtered = make([]int, 0, len(matches))
+	for _, mm := range matches {
+		m.filtered = append(m.filtered, mm.Index)
+	}
+	if len(m.filtered) == 0 {
+		m.cursor = 0
+	} else if m.cursor >= len(m.filtered) {
+		m.cursor = len(m.filtered) - 1
+	}
+}
+
+func (m *packageSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Enter search mode with '/'
+		if !m.searching && msg.String() == "/" {
+			m.findOrInitFiltered()
+			m.searching = true
+			m.searchInput.Focus()
+			return m, nil
+		}
+
+		// When searching, check for navigation/exit keys FIRST (before routing to textinput)
+		if m.searching {
+			switch msg.String() {
+			case "esc":
+				// Cancel search mode and clear filter
+				m.searching = false
+				m.searchInput = textinput.New()
+				m.searchInput.Placeholder = "Search packages..."
+				m.filtered = nil
+				m.cursor = 0
+				return m, nil
+			case "enter":
+				// Leave search mode but keep current filter
+				m.searching = false
+				m.cursor = 0
+				return m, nil
+			case "up", "k":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+				return m, nil
+			case "down", "j":
+				if m.cursor < len(m.filtered)-1 {
+					m.cursor++
+				}
+				return m, nil
+			case " ":
+				// Toggle selection on current filtered item
+				if len(m.filtered) > 0 {
+					idx := m.filtered[m.cursor]
+					if m.selected[idx] {
+						delete(m.selected, idx)
+					} else {
+						m.selected[idx] = true
+					}
+				}
+				return m, nil
+			case "ctrl+c":
+				m.done = true
+				return m, tea.Quit
+			}
+			// For all other keys, route to textinput for typing
+			newInput, cmd := m.searchInput.Update(msg)
+			m.searchInput = newInput
+			m.applySearchFilter()
+			return m, cmd
+		}
+
+		// Normal navigation/selection (when not searching)
 		switch msg.String() {
-		case "ctrl+c", "q", "esc":
+		case "ctrl+c", "q":
+			m.done = true
+			return m, tea.Quit
+		case "esc":
 			m.done = true
 			return m, tea.Quit
 		case "enter", " ":
 			// Toggle selection
-			if _, exists := m.selected[m.cursor]; exists {
+			if m.selected[m.cursor] {
 				delete(m.selected, m.cursor)
 			} else {
 				m.selected[m.cursor] = true
@@ -611,7 +719,7 @@ func (m packageSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m packageSelectModel) View() string {
+func (m *packageSelectModel) View() string {
 	if m.done {
 		return ""
 	}
@@ -619,14 +727,32 @@ func (m packageSelectModel) View() string {
 	var b strings.Builder
 	b.WriteString("Select packages to check for updates:\n\n")
 
-	for i, candidate := range m.candidates {
+	// Show search input when in search mode
+	if m.searching {
+		b.WriteString(m.searchInput.View())
+		b.WriteString("\n")
+	}
+
+	// Determine which indices to display: filtered if in search, otherwise all
+	var display []int
+	if m.searching {
+		display = m.filtered
+	} else {
+		display = make([]int, len(m.candidates))
+		for i := range m.candidates {
+			display[i] = i
+		}
+	}
+
+	for i, candidateIndex := range display {
+		candidate := m.candidates[candidateIndex]
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
 		}
 
 		checkbox := "[ ]"
-		if m.selected[i] {
+		if m.selected[candidateIndex] {
 			checkbox = "[✓]"
 		}
 
@@ -639,8 +765,12 @@ func (m packageSelectModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString("↑/↓ or j/k: navigate • space: toggle • a: select all • n: select none\n")
-	b.WriteString("ctrl+d or enter: confirm • q/esc: quit\n")
+	if m.searching {
+		b.WriteString("↑/↓: navigate items • space: toggle • enter: keep filter • esc: clear filter\n")
+	} else {
+		b.WriteString("↑/↓ or j/k: navigate • /: search • space: toggle • a: select all • n: select none\n")
+		b.WriteString("ctrl+d or enter: confirm • q/esc: quit\n")
+	}
 
 	return b.String()
 }
@@ -658,11 +788,15 @@ func selectPackagesInteractively(candidates []UpgradeCandidate) []UpgradeCandida
 	}
 
 	// Create and run the bubbletea program
-	model := packageSelectModel{
+	model := &packageSelectModel{
 		candidates: candidates,
 		selected:   make(map[int]bool),
 		done:       false,
 	}
+	// Initialize internal state
+	model.Init()
+	model.findOrInitFiltered()
+	model.applySearchFilter()
 
 	p := tea.NewProgram(model)
 	finalModel, err := p.Run()
@@ -671,7 +805,7 @@ func selectPackagesInteractively(candidates []UpgradeCandidate) []UpgradeCandida
 		return candidates
 	}
 
-	m := finalModel.(packageSelectModel)
+	m := finalModel.(*packageSelectModel)
 
 	// Collect selected candidates
 	selected := make([]UpgradeCandidate, 0, len(m.selected))
