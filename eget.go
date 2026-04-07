@@ -51,6 +51,19 @@ func IsLocalFile(s string) bool {
 	return err == nil
 }
 
+// replaceTagInURL replaces the tag in a GitHub release URL with a new tag
+func replaceTagInURL(url, newTag string) string {
+	parts := strings.Split(url, "/")
+	if len(parts) < 8 || parts[2] != "github.com" {
+		return url
+	}
+	if len(parts) >= 8 && parts[5] == "releases" && parts[6] == "download" {
+		parts[7] = newTag
+		return strings.Join(parts, "/")
+	}
+	return url
+}
+
 // IsDirectory returns true if the file at 'path' is a directory.
 func IsDirectory(path string) bool {
 	fileInfo, err := os.Stat(path)
@@ -305,7 +318,7 @@ func downloadConfigRepositories(config *Config) error {
 		binary = os.Args[0]
 	}
 
-	for name, _ := range config.Repositories {
+	for name := range config.Repositories {
 		cmd := exec.Command(binary, name)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -465,8 +478,45 @@ func main() {
 		for i := range candidates {
 			choices[i] = path.Base(candidates[i])
 		}
-		choice := userSelect(choices)
+		// Try to use previous selection as fallback
+		choice := 0
+		repoKey := normalizeRepoName(target)
+		if config, loadErr := loadInstalledConfig(); loadErr == nil {
+			if entry, exists := config.Installed[repoKey]; exists {
+				previousAsset := entry.Asset
+				for i, cand := range candidates {
+					if path.Base(cand) == previousAsset {
+						choice = i + 1
+						fmt.Fprintf(os.Stderr, "\033[33mUsing previous selection '%s' as fallback\033[0m\n", choices[i])
+						break
+					}
+				}
+			}
+		}
+		if choice == 0 {
+			choice = userSelect(choices)
+		}
 		url = candidates[choice-1]
+	} else if len(candidates) == 0 && err != nil {
+		// Try fallback to previous asset
+		config, loadErr := loadInstalledConfig()
+		if loadErr == nil {
+			repoKey := normalizeRepoName(target)
+			if entry, exists := config.Installed[repoKey]; exists && entry.URL != "" {
+				currentTag := opts.Tag
+				if currentTag == "" {
+					currentTag = "latest"
+				}
+				fallbackURL := replaceTagInURL(entry.URL, currentTag)
+				url = fallbackURL
+				fmt.Fprintf(os.Stderr, "\033[33mWarning: no assets matched current filters, using fallback asset '%s' from previous installation\033[0m\n", path.Base(fallbackURL))
+				err = nil
+			} else {
+				fatal(err)
+			}
+		} else {
+			fatal(err)
+		}
 	} else if err != nil {
 		fatal(err)
 	}
