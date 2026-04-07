@@ -48,7 +48,7 @@ jobs:
           git add version.go
           git commit -m "chore: set version to ${{ env.RELEASE_VERSION }} for release"
           # Find the branch that contains this tag and push to it
-          BRANCH=$(git branch -r --contains HEAD | grep -E 'origin/(main|master)$' | head -1 | sed 's/origin\///' || echo "main")
+          BRANCH="master"
           git push origin HEAD:${BRANCH}
           # Move the tag to the new commit so GoReleaser builds from the versioned commit
           TAG=${GITHUB_REF#refs/tags/}
@@ -91,7 +91,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Switch back to the branch (we were on the tag)
-          BRANCH=$(git branch -r --contains HEAD | grep -E 'origin/(main|master)$' | head -1 | sed 's/origin\///' || echo "main")
+          BRANCH="master"
           git checkout ${BRANCH}
           git pull origin ${BRANCH} --rebase || true
           git add version.go
