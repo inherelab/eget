@@ -1,3 +1,3 @@
 package main
 
-var Version = "1.5.0+src"
+var Version = "1.4.2"
