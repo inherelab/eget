@@ -1,6 +1,10 @@
 # Eget: easy pre-built binary installation
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/zyedidia/eget)](https://goreportcard.com/report/github.com/zyedidia/eget)
+This fork: [![Go Report Card](https://goreportcard.com/badge/github.com/gmatheu/eget)](https://goreportcard.com/report/github.com/gmatheu/eget)
+[![Release](https://img.shields.io/github/release/gmatheu/eget.svg?label=Release)](https://github.com/gmatheu/eget/releases)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gmatheu/eget/blob/master/LICENSE)
+
+Upstream: [![Go Report Card](https://goreportcard.com/badge/github.com/zyedidia/eget)](https://goreportcard.com/report/github.com/zyedidia/eget)
 [![Release](https://img.shields.io/github/release/zyedidia/eget.svg?label=Release)](https://github.com/zyedidia/eget/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/zyedidia/eget/blob/master/LICENSE)
 
@@ -184,35 +188,34 @@ target = "~/.local/bin"
 
 ## Available settings - global section
 
-| Setting | Related Flag | Description | Default |
-| --- | --- | --- | --- |
-| `github_token` | `N/A` | GitHub API token to use for requests | `""` |
-| `all` | `--all` | Whether to extract all candidate files. | `false` |
-| `download_only` | `--download-only` | Whether to stop after downloading the asset (no extraction). | `false` |
-| `download_source` | `--source` | Whether to download the source code for the target repo instead of a release. | `false` |
-| `file` | `--file` | The glob to select files for extraction. | `*` |
-| `quiet` | `--quiet` | Whether to only print essential output. | `false` |
-| `show_hash` | `--sha256` | Whether to show the SHA-256 hash of the downloaded asset. | `false` |
-| `system` | `--system` | The target system to download for. | `all` |
-| `target` | `--to` | The directory to move the downloaded file to after extraction. | `.` |
-| `upgrade_only` | `--upgrade-only` | Whether to only download if release is more recent than current version. | `false` |
+| Setting           | Related Flag      | Description                                                                   | Default |
+| ----------------- | ----------------- | ----------------------------------------------------------------------------- | ------- |
+| `github_token`    | `N/A`             | GitHub API token to use for requests                                          | `""`    |
+| `all`             | `--all`           | Whether to extract all candidate files.                                       | `false` |
+| `download_only`   | `--download-only` | Whether to stop after downloading the asset (no extraction).                  | `false` |
+| `download_source` | `--source`        | Whether to download the source code for the target repo instead of a release. | `false` |
+| `file`            | `--file`          | The glob to select files for extraction.                                      | `*`     |
+| `quiet`           | `--quiet`         | Whether to only print essential output.                                       | `false` |
+| `show_hash`       | `--sha256`        | Whether to show the SHA-256 hash of the downloaded asset.                     | `false` |
+| `system`          | `--system`        | The target system to download for.                                            | `all`   |
+| `target`          | `--to`            | The directory to move the downloaded file to after extraction.                | `.`     |
+| `upgrade_only`    | `--upgrade-only`  | Whether to only download if release is more recent than current version.      | `false` |
 
 ## Available settings - repository sections
 
-| Setting | Related Flag | Description | Default |
-| --- | --- | --- | --- |
-| `all` | `--all` | Whether to extract all candidate files. | `false` |
-| `asset_filters` | `--asset` |  An array of partial asset names to filter the available assets for download. | `[]` |
-| `download_only` | `--download-only` | Whether to stop after downloading the asset (no extraction). | `false` |
-| `download_source` | `--source` | Whether to download the source code for the target repo instead of a release. | `false` |
-| `file` | `--file` | The glob to select files for extraction. | `*` |
-| `quiet` | `--quiet` | Whether to only print essential output. | `false` |
-| `show_hash` | `--sha256` | Whether to show the SHA-256 hash of the downloaded asset. | `false` |
-| `system` | `--system` | The target system to download for. | `all` |
-| `target` | `--to` | The directory to move the downloaded file to after extraction. | `.` |
-| `upgrade_only` | `--upgrade-only` | Whether to only download if release is more recent than current version. | `false` |
-| `verify_sha256` | `--verify-sha256` | Verify the sha256 hash of the asset against a provided hash. | `""` |
-
+| Setting           | Related Flag      | Description                                                                   | Default |
+| ----------------- | ----------------- | ----------------------------------------------------------------------------- | ------- |
+| `all`             | `--all`           | Whether to extract all candidate files.                                       | `false` |
+| `asset_filters`   | `--asset`         | An array of partial asset names to filter the available assets for download.  | `[]`    |
+| `download_only`   | `--download-only` | Whether to stop after downloading the asset (no extraction).                  | `false` |
+| `download_source` | `--source`        | Whether to download the source code for the target repo instead of a release. | `false` |
+| `file`            | `--file`          | The glob to select files for extraction.                                      | `*`     |
+| `quiet`           | `--quiet`         | Whether to only print essential output.                                       | `false` |
+| `show_hash`       | `--sha256`        | Whether to show the SHA-256 hash of the downloaded asset.                     | `false` |
+| `system`          | `--system`        | The target system to download for.                                            | `all`   |
+| `target`          | `--to`            | The directory to move the downloaded file to after extraction.                | `.`     |
+| `upgrade_only`    | `--upgrade-only`  | Whether to only download if release is more recent than current version.      | `false` |
+| `verify_sha256`   | `--verify-sha256` | Verify the sha256 hash of the asset against a provided hash.                  | `""`    |
 
 ## Example configuration
 
