@@ -83,7 +83,7 @@ func checksumAsset(asset string, assets []string) string {
 // repo is provided, we assume the repo name is the 'tool' name (for direct
 // URLs, the tool name is unknown and remains empty).
 func getFinder(project string, opts *Flags) (finder Finder, tool string) {
-	svc := install.NewService()
+	svc := install.NewDefaultService(NewHTTPGetter(), bintime)
 
 	finder, tool, err := svc.SelectFinder(project, &install.Options{
 		Tag:          opts.Tag,
@@ -109,7 +109,7 @@ func getFinder(project string, opts *Flags) (finder Finder, tool string) {
 }
 
 func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
-	svc := install.NewService()
+	svc := install.NewDefaultService(NewHTTPGetter(), bintime)
 	v, err := svc.SelectVerifier(sumAsset, &install.Options{
 		Hash:   opts.Hash,
 		Verify: opts.Verify,
@@ -125,7 +125,7 @@ func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
 // --system pair provided by the user, or the runtime.GOOS/runtime.GOARCH
 // pair by default (the host system OS/Arch pair).
 func getDetector(opts *Flags) (detector Detector, err error) {
-	svc := install.NewService()
+	svc := install.NewDefaultService(NewHTTPGetter(), bintime)
 	d, err := svc.SelectDetector(&install.Options{
 		System: opts.System,
 		Asset:  opts.Asset,
@@ -142,7 +142,7 @@ func getDetector(opts *Flags) (detector Detector, err error) {
 // extract a binary with the tool name that was possibly auto-detected
 // above.
 func getExtractor(url, tool string, opts *Flags) (extractor Extractor, err error) {
-	svc := install.NewService()
+	svc := install.NewDefaultService(NewHTTPGetter(), bintime)
 	return install.SelectExtractorAs[Extractor](svc, url, tool, &install.Options{
 		ExtractFile:  opts.ExtractFile,
 		DownloadOnly: opts.DLOnly,
@@ -235,10 +235,6 @@ func bintime(bin string, to string) (t time.Time) {
 		return
 	}
 	return fi.ModTime()
-}
-
-func init() {
-	install.RegisterBinaryModTime(bintime)
 }
 
 func downloadConfigRepositories(config *Config) error {

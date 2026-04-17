@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-
-	"github.com/inherelab/eget/internal/install"
 )
 
 type Verifier interface {
@@ -76,23 +74,6 @@ type Sha256AssetVerifier struct {
 
 func NewSha256AssetVerifier(assetURL string) *Sha256AssetVerifier {
 	return &Sha256AssetVerifier{AssetURL: assetURL}
-}
-
-func init() {
-	install.RegisterVerifierFactories(
-		func(expected string) (install.Verifier, error) {
-			return NewSha256Verifier(expected)
-		},
-		func(assetURL string) install.Verifier {
-			return NewSha256AssetVerifier(assetURL)
-		},
-		func() install.Verifier {
-			return NewSha256Printer()
-		},
-		func() install.Verifier {
-			return NewNoVerifier()
-		},
-	)
 }
 
 func (s256 *Sha256AssetVerifier) Verify(b []byte) error {

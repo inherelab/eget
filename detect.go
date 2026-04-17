@@ -5,8 +5,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-
-	"github.com/inherelab/eget/internal/install"
 )
 
 // A Detector selects an asset from a list of possibilities.
@@ -223,27 +221,6 @@ type SystemDetector struct {
 
 func NewDetectorChain(detectors []Detector, system Detector) *DetectorChain {
 	return &DetectorChain{detectors: detectors, system: system}
-}
-
-func init() {
-	install.RegisterDetectorFactories(
-		func() install.Detector {
-			return NewAllDetector()
-		},
-		func(goos, goarch string) (install.Detector, error) {
-			return NewSystemDetector(goos, goarch)
-		},
-		func(asset string, anti bool) install.Detector {
-			return NewSingleAssetDetector(asset, anti)
-		},
-		func(detectors []install.Detector, system install.Detector) install.Detector {
-			chain := make([]Detector, len(detectors))
-			for i := range detectors {
-				chain[i] = detectors[i].(Detector)
-			}
-			return NewDetectorChain(chain, system.(Detector))
-		},
-	)
 }
 
 // NewSystemDetector returns a new detector for the given OS/Arch as given by

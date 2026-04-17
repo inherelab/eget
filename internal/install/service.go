@@ -57,87 +57,8 @@ type Service struct {
 	ExtractorFactory             func(filename, tool string, chooser any) any
 }
 
-var (
-	defaultBinaryModTime            func(tool, output string) time.Time
-	defaultGitHubGetterFactory      func() sourcegithub.HTTPGetter
-	defaultAllDetectorFactory       func() Detector
-	defaultSystemDetectorFactory    func(goos, goarch string) (Detector, error)
-	defaultAssetDetectorFactory     func(asset string, anti bool) Detector
-	defaultDetectorChainFactory     func(detectors []Detector, system Detector) Detector
-	defaultSha256VerifierFactory    func(expected string) (Verifier, error)
-	defaultSha256AssetVerifierFactory func(assetURL string) Verifier
-	defaultSha256PrinterFactory     func() Verifier
-	defaultNoVerifierFactory        func() Verifier
-	defaultDownloadOnlyExtractorFactory func(name string) any
-	defaultGlobChooserFactory       func(pattern string) (any, error)
-	defaultBinaryChooserFactory     func(tool string) any
-	defaultExtractorFactory         func(filename, tool string, chooser any) any
-)
-
 func NewService() *Service {
-	svc := &Service{
-		BinaryModTime:                defaultBinaryModTime,
-		AllDetectorFactory:           defaultAllDetectorFactory,
-		SystemDetectorFactory:        defaultSystemDetectorFactory,
-		AssetDetectorFactory:         defaultAssetDetectorFactory,
-		DetectorChainFactory:         defaultDetectorChainFactory,
-		Sha256VerifierFactory:        defaultSha256VerifierFactory,
-		Sha256AssetVerifierFactory:   defaultSha256AssetVerifierFactory,
-		Sha256PrinterFactory:         defaultSha256PrinterFactory,
-		NoVerifierFactory:            defaultNoVerifierFactory,
-		DownloadOnlyExtractorFactory: defaultDownloadOnlyExtractorFactory,
-		GlobChooserFactory:           defaultGlobChooserFactory,
-		BinaryChooserFactory:         defaultBinaryChooserFactory,
-		ExtractorFactory:             defaultExtractorFactory,
-	}
-	if defaultGitHubGetterFactory != nil {
-		svc.GitHubGetter = defaultGitHubGetterFactory()
-	}
-	return svc
-}
-
-func RegisterBinaryModTime(fn func(tool, output string) time.Time) {
-	defaultBinaryModTime = fn
-}
-
-func RegisterGitHubGetterFactory(fn func() sourcegithub.HTTPGetter) {
-	defaultGitHubGetterFactory = fn
-}
-
-func RegisterDetectorFactories(
-	all func() Detector,
-	system func(goos, goarch string) (Detector, error),
-	asset func(asset string, anti bool) Detector,
-	chain func(detectors []Detector, system Detector) Detector,
-) {
-	defaultAllDetectorFactory = all
-	defaultSystemDetectorFactory = system
-	defaultAssetDetectorFactory = asset
-	defaultDetectorChainFactory = chain
-}
-
-func RegisterVerifierFactories(
-	sha256 func(expected string) (Verifier, error),
-	asset func(assetURL string) Verifier,
-	printer func() Verifier,
-	noop func() Verifier,
-) {
-	defaultSha256VerifierFactory = sha256
-	defaultSha256AssetVerifierFactory = asset
-	defaultSha256PrinterFactory = printer
-	defaultNoVerifierFactory = noop
-}
-
-func RegisterExtractorFactories(
-	downloadOnly func(name string) any,
-	glob func(pattern string) (any, error),
-	binary func(tool string) any,
-	extractor func(filename, tool string, chooser any) any,
-) {
-	defaultDownloadOnlyExtractorFactory = downloadOnly
-	defaultGlobChooserFactory = glob
-	defaultBinaryChooserFactory = binary
-	defaultExtractorFactory = extractor
+	return &Service{}
 }
 
 func Cast[T any](value any) (T, error) {
