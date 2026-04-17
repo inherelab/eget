@@ -27,6 +27,7 @@ require (
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.5.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
+	github.com/gookit/goutil v0.7.4 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
@@ -39,7 +40,8 @@ require (
 	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
-	golang.org/x/text v0.3.8 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
