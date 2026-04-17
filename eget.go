@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/inherelab/eget/internal/install"
 	"github.com/jessevdk/go-flags"
 	pb "github.com/schollz/progressbar/v3"
 )
@@ -27,8 +26,7 @@ func fatal(a ...interface{}) {
 
 // IsUrl returns true if s is a valid URL.
 func IsUrl(s string) bool {
-	u, err := url.Parse(s)
-	return err == nil && u.Scheme != "" && u.Host != ""
+	return install.IsURL(s)
 }
 
 // Cut is strings.Cut
@@ -39,16 +37,13 @@ func Cut(s, sep string) (before, after string, found bool) {
 	return s, "", false
 }
 
-var ghrgx = regexp.MustCompile(`^(http(s)?://)?github\.com/[\w,\-,_]+/[\w,\-,_]+(.git)?(/)?$`)
-
 // IsGithubUrl returns true if s is a URL with github.com as the host.
 func IsGithubUrl(s string) bool {
-	return ghrgx.MatchString(s)
+	return install.IsGitHubURL(s)
 }
 
 func IsLocalFile(s string) bool {
-	_, err := os.Stat(s)
-	return err == nil
+	return install.IsLocalFile(s)
 }
 
 // replaceTagInURL replaces the tag in a GitHub release URL with a new tag
@@ -89,61 +84,31 @@ func checksumAsset(asset string, assets []string) string {
 // repo is provided, we assume the repo name is the 'tool' name (for direct
 // URLs, the tool name is unknown and remains empty).
 func getFinder(project string, opts *Flags) (finder Finder, tool string) {
-	if IsLocalFile(project) || (IsUrl(project) && !IsGithubUrl(project)) {
-		finder = &DirectAssetFinder{
-			URL: project,
-		}
+	svc := install.NewService()
+	svc.BinaryModTime = bintime
+	svc.GitHubGetter = install.HTTPGetterFunc(Get)
+
+	finder, tool, err := svc.SelectFinder(project, &install.Options{
+		Tag:          opts.Tag,
+		Prerelease:   opts.Prerelease,
+		Source:       opts.Source,
+		Output:       opts.Output,
+		System:       opts.System,
+		ExtractFile:  opts.ExtractFile,
+		All:          opts.All,
+		Quiet:        opts.Quiet,
+		DownloadOnly: opts.DLOnly,
+		UpgradeOnly:  opts.UpgradeOnly,
+		Asset:        opts.Asset,
+		Hash:         opts.Hash,
+		Verify:       opts.Verify,
+		DisableSSL:   opts.DisableSSL,
+	})
+	if err != nil {
+		fatal(err)
+	}
+	if _, ok := finder.(*install.DirectAssetFinder); ok {
 		opts.System = "all"
-	} else {
-		if IsGithubUrl(project) {
-			_, after, found := Cut(project, "github.com/")
-			if found {
-				project = strings.Trim(after, "/")
-			} else {
-				fatal(fmt.Sprintf("invalid GitHub repo URL %s", project))
-			}
-		}
-
-		repo := project
-		if strings.Count(repo, "/") != 1 {
-			fatal("invalid argument (must be of the form `user/repo`)")
-		}
-		parts := strings.Split(repo, "/")
-		if parts[0] == "" || parts[1] == "" {
-			fatal("invalid argument (must be of the form `user/repo`)")
-		}
-		tool = parts[1]
-
-		if opts.Source {
-			tag := "master"
-			if opts.Tag != "" {
-				tag = opts.Tag
-			}
-			finder = &GithubSourceFinder{
-				Repo: repo,
-				Tag:  tag,
-				Tool: tool,
-			}
-		} else {
-			tag := "latest"
-			if opts.Tag != "" {
-				tag = fmt.Sprintf("tags/%s", opts.Tag)
-			}
-
-			var mint time.Time
-			if opts.UpgradeOnly {
-				parts := strings.Split(project, "/")
-				last := parts[len(parts)-1]
-				mint = bintime(last, opts.Output)
-			}
-
-			finder = &GithubAssetFinder{
-				Repo:       repo,
-				Tag:        tag,
-				Prerelease: opts.Prerelease,
-				MinTime:    mint,
-			}
-		}
 	}
 	return finder, tool
 }

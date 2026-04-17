@@ -341,12 +341,7 @@ func checkForUpgrade(entry InstalledEntry) (bool, string, error) {
 	}
 
 	// Create a GithubAssetFinder to check for newer releases
-	finder := &GithubAssetFinder{
-		Repo:       entry.Repo,
-		Tag:        "latest",
-		Prerelease: false, // Only check stable releases
-		MinTime:    entry.ReleaseDate,
-	}
+	finder := NewGithubAssetFinder(entry.Repo, "latest", false, entry.ReleaseDate)
 
 	// If we find assets, it means there's a newer release
 	_, err := finder.Find()
