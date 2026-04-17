@@ -14,7 +14,7 @@
 ## 目标
 
 - 建立清晰、可维护的 CLI 架构，减少根目录平铺逻辑
-- 保持现有默认用法兼容：`eget owner/repo [flags...]`
+- 使用显式子命令，避免根命令兼容分支带来的解析复杂度
 - 新增受管理包模型，支持 `add` 和 `update --all`
 - 继续复用现有配置文件 `~/.eget.toml`
 - 将“声明式配置”和“安装状态记录”分离
@@ -139,37 +139,41 @@ internal/
 
 ## CLI 命令模型
 
-### 根命令兼容策略
+### 根命令策略
 
-重构后保留旧用法：
+重构后去除根命令默认 `install` 的兼容处理，只保留显式子命令入口。
 
-```bash
-eget owner/repo [flags...]
-```
-
-该行为等价于：
+CLI 统一采用：
 
 ```bash
-eget install owner/repo [flags...]
+eget <command> --options... arguments...
 ```
 
-路由规则：
+原因：
 
-1. 如果第一个非 flag 参数是已知子命令名，则进入对应子命令
-2. 否则按默认 `install` 处理
+- `cflag/capp` 更适合标准子命令模型
+- 去掉兼容分支后，命令路由和帮助输出更直接
+- 避免根命令同时承担“默认安装”和“子命令分发”两套职责
+- 避免继续支持旧参数顺序带来的额外解析复杂度
 
-这样可以同时兼容：
+因此首版不再支持：
 
-- `eget inhere/markview --tag nightly`
-- `eget install inhere/markview --tag nightly`
-- `eget --system linux/amd64 sharkdp/fd`
+```bash
+eget owner/repo
+eget --tag nightly owner/repo
+```
 
-且不会与下面的子命令冲突：
+统一改为：
 
-- `eget add ...`
-- `eget update ...`
-- `eget config ...`
-- `eget download ...`
+```bash
+eget install owner/repo
+eget install --tag nightly owner/repo
+```
+
+并且继续遵循 `CMD --OPTIONS... ARGUMENTS...` 顺序：
+
+- 支持 `eget install --tag nightly inhere/markview`
+- 不支持 `eget install inhere/markview --tag nightly`
 
 ### 子命令列表
 
@@ -178,6 +182,14 @@ eget install owner/repo [flags...]
 显式安装命令。负责查找 release、下载、校验、解压、写入目标位置，并记录安装结果。
 
 支持 repo、GitHub URL、直链 URL、本地文件。
+
+语法约束：
+
+```bash
+eget install --tag nightly inhere/markview
+```
+
+不支持将目标参数写在前面再继续追加选项。
 
 #### `download`
 
@@ -250,6 +262,7 @@ eget update --all
 - `download` 复用查找/下载相关参数，但不做安装后动作
 - `add` 只接收声明式可复用安装参数
 - `update` 只接收更新流程需要的参数
+- 所有 `capp` 命令统一遵循 `CMD --OPTIONS... ARGUMENTS...`，不承诺兼容旧的“参数在前、选项在后”写法
 
 ## 配置模型设计
 
@@ -489,7 +502,7 @@ disable_ssl = false
 
 本轮必须保证：
 
-- `eget owner/repo [flags...]` 继续可用
+- 所有功能都通过显式子命令提供
 - 旧配置 `~/.eget.toml` 继续可读
 - 旧 repo section 继续生效
 - 旧 installed 状态记录继续可读写
@@ -499,6 +512,8 @@ disable_ssl = false
 
 - 帮助输出会因 `capp` 接管而变化
 - 历史 flag 型入口如 `--list-installed`、`--upgrade-all` 可逐步迁移为命令能力，不再作为主设计中心
+- 根命令不再支持直接安装 repo
+- 旧的“目标参数在前、选项在后”命令顺序不再保证兼容
 
 ## 测试策略
 
@@ -531,7 +546,6 @@ disable_ssl = false
 
 保留并迁移现有真实下载测试，重点覆盖：
 
-- 默认 install 兼容入口
 - 显式 `install`
 - `download`
 - `add + update` 最小链路
@@ -545,7 +559,6 @@ disable_ssl = false
 
 - 新入口位于 `cmd/eget/main.go`
 - 业务代码收敛到 `internal/`
-- 根命令兼容旧 `install` 用法
 - `install`、`add`、`update`、`config`、`download` 可用
 - `config` 支持 `--info`、`--init`、`get`、`set`、`--list`
 - `update <name|repo>` 与 `update --all` 可用
@@ -554,12 +567,13 @@ disable_ssl = false
 
 ## 风险与控制
 
-### 风险一：兼容入口与子命令路由冲突
+### 风险一：命令迁移导致旧用法失效
 
 控制措施：
 
-- 固定“首个非 flag 参数命中子命令，否则默认 install”的规则
+- 在帮助信息和 README 中明确显式子命令语法
 - 为命令路由单独补测试
+- 为 `CMD --OPTIONS... ARGUMENTS...` 顺序增加显式帮助与用例测试，避免用户误用
 
 ### 风险二：配置优先级行为变化
 
@@ -584,4 +598,4 @@ disable_ssl = false
 
 ## 结论
 
-本设计以“分层重构 + 渐进兼容”为核心策略，目标是在不破坏现有默认安装体验的前提下，把 `eget` 从单入口平铺结构迁移为基于 `gookit/cflag/capp` 的多命令 CLI，并为后续继续扩展管理类命令和 source 抽象提供明确边界。
+本设计以“分层重构 + 显式子命令”为核心策略，目标是把 `eget` 从单入口平铺结构迁移为基于 `gookit/cflag/capp` 的多命令 CLI，在保留配置兼容与核心安装能力的前提下，去掉根命令默认安装分支，降低解析复杂度，并为后续继续扩展管理类命令和 source 抽象提供明确边界。
