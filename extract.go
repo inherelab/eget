@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
+	"github.com/inherelab/eget/internal/install"
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 )
@@ -289,6 +290,23 @@ func NewDownloadOnlyExtractor(name string) *SingleFileExtractor {
 
 func NewBinaryChooser(tool string) *BinaryChooser {
 	return &BinaryChooser{Tool: tool}
+}
+
+func init() {
+	install.RegisterExtractorFactories(
+		func(name string) any {
+			return NewDownloadOnlyExtractor(name)
+		},
+		func(pattern string) (any, error) {
+			return NewGlobChooser(pattern)
+		},
+		func(tool string) any {
+			return NewBinaryChooser(tool)
+		},
+		func(filename, tool string, chooser any) any {
+			return NewExtractor(filename, tool, chooser.(Chooser))
+		},
+	)
 }
 
 func (sf *SingleFileExtractor) Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error) {

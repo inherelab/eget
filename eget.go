@@ -84,8 +84,6 @@ func checksumAsset(asset string, assets []string) string {
 // URLs, the tool name is unknown and remains empty).
 func getFinder(project string, opts *Flags) (finder Finder, tool string) {
 	svc := install.NewService()
-	svc.BinaryModTime = bintime
-	svc.GitHubGetter = NewHTTPGetter()
 
 	finder, tool, err := svc.SelectFinder(project, &install.Options{
 		Tag:          opts.Tag,
@@ -106,27 +104,12 @@ func getFinder(project string, opts *Flags) (finder Finder, tool string) {
 	if err != nil {
 		fatal(err)
 	}
-	if _, ok := finder.(*install.DirectAssetFinder); ok {
-		opts.System = "all"
-	}
+	opts.System = mergeSystemOption(opts.System, project)
 	return finder, tool
 }
 
 func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
 	svc := install.NewService()
-	svc.Sha256VerifierFactory = func(expected string) (install.Verifier, error) {
-		return NewSha256Verifier(expected)
-	}
-	svc.Sha256AssetVerifierFactory = func(assetURL string) install.Verifier {
-		return NewSha256AssetVerifier(assetURL)
-	}
-	svc.Sha256PrinterFactory = func() install.Verifier {
-		return NewSha256Printer()
-	}
-	svc.NoVerifierFactory = func() install.Verifier {
-		return NewNoVerifier()
-	}
-
 	v, err := svc.SelectVerifier(sumAsset, &install.Options{
 		Hash:   opts.Hash,
 		Verify: opts.Verify,
@@ -134,7 +117,7 @@ func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return v.(Verifier), nil
+	return install.Cast[Verifier](v)
 }
 
 // Determine the appropriate detector. If the --system is 'all', we use an
@@ -143,23 +126,6 @@ func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
 // pair by default (the host system OS/Arch pair).
 func getDetector(opts *Flags) (detector Detector, err error) {
 	svc := install.NewService()
-	svc.AllDetectorFactory = func() install.Detector {
-		return NewAllDetector()
-	}
-	svc.SystemDetectorFactory = func(goos, goarch string) (install.Detector, error) {
-		return NewSystemDetector(goos, goarch)
-	}
-	svc.AssetDetectorFactory = func(asset string, anti bool) install.Detector {
-		return NewSingleAssetDetector(asset, anti)
-	}
-	svc.DetectorChainFactory = func(detectors []install.Detector, system install.Detector) install.Detector {
-		chain := make([]Detector, len(detectors))
-		for i := range detectors {
-			chain[i] = detectors[i].(Detector)
-		}
-		return NewDetectorChain(chain, system.(Detector))
-	}
-
 	d, err := svc.SelectDetector(&install.Options{
 		System: opts.System,
 		Asset:  opts.Asset,
@@ -167,7 +133,7 @@ func getDetector(opts *Flags) (detector Detector, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return d.(Detector), nil
+	return install.Cast[Detector](d)
 }
 
 // Determine which extractor to use. If --download-only is provided, we
@@ -177,27 +143,21 @@ func getDetector(opts *Flags) (detector Detector, err error) {
 // above.
 func getExtractor(url, tool string, opts *Flags) (extractor Extractor, err error) {
 	svc := install.NewService()
-	svc.DownloadOnlyExtractorFactory = func(name string) any {
-		return NewDownloadOnlyExtractor(name)
-	}
-	svc.GlobChooserFactory = func(pattern string) (any, error) {
-		return NewGlobChooser(pattern)
-	}
-	svc.BinaryChooserFactory = func(tool string) any {
-		return NewBinaryChooser(tool)
-	}
-	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
-		return NewExtractor(filename, tool, chooser.(Chooser))
-	}
-
-	ex, err := svc.SelectExtractor(url, tool, &install.Options{
+	return install.SelectExtractorAs[Extractor](svc, url, tool, &install.Options{
 		ExtractFile:  opts.ExtractFile,
 		DownloadOnly: opts.DLOnly,
 	})
-	if err != nil {
-		return nil, err
+}
+
+func mergeSystemOption(current, target string) string {
+	if current != "" {
+		return current
 	}
-	return ex.(Extractor), nil
+	kind := install.DetectTargetKind(target)
+	if kind == install.TargetDirectURL || kind == install.TargetLocalFile {
+		return "all"
+	}
+	return current
 }
 
 // Write an extracted file to disk with a new name.
@@ -275,6 +235,10 @@ func bintime(bin string, to string) (t time.Time) {
 		return
 	}
 	return fi.ModTime()
+}
+
+func init() {
+	install.RegisterBinaryModTime(bintime)
 }
 
 func downloadConfigRepositories(config *Config) error {

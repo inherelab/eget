@@ -13,6 +13,7 @@ import (
 
 	"github.com/inherelab/eget/home"
 	"github.com/inherelab/eget/internal/install"
+	sourcegithub "github.com/inherelab/eget/internal/source/github"
 	pb "github.com/schollz/progressbar/v3"
 )
 
@@ -76,6 +77,12 @@ func Get(url string) (*http.Response, error) {
 
 func NewHTTPGetter() install.HTTPGetterFunc {
 	return install.HTTPGetterFunc(Get)
+}
+
+func init() {
+	install.RegisterGitHubGetterFactory(func() sourcegithub.HTTPGetter {
+		return NewHTTPGetter()
+	})
 }
 
 type RateLimitJson struct {
