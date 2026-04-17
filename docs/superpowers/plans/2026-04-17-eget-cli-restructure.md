@@ -177,7 +177,7 @@ git commit -m "refactor: add capp cli skeleton"
 - Modify: `eget.go`
 - Test: `internal/install/options_test.go`
 
-- [x] **Step 1: 写安装参数与 target 识别测试**
+- [ ] **Step 1: 写安装参数与 target 识别测试**
 
 新建 `internal/install/options_test.go`，覆盖：
 - repo target 识别
@@ -194,12 +194,12 @@ func TestDetectTargetKind(t *testing.T) {
 }
 ```
 
-- [x] **Step 2: 运行测试确认失败**
+- [ ] **Step 2: 运行测试确认失败**
 
 Run: `go test ./internal/install -run TestDetectTargetKind -v`
 Expected: FAIL
 
-- [x] **Step 3: 建立 `internal/install.Options` 与 target 识别函数**
+- [ ] **Step 3: 建立 `internal/install.Options` 与 target 识别函数**
 
 从 `flags.go`、`eget.go` 提取核心字段到：
 
@@ -228,13 +228,13 @@ type Options struct {
 - `IsLocalFile`
 - `DetectTargetKind`
 
-- [x] **Step 4: 将查找/下载/检测/校验/解压逻辑迁出 `main` 流程**
+- [ ] **Step 4: 将查找/下载/检测/校验/解压逻辑迁出 `main` 流程**
 
 建立 `internal/install/service.go` 和 `internal/source/github/finder.go` 包装旧逻辑，要求：
 - 旧实现先通过适配层复用
 - `main` 级流程不再是唯一承载者
 
-- [x] **Step 5: 运行安装层测试**
+- [ ] **Step 5: 运行安装层测试**
 
 Run: `go test ./internal/install -v`
 Expected: PASS
