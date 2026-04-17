@@ -1,6 +1,6 @@
-module github.com/zyedidia/eget
+module github.com/inherelab/eget
 
-go 1.24
+go 1.24.2
 
 require (
 	github.com/BurntSushi/toml v1.2.1

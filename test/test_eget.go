@@ -32,7 +32,7 @@ func main() {
 	must(run(eget, "--system", "linux/amd64", "jgm/pandoc"))
 	must(fileExists("pandoc"))
 
-	must(run(eget, "zyedidia/micro", "--tag", "nightly", "--asset", "osx"))
+	must(run(eget, "inhere/markview", "--tag", "nightly", "--asset", "osx"))
 	must(fileExists("micro"))
 
 	must(run(eget, "--asset", "nvim.appimage", "--to", "nvim", "neovim/neovim"))
@@ -44,7 +44,7 @@ func main() {
 	must(run(eget, "--system", "windows/amd64", "--asset", "windows-gnu", "BurntSushi/ripgrep"))
 	must(fileExists("rg.exe"))
 
-	must(run(eget, "-f", "eget.1", "zyedidia/eget"))
+	must(run(eget, "-f", "eget.1", "inherelab/eget"))
 	must(fileExists("eget.1"))
 
 	fmt.Println("ALL TESTS PASS")

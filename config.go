@@ -8,8 +8,8 @@ import (
 	"runtime"
 
 	"github.com/BurntSushi/toml"
+	"github.com/inherelab/eget/home"
 	"github.com/jessevdk/go-flags"
-	"github.com/zyedidia/eget/home"
 )
 
 type ConfigGlobal struct {

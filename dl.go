@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/inherelab/eget/home"
 	pb "github.com/schollz/progressbar/v3"
-	"github.com/zyedidia/eget/home"
 )
 
 func tokenFrom(s string) (string, error) {

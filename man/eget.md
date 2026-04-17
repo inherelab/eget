@@ -55,7 +55,7 @@ header: Eget Manual
 # OPTIONS
   `-t, --tag=`
 
-:    Use the given tagged release instead of the latest release. If the project does not have a tag that matches exactly, eget will look for a tag that contains the given string, and use the latest one. Example: **`eget -t nightly zyedidia/micro`**.
+:    Use the given tagged release instead of the latest release. If the project does not have a tag that matches exactly, eget will look for a tag that contains the given string, and use the latest one. Example: **`eget -t nightly inhere/markview`**.
 
   `--pre-release`
 
@@ -67,15 +67,15 @@ header: Eget Manual
 
   `--to=`
 
-:    Move the executable to the given name after extraction. If the name is `-`, it the data will be written to stdout. Example: **`eget zyedidia/micro --to /usr/local/bin`**. Example: **`eget --asset nvim.appimage --to nvim neovim/neovim`**.
+:    Move the executable to the given name after extraction. If the name is `-`, it the data will be written to stdout. Example: **`eget inhere/markview --to /usr/local/bin`**. Example: **`eget --asset nvim.appimage --to nvim neovim/neovim`**.
 
   `-s, --system=`
 
-:    Use the given system as the target instead of the host. Systems follow the notation 'OS/Arch', where OS is a valid OS (darwin, windows, linux, netbsd, openbsd, freebsd, android, illumos, solaris, plan9), and Arch is a valid architecture (amd64, 386, arm, arm64, riscv64). If the special value **all** is used, all possibilities are given and the user must select manually. Example: **`eget -s darwin/amd64 zyedidia/micro`**.
+:    Use the given system as the target instead of the host. Systems follow the notation 'OS/Arch', where OS is a valid OS (darwin, windows, linux, netbsd, openbsd, freebsd, android, illumos, solaris, plan9), and Arch is a valid architecture (amd64, 386, arm, arm64, riscv64). If the special value **all** is used, all possibilities are given and the user must select manually. Example: **`eget -s darwin/amd64 inhere/markview`**.
 
   `-f, --file=`
 
-:    Extract the file that matches the given glob. You may want use this option to extract non-binary files. Example: **`eget -f LICENSE zyedidia/micro`**.
+:    Extract the file that matches the given glob. You may want use this option to extract non-binary files. Example: **`eget -f LICENSE inhere/markview`**.
 
   `--all`
 
@@ -140,14 +140,14 @@ header: Eget Manual
   format is quoted).
 
   For example, the following configuration file will set the `--to` flag to `~/bin` for
-  all repositories, and will set the `--to` flag to `~/.local/bin` for the `zyedidia/micro`
+  all repositories, and will set the `--to` flag to `~/.local/bin` for the `inhere/markview`
   repository.
 
 ```toml
   [global]
   target = "~/bin"
 
-  ["zyedidia/micro"]
+  ["inhere/markview"]
   target = "~/.local/bin"
 ```
 
@@ -161,7 +161,7 @@ header: Eget Manual
     upgrade_only = true
     target = "./test"
 
-["zyedidia/micro"]
+["inhere/markview"]
     upgrade_only = false
     show_hash = true
     asset_filters = [ "static", ".tar.gz" ]
@@ -170,10 +170,10 @@ header: Eget Manual
 
   By using the configuration above, you could run the following command to download
   the latest release of `micro`:
-  **`eget zyedidia/micro`**
+  **`eget inhere/markview`**
 
   Without the configuration, you would need to run the following command instead:
-  **`eget zyedidia/micro --to ~/.local/bin/micro --sha256 --asset static --asset .tar.gz`**
+  **`eget inhere/markview --to ~/.local/bin/micro --sha256 --asset static --asset .tar.gz`**
 
 ## Available settings
 
@@ -242,7 +242,7 @@ compatible with Eget.
 
 # BUGS
 
-See GitHub Issues: <https://github.com/zyedidia/eget/issues>
+See GitHub Issues: <https://github.com/inherelab/eget/issues>
 
 # AUTHOR
 
