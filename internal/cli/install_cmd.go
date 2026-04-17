@@ -14,18 +14,14 @@ type InstallOptions struct {
 	Target string
 }
 
-func newInstallCmd(r *runner) *capp.Cmd {
+func newInstallCmd(handler CommandHandler) *capp.Cmd {
 	opts := &InstallOptions{}
 	cmd := capp.NewCmd("install", "Install a target", func(cmd *capp.Cmd) error {
 		opts.Target = cmd.Arg("target").String()
 		if err := validateNoTrailingFlags(cmd); err != nil {
 			return err
 		}
-		if r != nil {
-			r.result.Command = cmd.Name
-			r.result.Options = opts
-		}
-		return ErrNotImplemented
+		return handler(cmd.Name, opts)
 	})
 
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")

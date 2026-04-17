@@ -6,7 +6,7 @@ type UpdateOptions struct {
 	Target string
 }
 
-func newUpdateCmd(r *runner) *capp.Cmd {
+func newUpdateCmd(handler CommandHandler) *capp.Cmd {
 	opts := &UpdateOptions{}
 	cmd := capp.NewCmd("update", "Update installed targets", func(cmd *capp.Cmd) error {
 		if cmd.Arg("target") != nil {
@@ -15,11 +15,7 @@ func newUpdateCmd(r *runner) *capp.Cmd {
 		if err := validateNoTrailingFlags(cmd); err != nil {
 			return err
 		}
-		if r != nil {
-			r.result.Command = cmd.Name
-			r.result.Options = opts
-		}
-		return ErrNotImplemented
+		return handler(cmd.Name, opts)
 	})
 
 	cmd.AddArg("target", "Target to update", false, nil)

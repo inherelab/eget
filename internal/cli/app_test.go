@@ -1,37 +1,62 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 )
 
-func TestRun_NoSubcommandReturnsError(t *testing.T) {
-	result := Run([]string{})
+type commandCall struct {
+	name    string
+	options any
+}
 
-	if result.Err == nil {
+func TestMain_NoSubcommandReturnsErrorAndHelp(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := Main([]string{}, &stdout, &stderr)
+	if err == nil {
 		t.Fatalf("expected error for missing subcommand")
 	}
-	if !errors.Is(result.Err, ErrCommandRequired) {
-		t.Fatalf("expected ErrCommandRequired, got %v", result.Err)
+	if !errors.Is(err, ErrCommandRequired) {
+		t.Fatalf("expected ErrCommandRequired, got %v", err)
+	}
+	if stdout.Len() == 0 {
+		t.Fatalf("expected help output on stdout")
+	}
+	if !strings.Contains(stdout.String(), "Usage:") {
+		t.Fatalf("expected help output to contain usage, got %q", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected stderr to be empty, got %q", stderr.String())
 	}
 }
 
-func TestRun_InstallStandardOrder(t *testing.T) {
-	result := Run([]string{"install", "--tag", "nightly", "inhere/markview"})
-
-	if result.Err == nil {
-		t.Fatalf("expected handler error for install skeleton")
-	}
-	if !errors.Is(result.Err, ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented, got %v", result.Err)
-	}
-	if result.Command != "install" {
-		t.Fatalf("expected command install, got %q", result.Command)
+func TestMain_InstallStandardOrderRoutesAndBindsOptions(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
 	}
 
-	opts, ok := result.Options.(*InstallOptions)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"install", "--tag", "nightly", "inhere/markview"})
+	if err != nil {
+		t.Fatalf("expected install command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if calls[0].name != "install" {
+		t.Fatalf("expected command install, got %q", calls[0].name)
+	}
+
+	opts, ok := calls[0].options.(*InstallOptions)
 	if !ok {
-		t.Fatalf("expected InstallOptions, got %T", result.Options)
+		t.Fatalf("expected InstallOptions, got %T", calls[0].options)
 	}
 	if opts.Tag != "nightly" {
 		t.Fatalf("expected tag nightly, got %q", opts.Tag)
@@ -41,33 +66,45 @@ func TestRun_InstallStandardOrder(t *testing.T) {
 	}
 }
 
-func TestRun_InstallRejectsFlagsAfterTarget(t *testing.T) {
-	result := Run([]string{"install", "inhere/markview", "--tag", "nightly"})
+func TestMain_InstallRejectsFlagsAfterTarget(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
-	if result.Err == nil {
+	err := Main([]string{"install", "inhere/markview", "--tag", "nightly"}, &stdout, &stderr)
+	if err == nil {
 		t.Fatalf("expected parse error for trailing flags after target")
 	}
-	if errors.Is(result.Err, ErrNotImplemented) {
-		t.Fatalf("expected parse error, got handler error: %v", result.Err)
+	if errors.Is(err, ErrCommandRequired) {
+		t.Fatalf("expected parse error, got %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected stderr to be empty, got %q", stderr.String())
 	}
 }
 
-func TestRun_ConfigInfoRoutesToConfigCommand(t *testing.T) {
-	result := Run([]string{"config", "--info"})
-
-	if result.Err == nil {
-		t.Fatalf("expected handler error for config skeleton")
-	}
-	if !errors.Is(result.Err, ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented, got %v", result.Err)
-	}
-	if result.Command != "config" {
-		t.Fatalf("expected command config, got %q", result.Command)
+func TestMain_ConfigInfoRoutesToConfigCommand(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
 	}
 
-	opts, ok := result.Options.(*ConfigOptions)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"config", "--info"})
+	if err != nil {
+		t.Fatalf("expected config command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if calls[0].name != "config" {
+		t.Fatalf("expected command config, got %q", calls[0].name)
+	}
+
+	opts, ok := calls[0].options.(*ConfigOptions)
 	if !ok {
-		t.Fatalf("expected ConfigOptions, got %T", result.Options)
+		t.Fatalf("expected ConfigOptions, got %T", calls[0].options)
 	}
 	if !opts.Info {
 		t.Fatalf("expected info flag to be true")
