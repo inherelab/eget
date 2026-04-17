@@ -86,7 +86,7 @@
 - Modify: `go.mod`
 - Test: `internal/cli/app_test.go`
 
-- [x] **Step 1: 写路由与命令注册失败测试**
+- [ ] **Step 1: 写路由与命令注册失败测试**
 
 在 `internal/cli/app_test.go` 写表驱动测试，覆盖：
 - 未提供子命令时返回帮助/错误
@@ -109,18 +109,18 @@ func TestCommandSyntax(t *testing.T) {
 }
 ```
 
-- [x] **Step 2: 运行 CLI 测试确认当前失败**
+- [ ] **Step 2: 运行 CLI 测试确认当前失败**
 
 Run: `go test ./internal/cli -run TestCommandSyntax -v`
 Expected: FAIL，因为 `internal/cli` 和 `capp` 入口尚不存在
 
-- [x] **Step 3: 添加 `gookit/cflag/capp` 依赖**
+- [ ] **Step 3: 添加 `gookit/cflag/capp` 依赖**
 
 Run: `go get github.com/gookit/goutil/cflag github.com/gookit/goutil/cflag/capp`
 
 并更新 `go.mod` / `go.sum`。
 
-- [x] **Step 4: 实现最小 CLI 骨架**
+- [ ] **Step 4: 实现最小 CLI 骨架**
 
 在 `cmd/eget/main.go` 中调用：
 
@@ -135,7 +135,7 @@ func main() {
 - 注册 `install`、`download`、`add`、`update`、`config`
 - 将命令 handler 暂时指向返回 `errors.New("not implemented")` 的占位实现
 
-- [x] **Step 5: 实现 `install` 命令的最小参数绑定**
+- [ ] **Step 5: 实现 `install` 命令的最小参数绑定**
 
 在 `internal/cli/install_cmd.go` 中先支持：
 - `--tag`
@@ -150,7 +150,7 @@ func main() {
 
 其他命令文件先建立最小命令壳子即可。
 
-- [x] **Step 6: 运行 CLI 测试确认通过**
+- [ ] **Step 6: 运行 CLI 测试确认通过**
 
 Run: `go test ./internal/cli -v`
 Expected: PASS

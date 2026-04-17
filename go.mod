@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/gobwas/glob v0.2.3
+	github.com/gookit/goutil v0.7.4
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/klauspost/compress v1.15.15
 	github.com/sahilm/fuzzy v0.1.1
@@ -27,7 +28,6 @@ require (
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.5.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
-	github.com/gookit/goutil v0.7.4 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
