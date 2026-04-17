@@ -136,11 +136,11 @@ header: Eget Manual
   Both global settings can be configured, as well as setting on a per-repository basis.
 
   Sections can be named either `global` or `"owner/repo"`, where `owner` and `repo`
-  are the owner and repository name of the target repository (not that the `owner/repo` 
+  are the owner and repository name of the target repository (not that the `owner/repo`
   format is quoted).
 
-  For example, the following configuration file will set the `--to` flag to `~/bin` for 
-  all repositories, and will set the `--to` flag to `~/.local/bin` for the `zyedidia/micro` 
+  For example, the following configuration file will set the `--to` flag to `~/bin` for
+  all repositories, and will set the `--to` flag to `~/.local/bin` for the `zyedidia/micro`
   repository.
 
 ```toml
@@ -194,7 +194,7 @@ header: Eget Manual
 :    The glob to select files for extraction.
 
   `github_token`
-  
+
 :    GitHub API token to use for requests.
 
   `quiet`

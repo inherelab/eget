@@ -51,6 +51,19 @@ func IsLocalFile(s string) bool {
 	return err == nil
 }
 
+// replaceTagInURL replaces the tag in a GitHub release URL with a new tag
+func replaceTagInURL(url, newTag string) string {
+	parts := strings.Split(url, "/")
+	if len(parts) < 8 || parts[2] != "github.com" {
+		return url
+	}
+	if len(parts) >= 8 && parts[5] == "releases" && parts[6] == "download" {
+		parts[7] = newTag
+		return strings.Join(parts, "/")
+	}
+	return url
+}
+
 // IsDirectory returns true if the file at 'path' is a directory.
 func IsDirectory(path string) bool {
 	fileInfo, err := os.Stat(path)
@@ -305,9 +318,11 @@ func downloadConfigRepositories(config *Config) error {
 		binary = os.Args[0]
 	}
 
-	for name, _ := range config.Repositories {
+	for name := range config.Repositories {
 		cmd := exec.Command(binary, name)
+		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
 
 		err := cmd.Run()
 		if err != nil {
@@ -365,6 +380,24 @@ func main() {
 		os.Exit(0)
 	}
 
+	if cli.ListInstalled {
+		err := listInstalled()
+		if err != nil {
+			fatal(err)
+		}
+		os.Exit(0)
+	}
+
+	if cli.UpgradeAll {
+		results, err := upgradeAllPackages(cli.DryRun, cli.Interactive)
+		if err != nil {
+			fatal(err)
+		}
+
+		displayUpgradeResults(results, cli.DryRun)
+		os.Exit(0)
+	}
+
 	target := ""
 
 	if len(args) > 0 {
@@ -401,9 +434,17 @@ func main() {
 		err := os.Remove(filepath.Join(ebin, target))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			// Continue to remove from tracking even if file removal failed
+		} else {
+			fmt.Printf("Removed `%s`\n", filepath.Join(ebin, target))
 		}
-		fmt.Printf("Removed `%s`\n", filepath.Join(ebin, target))
+
+		// Also remove from installed tracking
+		err = removeInstalled(target)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove from installed tracking: %v\n", err)
+		}
+
 		os.Exit(0)
 	}
 
@@ -437,8 +478,45 @@ func main() {
 		for i := range candidates {
 			choices[i] = path.Base(candidates[i])
 		}
-		choice := userSelect(choices)
+		// Try to use previous selection as fallback
+		choice := 0
+		repoKey := normalizeRepoName(target)
+		if config, loadErr := loadInstalledConfig(); loadErr == nil {
+			if entry, exists := config.Installed[repoKey]; exists {
+				previousAsset := entry.Asset
+				for i, cand := range candidates {
+					if path.Base(cand) == previousAsset {
+						choice = i + 1
+						fmt.Fprintf(os.Stderr, "\033[33mUsing previous selection '%s' as fallback\033[0m\n", choices[i])
+						break
+					}
+				}
+			}
+		}
+		if choice == 0 {
+			choice = userSelect(choices)
+		}
 		url = candidates[choice-1]
+	} else if len(candidates) == 0 && err != nil {
+		// Try fallback to previous asset
+		config, loadErr := loadInstalledConfig()
+		if loadErr == nil {
+			repoKey := normalizeRepoName(target)
+			if entry, exists := config.Installed[repoKey]; exists && entry.URL != "" {
+				currentTag := opts.Tag
+				if currentTag == "" {
+					currentTag = "latest"
+				}
+				fallbackURL := replaceTagInURL(entry.URL, currentTag)
+				url = fallbackURL
+				fmt.Fprintf(os.Stderr, "\033[33mWarning: no assets matched current filters, using fallback asset '%s' from previous installation\033[0m\n", path.Base(fallbackURL))
+				err = nil
+			} else {
+				fatal(err)
+			}
+		} else {
+			fatal(err)
+		}
 	} else if err != nil {
 		fatal(err)
 	}
@@ -521,7 +599,9 @@ func main() {
 		bins = []ExtractedFile{bin}
 	}
 
-	extract := func(bin ExtractedFile) {
+	extractedFiles := make([]string, 0, len(bins))
+
+	extract := func(bin ExtractedFile) string {
 		mode := bin.Mode()
 
 		// write the extracted file to a file on disk, in the --to directory if
@@ -553,13 +633,29 @@ func main() {
 		}
 
 		fmt.Fprintf(output, "Extracted `%s` to `%s`\n", bin.ArchiveName, out)
+		return out
 	}
 
 	if opts.All {
 		for _, bin := range bins {
-			extract(bin)
+			outPath := extract(bin)
+			if outPath != "-" { // Don't track stdout output
+				extractedFiles = append(extractedFiles, outPath)
+			}
 		}
 	} else {
-		extract(bin)
+		outPath := extract(bin)
+		if outPath != "-" { // Don't track stdout output
+			extractedFiles = append(extractedFiles, outPath)
+		}
+	}
+
+	// Record successful installation
+	if !opts.DLOnly && len(extractedFiles) > 0 {
+		err = recordInstallation(target, url, tool, opts, extractedFiles)
+		if err != nil {
+			// Log warning but don't fail the installation
+			fmt.Fprintf(os.Stderr, "Warning: failed to record installation: %v\n", err)
+		}
 	}
 }

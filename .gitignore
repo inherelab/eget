@@ -10,3 +10,5 @@ eget.1
 .claude/
 .agents/
 .xenv.toml
+# Added by goreleaser init:
+dist/
