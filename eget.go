@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -86,7 +85,7 @@ func checksumAsset(asset string, assets []string) string {
 func getFinder(project string, opts *Flags) (finder Finder, tool string) {
 	svc := install.NewService()
 	svc.BinaryModTime = bintime
-	svc.GitHubGetter = install.HTTPGetterFunc(Get)
+	svc.GitHubGetter = NewHTTPGetter()
 
 	finder, tool, err := svc.SelectFinder(project, &install.Options{
 		Tag:          opts.Tag,
@@ -114,18 +113,28 @@ func getFinder(project string, opts *Flags) (finder Finder, tool string) {
 }
 
 func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
-	if opts.Verify != "" {
-		verifier, err = NewSha256Verifier(opts.Verify)
-	} else if sumAsset != "" {
-		verifier = &Sha256AssetVerifier{
-			AssetURL: sumAsset,
-		}
-	} else if opts.Hash {
-		verifier = &Sha256Printer{}
-	} else {
-		verifier = &NoVerifier{}
+	svc := install.NewService()
+	svc.Sha256VerifierFactory = func(expected string) (install.Verifier, error) {
+		return NewSha256Verifier(expected)
 	}
-	return verifier, err
+	svc.Sha256AssetVerifierFactory = func(assetURL string) install.Verifier {
+		return NewSha256AssetVerifier(assetURL)
+	}
+	svc.Sha256PrinterFactory = func() install.Verifier {
+		return NewSha256Printer()
+	}
+	svc.NoVerifierFactory = func() install.Verifier {
+		return NewNoVerifier()
+	}
+
+	v, err := svc.SelectVerifier(sumAsset, &install.Options{
+		Hash:   opts.Hash,
+		Verify: opts.Verify,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return v.(Verifier), nil
 }
 
 // Determine the appropriate detector. If the --system is 'all', we use an
@@ -133,39 +142,32 @@ func getVerifier(sumAsset string, opts *Flags) (verifier Verifier, err error) {
 // --system pair provided by the user, or the runtime.GOOS/runtime.GOARCH
 // pair by default (the host system OS/Arch pair).
 func getDetector(opts *Flags) (detector Detector, err error) {
-	var system Detector
-	if opts.System == "all" {
-		system = &AllDetector{}
-	} else if opts.System != "" {
-		split := strings.Split(opts.System, "/")
-		if len(split) < 2 {
-			fatal("system descriptor must be os/arch")
+	svc := install.NewService()
+	svc.AllDetectorFactory = func() install.Detector {
+		return NewAllDetector()
+	}
+	svc.SystemDetectorFactory = func(goos, goarch string) (install.Detector, error) {
+		return NewSystemDetector(goos, goarch)
+	}
+	svc.AssetDetectorFactory = func(asset string, anti bool) install.Detector {
+		return NewSingleAssetDetector(asset, anti)
+	}
+	svc.DetectorChainFactory = func(detectors []install.Detector, system install.Detector) install.Detector {
+		chain := make([]Detector, len(detectors))
+		for i := range detectors {
+			chain[i] = detectors[i].(Detector)
 		}
-		system, err = NewSystemDetector(split[0], split[1])
-	} else {
-		system, err = NewSystemDetector(runtime.GOOS, runtime.GOARCH)
+		return NewDetectorChain(chain, system.(Detector))
 	}
 
-	if len(opts.Asset) >= 1 {
-		detectors := make([]Detector, len(opts.Asset))
-		for i, a := range opts.Asset {
-			anti := strings.HasPrefix(a, "^")
-			if anti {
-				a = a[1:]
-			}
-			detectors[i] = &SingleAssetDetector{
-				Asset: a,
-				Anti:  anti,
-			}
-		}
-		detector = &DetectorChain{
-			detectors: detectors,
-			system:    system,
-		}
-	} else {
-		detector = system
+	d, err := svc.SelectDetector(&install.Options{
+		System: opts.System,
+		Asset:  opts.Asset,
+	})
+	if err != nil {
+		return nil, err
 	}
-	return detector, err
+	return d.(Detector), nil
 }
 
 // Determine which extractor to use. If --download-only is provided, we
@@ -174,26 +176,28 @@ func getDetector(opts *Flags) (detector Detector, err error) {
 // extract a binary with the tool name that was possibly auto-detected
 // above.
 func getExtractor(url, tool string, opts *Flags) (extractor Extractor, err error) {
-	if opts.DLOnly {
-		extractor = &SingleFileExtractor{
-			Name:   path.Base(url),
-			Rename: path.Base(url),
-			Decompress: func(r io.Reader) (io.Reader, error) {
-				return r, nil
-			},
-		}
-	} else if opts.ExtractFile != "" {
-		gc, err := NewGlobChooser(opts.ExtractFile)
-		if err != nil {
-			return nil, err
-		}
-		extractor = NewExtractor(path.Base(url), tool, gc)
-	} else {
-		extractor = NewExtractor(path.Base(url), tool, &BinaryChooser{
-			Tool: tool,
-		})
+	svc := install.NewService()
+	svc.DownloadOnlyExtractorFactory = func(name string) any {
+		return NewDownloadOnlyExtractor(name)
 	}
-	return extractor, nil
+	svc.GlobChooserFactory = func(pattern string) (any, error) {
+		return NewGlobChooser(pattern)
+	}
+	svc.BinaryChooserFactory = func(tool string) any {
+		return NewBinaryChooser(tool)
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		return NewExtractor(filename, tool, chooser.(Chooser))
+	}
+
+	ex, err := svc.SelectExtractor(url, tool, &install.Options{
+		ExtractFile:  opts.ExtractFile,
+		DownloadOnly: opts.DLOnly,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ex.(Extractor), nil
 }
 
 // Write an extracted file to disk with a new name.

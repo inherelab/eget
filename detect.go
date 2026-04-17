@@ -170,6 +170,10 @@ var goarchmap = map[string]Arch{
 // candidates.
 type AllDetector struct{}
 
+func NewAllDetector() *AllDetector {
+	return &AllDetector{}
+}
+
 func (a *AllDetector) Detect(assets []string) (string, []string, error) {
 	if len(assets) == 1 {
 		return assets[0], nil, nil
@@ -182,6 +186,10 @@ func (a *AllDetector) Detect(assets []string) (string, []string, error) {
 type SingleAssetDetector struct {
 	Asset string
 	Anti  bool
+}
+
+func NewSingleAssetDetector(asset string, anti bool) *SingleAssetDetector {
+	return &SingleAssetDetector{Asset: asset, Anti: anti}
 }
 
 func (s *SingleAssetDetector) Detect(assets []string) (string, []string, error) {
@@ -209,6 +217,10 @@ func (s *SingleAssetDetector) Detect(assets []string) (string, []string, error) 
 type SystemDetector struct {
 	Os   OS
 	Arch Arch
+}
+
+func NewDetectorChain(detectors []Detector, system Detector) *DetectorChain {
+	return &DetectorChain{detectors: detectors, system: system}
 }
 
 // NewSystemDetector returns a new detector for the given OS/Arch as given by

@@ -86,40 +86,17 @@ func NewExtractor(filename string, tool string, chooser Chooser) Extractor {
 
 	switch {
 	case strings.HasSuffix(filename, ".tar.gz"), strings.HasSuffix(filename, ".tgz"):
-		return &ArchiveExtractor{
-			File:       chooser,
-			Ar:         NewTarArchive,
-			Decompress: gunzipper,
-		}
+		return NewArchiveExtractor(chooser, NewTarArchive, gunzipper)
 	case strings.HasSuffix(filename, ".tar.bz2"), strings.HasSuffix(filename, ".tbz"):
-		return &ArchiveExtractor{
-			File:       chooser,
-			Ar:         NewTarArchive,
-			Decompress: b2unzipper,
-		}
+		return NewArchiveExtractor(chooser, NewTarArchive, b2unzipper)
 	case strings.HasSuffix(filename, ".tar.xz"), strings.HasSuffix(filename, ".txz"):
-		return &ArchiveExtractor{
-			File:       chooser,
-			Ar:         NewTarArchive,
-			Decompress: xunzipper,
-		}
+		return NewArchiveExtractor(chooser, NewTarArchive, xunzipper)
 	case strings.HasSuffix(filename, ".tar.zst"):
-		return &ArchiveExtractor{
-			File:       chooser,
-			Ar:         NewTarArchive,
-			Decompress: zstdunzipper,
-		}
+		return NewArchiveExtractor(chooser, NewTarArchive, zstdunzipper)
 	case strings.HasSuffix(filename, ".tar"):
-		return &ArchiveExtractor{
-			File:       chooser,
-			Ar:         NewTarArchive,
-			Decompress: nounzipper,
-		}
+		return NewArchiveExtractor(chooser, NewTarArchive, nounzipper)
 	case strings.HasSuffix(filename, ".zip"):
-		return &ArchiveExtractor{
-			Ar:   NewZipArchive,
-			File: chooser,
-		}
+		return NewArchiveExtractor(chooser, NewZipArchive, nil)
 	case strings.HasSuffix(filename, ".gz"):
 		return &SingleFileExtractor{
 			Rename:     tool,
@@ -298,6 +275,20 @@ type SingleFileExtractor struct {
 	Rename     string
 	Name       string
 	Decompress func(r io.Reader) (io.Reader, error)
+}
+
+func NewDownloadOnlyExtractor(name string) *SingleFileExtractor {
+	return &SingleFileExtractor{
+		Name:   name,
+		Rename: name,
+		Decompress: func(r io.Reader) (io.Reader, error) {
+			return r, nil
+		},
+	}
+}
+
+func NewBinaryChooser(tool string) *BinaryChooser {
+	return &BinaryChooser{Tool: tool}
 }
 
 func (sf *SingleFileExtractor) Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error) {

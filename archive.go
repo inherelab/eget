@@ -54,6 +54,14 @@ type TarArchive struct {
 	r *tar.Reader
 }
 
+func NewArchiveExtractor(file Chooser, ar ArchiveFn, decompress DecompFn) *ArchiveExtractor {
+	return &ArchiveExtractor{
+		File:       file,
+		Ar:         ar,
+		Decompress: decompress,
+	}
+}
+
 func NewTarArchive(data []byte, decompress DecompFn) (Archive, error) {
 	r := bytes.NewReader(data)
 	dr, err := decompress(r)

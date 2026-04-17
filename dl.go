@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/inherelab/eget/home"
+	"github.com/inherelab/eget/internal/install"
 	pb "github.com/schollz/progressbar/v3"
 )
 
@@ -71,6 +72,10 @@ func Get(url string) (*http.Response, error) {
 	}}
 
 	return proxyClient.Do(req)
+}
+
+func NewHTTPGetter() install.HTTPGetterFunc {
+	return install.HTTPGetterFunc(Get)
 }
 
 type RateLimitJson struct {

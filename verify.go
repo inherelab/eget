@@ -14,6 +14,10 @@ type Verifier interface {
 
 type NoVerifier struct{}
 
+func NewNoVerifier() *NoVerifier {
+	return &NoVerifier{}
+}
+
 func (n *NoVerifier) Verify(b []byte) error {
 	return nil
 }
@@ -54,6 +58,10 @@ func (s256 *Sha256Verifier) Verify(b []byte) error {
 
 type Sha256Printer struct{}
 
+func NewSha256Printer() *Sha256Printer {
+	return &Sha256Printer{}
+}
+
 func (s256 *Sha256Printer) Verify(b []byte) error {
 	sum := sha256.Sum256(b)
 	fmt.Printf("%x\n", sum)
@@ -62,6 +70,10 @@ func (s256 *Sha256Printer) Verify(b []byte) error {
 
 type Sha256AssetVerifier struct {
 	AssetURL string
+}
+
+func NewSha256AssetVerifier(assetURL string) *Sha256AssetVerifier {
+	return &Sha256AssetVerifier{AssetURL: assetURL}
 }
 
 func (s256 *Sha256AssetVerifier) Verify(b []byte) error {
