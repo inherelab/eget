@@ -6,16 +6,19 @@ type AddOptions struct {
 	Target string
 }
 
-func newAddCmd(handler CommandHandler) *capp.Cmd {
+func newAddCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	opts := &AddOptions{}
 	cmd := capp.NewCmd("add", "Add a managed package", func(cmd *capp.Cmd) error {
 		opts.Target = cmd.Arg("target").String()
 		if err := validateNoTrailingFlags(cmd); err != nil {
 			return err
 		}
-		return handler(cmd.Name, opts)
+		snapshot := *opts
+		return handler(cmd.Name, &snapshot)
 	})
 
 	cmd.AddArg("target", "Package target", true, nil)
-	return cmd
+	return cmd, func() {
+		*opts = AddOptions{}
+	}
 }

@@ -14,14 +14,15 @@ type InstallOptions struct {
 	Target string
 }
 
-func newInstallCmd(handler CommandHandler) *capp.Cmd {
+func newInstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	opts := &InstallOptions{}
 	cmd := capp.NewCmd("install", "Install a target", func(cmd *capp.Cmd) error {
 		opts.Target = cmd.Arg("target").String()
 		if err := validateNoTrailingFlags(cmd); err != nil {
 			return err
 		}
-		return handler(cmd.Name, opts)
+		snapshot := *opts
+		return handler(cmd.Name, &snapshot)
 	})
 
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")
@@ -33,5 +34,7 @@ func newInstallCmd(handler CommandHandler) *capp.Cmd {
 	cmd.BoolVar(&opts.All, "all", false, "Extract all files")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
 	cmd.AddArg("target", "Installation target", true, nil)
-	return cmd
+	return cmd, func() {
+		*opts = InstallOptions{}
+	}
 }

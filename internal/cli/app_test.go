@@ -77,6 +77,9 @@ func TestMain_InstallRejectsFlagsAfterTarget(t *testing.T) {
 	if errors.Is(err, ErrCommandRequired) {
 		t.Fatalf("expected parse error, got %v", err)
 	}
+	if !strings.Contains(err.Error(), "flags must appear before arguments") {
+		t.Fatalf("expected trailing-flag error, got %v", err)
+	}
 	if stderr.Len() != 0 {
 		t.Fatalf("expected stderr to be empty, got %q", stderr.String())
 	}
@@ -108,5 +111,64 @@ func TestMain_ConfigInfoRoutesToConfigCommand(t *testing.T) {
 	}
 	if !opts.Info {
 		t.Fatalf("expected info flag to be true")
+	}
+}
+
+func TestApp_RunWithArgsDoesNotLeakCommandStateAcrossRuns(t *testing.T) {
+	calls := make([]commandCall, 0, 4)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	app := newApp(handler, &stdout, &stderr)
+
+	if err := app.RunWithArgs([]string{"update", "foo"}); err != nil {
+		t.Fatalf("expected first update run to succeed, got %v", err)
+	}
+	if err := app.RunWithArgs([]string{"update"}); err != nil {
+		t.Fatalf("expected second update run to succeed, got %v", err)
+	}
+	if err := app.RunWithArgs([]string{"install", "--tag", "nightly", "inhere/markview"}); err != nil {
+		t.Fatalf("expected first install run to succeed, got %v", err)
+	}
+	if err := app.RunWithArgs([]string{"install", "inhere/markview"}); err != nil {
+		t.Fatalf("expected second install run to succeed, got %v", err)
+	}
+
+	if len(calls) != 4 {
+		t.Fatalf("expected four handler calls, got %d", len(calls))
+	}
+
+	updateFirst, ok := calls[0].options.(*UpdateOptions)
+	if !ok {
+		t.Fatalf("expected first update options, got %T", calls[0].options)
+	}
+	updateSecond, ok := calls[1].options.(*UpdateOptions)
+	if !ok {
+		t.Fatalf("expected second update options, got %T", calls[1].options)
+	}
+	if updateFirst.Target != "foo" {
+		t.Fatalf("expected first update target foo, got %q", updateFirst.Target)
+	}
+	if updateSecond.Target != "" {
+		t.Fatalf("expected second update target to reset, got %q", updateSecond.Target)
+	}
+
+	installFirst, ok := calls[2].options.(*InstallOptions)
+	if !ok {
+		t.Fatalf("expected first install options, got %T", calls[2].options)
+	}
+	installSecond, ok := calls[3].options.(*InstallOptions)
+	if !ok {
+		t.Fatalf("expected second install options, got %T", calls[3].options)
+	}
+	if installFirst.Tag != "nightly" {
+		t.Fatalf("expected first install tag nightly, got %q", installFirst.Tag)
+	}
+	if installSecond.Tag != "" {
+		t.Fatalf("expected second install tag to reset, got %q", installSecond.Tag)
 	}
 }

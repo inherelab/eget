@@ -15,6 +15,11 @@ var (
 
 type CommandHandler func(name string, options any) error
 
+type App struct {
+	inner     *capp.App
+	resetters []func()
+}
+
 func Main(args []string, stdout, stderr io.Writer) error {
 	app := newApp(defaultCommandHandler, stdout, stderr)
 	err := app.RunWithArgs(args)
@@ -24,7 +29,7 @@ func Main(args []string, stdout, stderr io.Writer) error {
 	return err
 }
 
-func newApp(handler CommandHandler, stdout, stderr io.Writer) *capp.App {
+func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	if stdout == nil {
 		stdout = io.Discard
 	}
@@ -35,19 +40,31 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *capp.App {
 		handler = defaultCommandHandler
 	}
 
-	app := capp.NewApp()
-	app.Name = "eget"
-	app.Desc = "Easy install and download tool"
-	app.HelpWriter = stdout
-	app.SetOutput(stderr)
-	app.Add(
-		newInstallCmd(handler),
-		newDownloadCmd(handler),
-		newAddCmd(handler),
-		newUpdateCmd(handler),
-		newConfigCmd(handler),
-	)
+	inner := capp.NewApp()
+	inner.Name = "eget"
+	inner.Desc = "Easy install and download tool"
+	inner.HelpWriter = stdout
+	inner.SetOutput(stderr)
+
+	app := &App{inner: inner}
+	app.add(newInstallCmd(handler))
+	app.add(newDownloadCmd(handler))
+	app.add(newAddCmd(handler))
+	app.add(newUpdateCmd(handler))
+	app.add(newConfigCmd(handler))
 	return app
+}
+
+func (a *App) add(cmd *capp.Cmd, reset func()) {
+	a.inner.Add(cmd)
+	a.resetters = append(a.resetters, reset)
+}
+
+func (a *App) RunWithArgs(args []string) error {
+	for _, reset := range a.resetters {
+		reset()
+	}
+	return a.inner.RunWithArgs(args)
 }
 
 func defaultCommandHandler(name string, options any) error {
