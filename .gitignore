@@ -9,6 +9,7 @@ eget.1
 .eget.toml
 .claude/
 .agents/
+.worktrees/
 .xenv.toml
 # Added by goreleaser init:
 dist/
