@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/gookit/goutil/cflag/capp"
 )
@@ -11,6 +12,10 @@ import (
 var (
 	ErrCommandRequired = errors.New("command required")
 	ErrNotImplemented  = errors.New("not implemented")
+
+	defaultHandlerOnce sync.Once
+	defaultHandlerFn   CommandHandler
+	defaultHandlerErr  error
 )
 
 type CommandHandler func(name string, options any) error
@@ -68,9 +73,21 @@ func (a *App) RunWithArgs(args []string) error {
 }
 
 func defaultCommandHandler(name string, options any) error {
-	_ = name
-	_ = options
-	return ErrNotImplemented
+	defaultHandlerOnce.Do(func() {
+		service, err := newCLIService()
+		if err != nil {
+			defaultHandlerErr = err
+			return
+		}
+		defaultHandlerFn = service.handle
+	})
+	if defaultHandlerErr != nil {
+		return defaultHandlerErr
+	}
+	if defaultHandlerFn == nil {
+		return ErrNotImplemented
+	}
+	return defaultHandlerFn(name, options)
 }
 
 func validateNoTrailingFlags(cmd *capp.Cmd) error {
