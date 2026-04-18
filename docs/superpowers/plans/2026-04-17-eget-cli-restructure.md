@@ -258,7 +258,7 @@ git commit -m "refactor: extract install option model"
 - Modify: `config.go`
 - Modify: `home/home.go`
 
-- [ ] **Step 1: 写配置路径与旧配置读取测试**
+- [x] **Step 1: 写配置路径与旧配置读取测试**
 
 在 `internal/config/loader_test.go` 中覆盖：
 - `EGET_CONFIG` 优先级
@@ -271,12 +271,12 @@ git commit -m "refactor: extract install option model"
 - repo section
 - CLI 选项覆盖 repo/global
 
-- [ ] **Step 2: 运行配置测试确认失败**
+- [x] **Step 2: 运行配置测试确认失败**
 
 Run: `go test ./internal/config -v`
 Expected: FAIL
 
-- [ ] **Step 3: 建立新配置模型**
+- [x] **Step 3: 建立新配置模型**
 
 定义：
 
@@ -293,7 +293,7 @@ type File struct {
 - `Packages` 映射 `[packages.<name>]`
 - 首版继续兼容没有 `packages` 的旧配置
 
-- [ ] **Step 4: 实现路径解析与读取**
+- [x] **Step 4: 实现路径解析与读取**
 
 把 `config.go` 中的路径查找逻辑迁到 `internal/config/paths.go`、`loader.go`。
 
@@ -301,18 +301,18 @@ type File struct {
 - 先只实现读取
 - 保留现有环境变量和 fallback 行为
 
-- [ ] **Step 5: 实现优先级合并函数**
+- [x] **Step 5: 实现优先级合并函数**
 
 在 `internal/config/merge.go` 中实现：
 - `MergeInstallOptions(global, repo, pkg, cli)`
 - 明确优先级：CLI > package > repo > global > default
 
-- [ ] **Step 6: 运行配置测试确认通过**
+- [x] **Step 6: 运行配置测试确认通过**
 
 Run: `go test ./internal/config -v`
 Expected: PASS
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add internal/config
@@ -793,3 +793,4 @@ git commit -m "refactor: complete eget cli restructuring"
 - `update --interactive` 如果首版无法完整复用现有 bubbletea 逻辑，优先保证 `update` 和 `update --all` 稳定可用，再以清晰错误替代半成品行为
 - `config` 写回必须避免抹掉旧 repo section 和 global 配置
 - 文档更新必须与最终 CLI 语法一致，避免 README 继续展示旧 `eget owner/repo` 示例
+

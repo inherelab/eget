@@ -1,88 +1,179 @@
 # Eget Documentation
 
-Eget works in four phases:
+## Overview
 
-* Find: determine a list of assets that may be installed.
-* Detect: determine which asset in the list should be downloaded for the target system.
-* Verify: verify the checksum of the asset if possible.
-* Extract: determine which file within the asset to extract.
+当前 CLI 采用显式子命令结构：
 
-If you are interested in reading the source code, there is one file for each
-phase, and the `eget.go` main file runs a routine that combines them all
-together.
+```text
+eget <command> --options... arguments...
+```
 
-## Find
+命令集合：
 
-If the input is a repo identifier, the Find phase queries `api.github.com` with
-the repo and reads the list of assets from the response JSON. If a direct URL
-is provided, the Find phase just returns the direct URL without doing any work.
+- `install`
+- `download`
+- `add`
+- `update`
+- `config`
 
-## Detect
+根命令不再承担默认安装行为。
 
-The Detect phase attempts to determine what OS and architecture each asset is
-built for. This is done by matching a regular expression for each
-OS/architecture that Eget knows about. The match rules are shown below, and are
-case insensitive.
+## Runtime Layout
 
-| OS            | Match Rule           |
-| ------------- | -------------------- |
-| `darwin`      | `darwin\|mac.?os\|osx` |
-| `windows`     | `win\|windows`        |
-| `linux`       | `linux`              |
-| `netbsd`      | `netbsd`             |
-| `openbsd`     | `openbsd`            |
-| `freebsd`     | `freebsd`            |
-| `android`     | `android`            |
-| `illumos`     | `illumos`            |
-| `solaris`     | `solaris`            |
-| `plan9`       | `plan9`              |
+- `cmd/eget/main.go`: 进程入口
+- `internal/cli`: `gookit/cflag/capp` 命令注册、参数绑定、输出
+- `internal/app`: 用例编排层
+- `internal/install`: 查找、检测、下载、校验、提取执行链路
+- `internal/config`: 配置文件路径、加载、合并、写回
+- `internal/installed`: 安装记录读写
+- `internal/source/github`: GitHub release/source 查找
 
-| Architecture  | Match Rule                    |
-| ------------- | ----------------------------- |
-| `amd64`       | `x64\|amd64\|x86(-\|_)?64`       |
-| `386`         | `x32\|amd32\|x86(-\|_)?32\|i?386` |
-| `arm`         | `arm`                         |
-| `arm64`       | `arm64\|armv8\|aarch64`                 |
-| `riscv64`     | `riscv64`                     |
+## Install Flow
 
-If you would like a new OS/Architecture to be added, or find a case where the
-auto-detection is not adequate (within reason), please open an issue.
+`install` 的主流程在 `internal/app/install.go` 与 `internal/install/runner.go`：
 
-Using the direct OS/Architecture (left column of the above tables) name in your
-prebuilt zip file names will always allow Eget to auto-detect correctly,
-although Eget will often auto-detect correctly for other names as well.
+1. 解析目标类型
+2. 选择 finder
+3. 枚举候选资产
+4. 按 `system` / `asset_filters` 选择资产
+5. 下载内容
+6. 执行 SHA-256 自动校验（如果有匹配校验文件）
+7. 选择 extractor 并提取
+8. 写入 installed store
 
-## Verify
+目标类型支持：
 
-During verification, Eget will attempt to verify the checksum of the downloaded
-asset. If the user has provided a checksum, or asked Eget to simply print the
-checksum, it will do so. Otherwise it may do auto-detection. If it is
-downloading an asset called `xxx`, and there is another asset called
-`xxx.sha256` or `xxx.sha256sum`, Eget will automatically verify the SHA-256
-checksum of the downloaded asset against the one contained in the
-`.sha256`/`.sha256sum` file.
+- repo 标识符
+- GitHub URL
+- 直链 URL
+- 本地文件
 
-## Extract
+## Download Flow
 
-During extraction, Eget will detect the type of archive and compression, and
-use this information to extract the requested file. If there is no requested
-file, Eget will extract a file with executable permissions, with priority given
-to files that have the same name as the repo. If multiple files with executable
-permissions exist and none of them match the repo name, Eget will ask the user
-to choose. Files ending in `.exe` are also assumed to be executable, regardless
-of permissions within the archive.
+`download` 与 `install` 复用同一条执行链路，只是 app 层会强制 `DownloadOnly=true`，并且不写 installed store。
 
-Eget supports the following filetypes for assets:
+## Add Flow
 
-* `.tar.gz`/`.tgz`: tar archive with gzip compression.
-* `.tar.bz2`: tar archive with bzip2 compression.
-* `.tar.xz`: tar archive with xz compression.
-* `.tar`: tar archive with no compression.
-* `.zip`: zip archive.
-* `.gz`: single file with gzip compression.
-* `.bz2`: single file with bzip2 compression.
-* `.xz`: single file with xz compression.
-* otherwise: single file.
+`add` 不执行下载，只把一个可复用的安装描述写入 `[packages.<name>]`。
 
-If a single file is "extracted" (no tar or zip archive), it will be marked
-executable automatically.
+默认规则：
+
+- `--name` 未提供时，默认使用 repo basename
+- 保存 repo、tag、system、target、file、asset_filters、download_source、all、quiet、verify_sha256、disable_ssl 等可复用字段
+
+## Update Flow
+
+`update` 由 `internal/app/update.go` 驱动：
+
+- `update <name>` 先查 `[packages.<name>]`
+- `update owner/repo` 可以直接按 repo 更新
+- `update --all` 遍历全部 managed packages
+
+CLI 当前还保留：
+
+- `--dry-run`
+- `--interactive`
+
+其中 `--all` 已接通；其余行为以当前实现为准。
+
+## Config Flow
+
+`config` 当前不是嵌套子命令树，而是这些形式：
+
+- `config --info`
+- `config --init`
+- `config --list`
+- `config get KEY`
+- `config set KEY VALUE`
+
+点路径示例：
+
+- `global.target`
+- `packages.fzf.repo`
+
+## Config Model
+
+配置模型定义在 `internal/config/model.go`。
+
+支持的主结构：
+
+```toml
+[global]
+
+["owner/repo"]
+
+[packages.name]
+```
+
+兼容旧 repo section，同时新增 managed packages。
+
+路径查找优先级：
+
+1. `EGET_CONFIG`
+2. `~/.eget.toml`
+3. 平台 fallback 路径
+
+安装选项合并优先级：
+
+```text
+CLI > package > repo > global > default
+```
+
+## Installed Store
+
+安装记录抽离到 `internal/installed`，用于：
+
+- 记录安装结果
+- 为资产回退选择提供历史信息
+- 支撑 update 相关流程
+
+## Option Surface
+
+当前 CLI 已暴露的核心安装选项：
+
+- `--tag`
+- `--system`
+- `--to`
+- `--file`
+- `--asset`
+- `--source`
+- `--all`
+- `--quiet`
+
+`update` 额外支持：
+
+- `--all`
+- `--dry-run`
+- `--interactive`
+
+## Constraints
+
+由于 `cflag/capp` 的解析模型，参数顺序必须遵循：
+
+```text
+CMD --OPTIONS... ARGUMENTS...
+```
+
+支持：
+
+```text
+eget install --tag nightly inhere/markview
+```
+
+不支持：
+
+```text
+eget install inhere/markview --tag nightly
+```
+
+## Verification
+
+常用验证命令：
+
+```bash
+go test ./internal/app -v
+go test ./internal/cli -v
+go test ./...
+make build
+make test
+```

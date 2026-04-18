@@ -2,12 +2,20 @@ package home
 
 import (
 	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 )
 
 func Home() (string, error) {
+	if home := os.Getenv("HOME"); home != "" {
+		return home, nil
+	}
+	if home := os.Getenv("USERPROFILE"); home != "" {
+		return home, nil
+	}
+
 	userData, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("find homedir: %w", err)

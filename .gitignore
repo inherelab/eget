@@ -1,6 +1,9 @@
 eget
 eget.exe
 eget-*
+!cmd/
+!cmd/eget/
+!cmd/eget/main.go
 todo.txt
 eget.1
 /test/*
