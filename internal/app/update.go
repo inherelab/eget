@@ -85,6 +85,7 @@ func mergeInstallOptions(global, repo, pkg cfgpkg.Section, cli install.Options) 
 	merged := cfgpkg.MergeInstallOptions(global, repo, pkg, cfgpkg.CLIOverrides{
 		All:          boolOpt(cli.All),
 		AssetFilters: stringsOpt(cli.Asset),
+		CacheDir:     stringOpt(cli.CacheDir),
 		DownloadOnly: boolOpt(cli.DownloadOnly),
 		File:         stringOpt(cli.ExtractFile),
 		Quiet:        boolOpt(cli.Quiet),
@@ -102,6 +103,7 @@ func mergeInstallOptions(global, repo, pkg cfgpkg.Section, cli install.Options) 
 		Tag:          merged.Tag,
 		Source:       merged.Source,
 		Output:       merged.Target,
+		CacheDir:     merged.CacheDir,
 		System:       merged.System,
 		ExtractFile:  merged.File,
 		All:          merged.All,

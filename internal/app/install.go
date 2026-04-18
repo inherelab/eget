@@ -4,6 +4,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/inherelab/eget/home"
+	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 )
@@ -25,9 +27,14 @@ type Service struct {
 	Store       InstalledStore
 	Now         func() time.Time
 	ReleaseInfo ReleaseInfoFunc
+	LoadConfig  func() (*cfgpkg.File, error)
 }
 
 func (s Service) InstallTarget(target string, opts install.Options) (RunResult, error) {
+	opts, err := s.resolveInstallOptions(target, opts, false)
+	if err != nil {
+		return RunResult{}, err
+	}
 	result, err := s.Runner.Run(target, opts)
 	if err != nil {
 		return RunResult{}, err
@@ -65,6 +72,11 @@ func (s Service) InstallTarget(target string, opts install.Options) (RunResult, 
 
 func (s Service) DownloadTarget(target string, opts install.Options) (RunResult, error) {
 	opts.DownloadOnly = true
+	var err error
+	opts, err = s.resolveInstallOptions(target, opts, true)
+	if err != nil {
+		return RunResult{}, err
+	}
 	return s.Runner.Run(target, opts)
 }
 
@@ -80,6 +92,80 @@ func chooseAsset(result RunResult) string {
 		return result.Asset
 	}
 	return path.Base(result.URL)
+}
+
+func (s Service) loadConfig() (*cfgpkg.File, error) {
+	if s.LoadConfig != nil {
+		return s.LoadConfig()
+	}
+	return cfgpkg.Load()
+}
+
+func (s Service) resolveInstallOptions(target string, cli install.Options, preferCacheDir bool) (install.Options, error) {
+	cfg, err := s.loadConfig()
+	if err != nil {
+		return install.Options{}, err
+	}
+
+	repoKey := ""
+	if repo, err := install.NormalizeRepoTarget(target); err == nil {
+		repoKey = repo
+	}
+
+	merged := cfgpkg.MergeInstallOptions(cfg.Global, cfg.Repos[repoKey], cfgpkg.Section{}, cfgpkg.CLIOverrides{
+		All:          boolOpt(cli.All),
+		AssetFilters: stringsOpt(cli.Asset),
+		CacheDir:     stringOpt(cli.CacheDir),
+		DownloadOnly: boolOpt(cli.DownloadOnly),
+		File:         stringOpt(cli.ExtractFile),
+		Quiet:        boolOpt(cli.Quiet),
+		ShowHash:     boolOpt(cli.Hash),
+		Source:       boolOpt(cli.Source),
+		System:       stringOpt(cli.System),
+		Tag:          stringOpt(cli.Tag),
+		Target:       stringOpt(cli.Output),
+		UpgradeOnly:  boolOpt(cli.UpgradeOnly),
+		Verify:       stringOpt(cli.Verify),
+		DisableSSL:   boolOpt(cli.DisableSSL),
+	})
+
+	targetDir, err := expandPath(merged.Target)
+	if err != nil {
+		return install.Options{}, err
+	}
+	cacheDir, err := expandPath(merged.CacheDir)
+	if err != nil {
+		return install.Options{}, err
+	}
+
+	output := targetDir
+	if preferCacheDir && cli.Output == "" && cacheDir != "" {
+		output = cacheDir
+	}
+
+	return install.Options{
+		Tag:          merged.Tag,
+		Source:       merged.Source,
+		Output:       output,
+		CacheDir:     cacheDir,
+		System:       merged.System,
+		ExtractFile:  merged.File,
+		All:          merged.All,
+		Quiet:        merged.Quiet,
+		DownloadOnly: merged.DownloadOnly,
+		UpgradeOnly:  merged.UpgradeOnly,
+		Asset:        append([]string(nil), merged.AssetFilters...),
+		Hash:         merged.ShowHash,
+		Verify:       merged.Verify,
+		DisableSSL:   merged.DisableSSL,
+	}, nil
+}
+
+func expandPath(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	return home.Expand(value)
 }
 
 func extractOptionsMap(opts install.Options) map[string]interface{} {

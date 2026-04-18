@@ -212,13 +212,16 @@ func promptIndex(choices []string) (int, error) {
 }
 
 func printConfigList(cfg *cfgpkg.File) {
-	if cfg.Global.Target != nil || cfg.Global.System != nil {
+	if cfg.Global.Target != nil || cfg.Global.System != nil || cfg.Global.CacheDir != nil {
 		fmt.Println("[global]")
 		if cfg.Global.Target != nil {
 			fmt.Printf("target = %s\n", *cfg.Global.Target)
 		}
 		if cfg.Global.System != nil {
 			fmt.Printf("system = %s\n", *cfg.Global.System)
+		}
+		if cfg.Global.CacheDir != nil {
+			fmt.Printf("cache_dir = %s\n", *cfg.Global.CacheDir)
 		}
 	}
 
@@ -244,6 +247,12 @@ func printConfigList(cfg *cfgpkg.File) {
 			fmt.Printf("[packages.%s]\n", name)
 			if section.Repo != nil {
 				fmt.Printf("repo = %s\n", *section.Repo)
+			}
+			if section.Target != nil {
+				fmt.Printf("target = %s\n", *section.Target)
+			}
+			if section.CacheDir != nil {
+				fmt.Printf("cache_dir = %s\n", *section.CacheDir)
 			}
 		}
 	}

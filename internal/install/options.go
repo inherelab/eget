@@ -12,6 +12,7 @@ type Options struct {
 	Prerelease   bool
 	Source       bool
 	Output       string
+	CacheDir     string
 	System       string
 	ExtractFile  string
 	All          bool

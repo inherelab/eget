@@ -73,8 +73,11 @@ func (s ConfigService) ConfigInit() (string, error) {
 	}
 
 	file := cfgpkg.NewFile()
+	target := "~/.local/bin"
+	cacheDir := "~/.cache/eget"
 	empty := ""
-	file.Global.Target = &empty
+	file.Global.Target = &target
+	file.Global.CacheDir = &cacheDir
 	file.Global.System = &empty
 	if err := cfgpkg.Save(path, file); err != nil {
 		return "", err
@@ -148,6 +151,9 @@ func sectionFromInstallOptions(repo, name string, opts install.Options) cfgpkg.S
 	if opts.Output != "" {
 		section.Target = stringPtr(opts.Output)
 	}
+	if opts.CacheDir != "" {
+		section.CacheDir = stringPtr(opts.CacheDir)
+	}
 	if opts.System != "" {
 		section.System = stringPtr(opts.System)
 	}
@@ -194,6 +200,8 @@ func getSectionField(section *cfgpkg.Section, field string) (string, error) {
 		return derefString(section.Target), nil
 	case "system":
 		return derefString(section.System), nil
+	case "cache_dir":
+		return derefString(section.CacheDir), nil
 	case "repo":
 		return derefString(section.Repo), nil
 	case "file":
@@ -213,6 +221,8 @@ func setSectionField(section *cfgpkg.Section, field, value string) error {
 		section.Target = stringPtr(value)
 	case "system":
 		section.System = stringPtr(value)
+	case "cache_dir":
+		section.CacheDir = stringPtr(value)
 	case "repo":
 		section.Repo = stringPtr(value)
 	case "file":

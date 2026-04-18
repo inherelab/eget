@@ -43,11 +43,14 @@ func TestConfigInit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load init config: %v", err)
 	}
-	if cfg.Global.Target == nil || *cfg.Global.Target != "" {
-		t.Fatalf("expected empty global.target, got %#v", cfg.Global.Target)
+	if cfg.Global.Target == nil || *cfg.Global.Target != "~/.local/bin" {
+		t.Fatalf("expected default global.target, got %#v", cfg.Global.Target)
 	}
 	if cfg.Global.System == nil || *cfg.Global.System != "" {
 		t.Fatalf("expected empty global.system, got %#v", cfg.Global.System)
+	}
+	if cfg.Global.CacheDir == nil || *cfg.Global.CacheDir != "~/.cache/eget" {
+		t.Fatalf("expected default global.cache_dir, got %#v", cfg.Global.CacheDir)
 	}
 	if cfg.Packages == nil {
 		t.Fatal("expected packages section to be initialized")
@@ -99,6 +102,18 @@ target = "~/.local/bin"
 	}
 	if value != "junegunn/fzf" {
 		t.Fatalf("expected packages.fzf.repo to be junegunn/fzf, got %q", value)
+	}
+
+	if err := svc.ConfigSet("global.cache_dir", "~/.cache/eget"); err != nil {
+		t.Fatalf("config set cache_dir: %v", err)
+	}
+
+	value, err = svc.ConfigGet("global.cache_dir")
+	if err != nil {
+		t.Fatalf("config get updated global.cache_dir: %v", err)
+	}
+	if value != "~/.cache/eget" {
+		t.Fatalf("expected updated global.cache_dir, got %q", value)
 	}
 
 	if err := svc.ConfigSet("global.target", "~/.local/bin"); err != nil {

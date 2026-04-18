@@ -10,6 +10,7 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 			Source:       boolPtr(true),
 			Quiet:        boolPtr(true),
 			ShowHash:     boolPtr(true),
+			CacheDir:     stringPtr("~/.cache/eget"),
 			System:       stringPtr("linux/amd64"),
 			Target:       stringPtr("~/bin"),
 			UpgradeOnly:  boolPtr(true),
@@ -25,6 +26,9 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 	if merged.System != "linux/amd64" || merged.Target != "~/bin" {
 		t.Fatalf("expected global strings to be applied, got %#v", merged)
 	}
+	if merged.CacheDir != "~/.cache/eget" {
+		t.Fatalf("expected global cache dir to be applied, got %#v", merged)
+	}
 }
 
 func TestMergeInstallOptionsUsesRepoSection(t *testing.T) {
@@ -35,6 +39,7 @@ func TestMergeInstallOptionsUsesRepoSection(t *testing.T) {
 		},
 		Section{
 			Quiet:        boolPtr(true),
+			CacheDir:     stringPtr("~/repo-cache"),
 			Target:       stringPtr("~/repo"),
 			AssetFilters: []string{"linux", "amd64"},
 			DisableSSL:   boolPtr(true),
@@ -49,6 +54,9 @@ func TestMergeInstallOptionsUsesRepoSection(t *testing.T) {
 	if merged.Target != "~/repo" {
 		t.Fatalf("expected repo target override, got %#v", merged)
 	}
+	if merged.CacheDir != "~/repo-cache" {
+		t.Fatalf("expected repo cache_dir override, got %#v", merged)
+	}
 	if len(merged.AssetFilters) != 2 || merged.AssetFilters[0] != "linux" {
 		t.Fatalf("expected repo asset filters, got %#v", merged.AssetFilters)
 	}
@@ -61,19 +69,23 @@ func TestMergeInstallOptionsCLIOverridesRepoAndGlobal(t *testing.T) {
 	merged := MergeInstallOptions(
 		Section{
 			Quiet: boolPtr(false),
+			CacheDir: stringPtr("~/global-cache"),
 			Tag:   stringPtr("v1.0.0"),
 		},
 		Section{
-			Quiet: boolPtr(true),
-			Tag:   stringPtr("v1.1.0"),
+			Quiet:    boolPtr(true),
+			CacheDir: stringPtr("~/repo-cache"),
+			Tag:      stringPtr("v1.1.0"),
 		},
 		Section{
-			Quiet: boolPtr(false),
-			Tag:   stringPtr("v1.2.0"),
+			Quiet:    boolPtr(false),
+			CacheDir: stringPtr("~/pkg-cache"),
+			Tag:      stringPtr("v1.2.0"),
 		},
 		CLIOverrides{
-			Quiet: boolPtr(true),
-			Tag:   stringPtr("v2.0.0"),
+			Quiet:    boolPtr(true),
+			CacheDir: stringPtr("~/cli-cache"),
+			Tag:      stringPtr("v2.0.0"),
 		},
 	)
 
@@ -82,6 +94,9 @@ func TestMergeInstallOptionsCLIOverridesRepoAndGlobal(t *testing.T) {
 	}
 	if merged.Tag != "v2.0.0" {
 		t.Fatalf("expected cli tag override, got %#v", merged)
+	}
+	if merged.CacheDir != "~/cli-cache" {
+		t.Fatalf("expected cli cache_dir override, got %#v", merged)
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/inherelab/eget/home"
+	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 )
@@ -138,6 +140,84 @@ func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {
 	}
 	if result.URL == "" {
 		t.Fatal("expected result URL to be preserved")
+	}
+}
+
+func TestInstallTargetUsesConfiguredDefaults(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[global]
+target = "~/.local/bin"
+cache_dir = "~/.cache/eget"
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://example.com/tool.tar.gz",
+			ExtractedFiles: []string{"./tool"},
+		},
+	}
+	svc := Service{
+		Runner: runner,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	_, err := svc.InstallTarget("junegunn/fzf", install.Options{})
+	if err != nil {
+		t.Fatalf("install target: %v", err)
+	}
+
+	expectedTarget, err := home.Expand("~/.local/bin")
+	if err != nil {
+		t.Fatalf("expand target: %v", err)
+	}
+	expectedCache, err := home.Expand("~/.cache/eget")
+	if err != nil {
+		t.Fatalf("expand cache: %v", err)
+	}
+
+	if runner.opts.Output != expectedTarget {
+		t.Fatalf("expected configured install target, got %q", runner.opts.Output)
+	}
+	if runner.opts.CacheDir != expectedCache {
+		t.Fatalf("expected configured cache dir, got %q", runner.opts.CacheDir)
+	}
+}
+
+func TestDownloadTargetUsesConfiguredCacheDirByDefault(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[global]
+target = "~/.local/bin"
+cache_dir = "~/.cache/eget"
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://example.com/tool.tar.gz",
+			ExtractedFiles: []string{"./tool.tar.gz"},
+		},
+	}
+	svc := Service{
+		Runner: runner,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	_, err := svc.DownloadTarget("https://example.com/tool.tar.gz", install.Options{})
+	if err != nil {
+		t.Fatalf("download target: %v", err)
+	}
+
+	expectedCache, err := home.Expand("~/.cache/eget")
+	if err != nil {
+		t.Fatalf("expand cache: %v", err)
+	}
+
+	if runner.opts.Output != expectedCache {
+		t.Fatalf("expected configured cache dir as download output, got %q", runner.opts.Output)
+	}
+	if runner.opts.CacheDir != expectedCache {
+		t.Fatalf("expected configured cache dir, got %q", runner.opts.CacheDir)
 	}
 }
 

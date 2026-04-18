@@ -5,6 +5,7 @@ import "github.com/BurntSushi/toml"
 type Section struct {
 	All          *bool    `toml:"all"`
 	AssetFilters []string `toml:"asset_filters"`
+	CacheDir     *string  `toml:"cache_dir"`
 	DownloadOnly *bool    `toml:"download_only"`
 	File         *string  `toml:"file"`
 	GithubToken  *string  `toml:"github_token"`
@@ -39,6 +40,7 @@ type mergedFile struct {
 type Merged struct {
 	All          bool
 	AssetFilters []string
+	CacheDir     string
 	DownloadOnly bool
 	File         string
 	GithubToken  string
@@ -57,6 +59,7 @@ type Merged struct {
 type CLIOverrides struct {
 	All          *bool
 	AssetFilters *[]string
+	CacheDir     *string
 	DownloadOnly *bool
 	File         *string
 	GithubToken  *string
