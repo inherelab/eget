@@ -19,7 +19,7 @@ eget install REPO --tag nightly
 必须改为：
 
 ```text
-eget install --tag nightly user/repo
+eget install --tag nightly owner/repo
 ```
 
 ## 示例
@@ -135,8 +135,6 @@ asset_filters = ["windows"]
 - `all`
 - `quiet`
 - `upgrade_only`
-- `verify_sha256`
-- `disable_ssl`
 
 ## 构建与测试
 
