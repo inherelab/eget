@@ -19,6 +19,15 @@ func run(name string, args ...string) error {
 	return cmd.Run()
 }
 
+func runWithEnv(env []string, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), env...)
+
+	return cmd.Run()
+}
+
 func must(err error) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -28,24 +37,17 @@ func must(err error) {
 
 func main() {
 	eget := os.Getenv("TEST_EGET")
+	configInitPath := "tmp.eget.toml"
 
-	must(run(eget, "--system", "linux/amd64", "jgm/pandoc"))
-	must(fileExists("pandoc"))
+	must(run(eget, "install", "--to", "install-license.txt", "https://raw.githubusercontent.com/junegunn/fzf/master/LICENSE"))
+	must(fileExists("install-license.txt"))
 
-	must(run(eget, "inhere/markview", "--tag", "nightly", "--asset", "osx"))
-	must(fileExists("micro"))
+	must(run(eget, "download", "--to", "LICENSE.txt", "https://raw.githubusercontent.com/junegunn/fzf/master/LICENSE"))
+	must(fileExists("LICENSE.txt"))
 
-	must(run(eget, "--asset", "nvim.appimage", "--to", "nvim", "neovim/neovim"))
-	must(fileExists("nvim"))
-
-	must(run(eget, "--system", "darwin/amd64", "sharkdp/fd"))
-	must(fileExists("fd"))
-
-	must(run(eget, "--system", "windows/amd64", "--asset", "windows-gnu", "BurntSushi/ripgrep"))
-	must(fileExists("rg.exe"))
-
-	must(run(eget, "-f", "eget.1", "inherelab/eget"))
-	must(fileExists("eget.1"))
+	must(run(eget, "config", "--info"))
+	must(runWithEnv([]string{"EGET_CONFIG=" + configInitPath}, eget, "config", "--init"))
+	must(fileExists(configInitPath))
 
 	fmt.Println("ALL TESTS PASS")
 }
