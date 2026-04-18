@@ -38,11 +38,12 @@ func must(err error) {
 func main() {
 	eget := os.Getenv("TEST_EGET")
 	configInitPath := "tmp.eget.toml"
+	localSource := "../LICENSE"
 
-	must(run(eget, "install", "--to", "install-license.txt", "https://raw.githubusercontent.com/junegunn/fzf/master/LICENSE"))
+	must(run(eget, "install", "--to", "install-license.txt", localSource))
 	must(fileExists("install-license.txt"))
 
-	must(run(eget, "download", "--to", "LICENSE.txt", "https://raw.githubusercontent.com/junegunn/fzf/master/LICENSE"))
+	must(run(eget, "download", "--to", "LICENSE.txt", localSource))
 	must(fileExists("LICENSE.txt"))
 
 	must(run(eget, "config", "--info"))
