@@ -13,7 +13,7 @@ type UpdateOptions struct {
 	Asset       string
 	Source      bool
 	Quiet       bool
-	Target string
+	Target      string
 }
 
 func newUpdateCmd(handler CommandHandler) (*capp.Cmd, func()) {
@@ -30,6 +30,7 @@ func newUpdateCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		snapshot := *opts
 		return handler(cmd.Name, &snapshot)
 	})
+	cmd.Aliases = []string{"up"}
 
 	cmd.BoolVar(&opts.All, "all", false, "Update all managed packages")
 	cmd.BoolVar(&opts.DryRun, "dry-run", false, "Preview updates without changes")

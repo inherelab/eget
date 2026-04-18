@@ -4,18 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/gookit/goutil/cflag/capp"
 )
 
 var (
-	ErrCommandRequired = errors.New("command required")
 	ErrNotImplemented  = errors.New("not implemented")
-
-	defaultHandlerOnce sync.Once
-	defaultHandlerFn   CommandHandler
-	defaultHandlerErr  error
 )
 
 type CommandHandler func(name string, options any) error
@@ -26,12 +20,21 @@ type App struct {
 }
 
 func Main(args []string, stdout, stderr io.Writer) error {
-	app := newApp(defaultCommandHandler, stdout, stderr)
-	err := app.RunWithArgs(args)
-	if len(args) == 0 {
-		return ErrCommandRequired
-	}
-	return err
+	var service *cliService
+	var serviceErr error
+	app := newApp(func(name string, options any) error {
+		if service == nil && serviceErr == nil {
+			service, serviceErr = newCLIService()
+		}
+		if serviceErr != nil {
+			return serviceErr
+		}
+		if service == nil {
+			return ErrNotImplemented
+		}
+		return service.handle(name, options)
+	}, stdout, stderr)
+	return app.RunWithArgs(args)
 }
 
 func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
@@ -42,7 +45,11 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 		stderr = io.Discard
 	}
 	if handler == nil {
-		handler = defaultCommandHandler
+		handler = func(name string, options any) error {
+			_ = name
+			_ = options
+			return ErrNotImplemented
+		}
 	}
 
 	inner := capp.NewApp()
@@ -70,24 +77,6 @@ func (a *App) RunWithArgs(args []string) error {
 		reset()
 	}
 	return a.inner.RunWithArgs(args)
-}
-
-func defaultCommandHandler(name string, options any) error {
-	defaultHandlerOnce.Do(func() {
-		service, err := newCLIService()
-		if err != nil {
-			defaultHandlerErr = err
-			return
-		}
-		defaultHandlerFn = service.handle
-	})
-	if defaultHandlerErr != nil {
-		return defaultHandlerErr
-	}
-	if defaultHandlerFn == nil {
-		return ErrNotImplemented
-	}
-	return defaultHandlerFn(name, options)
 }
 
 func validateNoTrailingFlags(cmd *capp.Cmd) error {

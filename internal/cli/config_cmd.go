@@ -31,6 +31,8 @@ func newConfigCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		return handler(cmd.Name, &snapshot)
 	})
 
+	cmd.Aliases = []string{"cfg"}
+
 	cmd.BoolVar(&opts.Info, "info", false, "Show config information")
 	cmd.BoolVar(&opts.Init, "init", false, "Initialize config file")
 	cmd.BoolVar(&opts.List, "list", false, "List config values")

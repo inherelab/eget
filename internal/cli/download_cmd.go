@@ -24,6 +24,7 @@ func newDownloadCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		snapshot := *opts
 		return handler(cmd.Name, &snapshot)
 	})
+	cmd.Aliases = []string{"dl"}
 
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")
 	cmd.StringVar(&opts.System, "system", "", "Target system")

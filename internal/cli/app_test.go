@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"errors"
 	"strings"
 	"testing"
 )
@@ -17,11 +16,8 @@ func TestMain_NoSubcommandReturnsErrorAndHelp(t *testing.T) {
 	var stderr bytes.Buffer
 
 	err := Main([]string{}, &stdout, &stderr)
-	if err == nil {
-		t.Fatalf("expected error for missing subcommand")
-	}
-	if !errors.Is(err, ErrCommandRequired) {
-		t.Fatalf("expected ErrCommandRequired, got %v", err)
+	if err != nil {
+		t.Fatalf("expected no error for missing subcommand, got %v", err)
 	}
 	if stdout.Len() == 0 {
 		t.Fatalf("expected help output on stdout")
@@ -73,9 +69,6 @@ func TestMain_InstallRejectsFlagsAfterTarget(t *testing.T) {
 	err := Main([]string{"install", "inhere/markview", "--tag", "nightly"}, &stdout, &stderr)
 	if err == nil {
 		t.Fatalf("expected parse error for trailing flags after target")
-	}
-	if errors.Is(err, ErrCommandRequired) {
-		t.Fatalf("expected parse error, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "flags must appear before arguments") {
 		t.Fatalf("expected trailing-flag error, got %v", err)
