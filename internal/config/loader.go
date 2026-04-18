@@ -36,7 +36,9 @@ func LoadFile(path string) (*File, error) {
 	}
 
 	conf.Global = decoded.Global
-	conf.Packages = decoded.Packages
+	if decoded.Packages != nil {
+		conf.Packages = decoded.Packages
+	}
 
 	repos := make(map[string]Section)
 	meta, err = toml.DecodeFile(path, &repos)

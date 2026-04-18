@@ -10,6 +10,7 @@ type Section struct {
 	GithubToken  *string  `toml:"github_token"`
 	Name         *string  `toml:"name"`
 	Quiet        *bool    `toml:"quiet"`
+	Repo         *string  `toml:"repo"`
 	ShowHash     *bool    `toml:"show_hash"`
 	Source       *bool    `toml:"download_source"`
 	System       *string  `toml:"system"`

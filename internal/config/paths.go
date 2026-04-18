@@ -28,6 +28,18 @@ func ResolveConfigPath() (string, error) {
 	})
 }
 
+func ResolveWritablePath() (string, error) {
+	homeDir, err := home.Home()
+	if err != nil {
+		return "", err
+	}
+	return resolveWritablePath(pathOptions{
+		HomeDir:   homeDir,
+		GOOS:      runtime.GOOS,
+		LookupEnv: os.LookupEnv,
+	})
+}
+
 func OSConfigPath(homeDir, goos string, lookupEnv func(string) (string, bool)) string {
 	if lookupEnv == nil {
 		lookupEnv = os.LookupEnv
@@ -47,15 +59,19 @@ func resolveConfigPath(opts pathOptions) (string, error) {
 		opts.GOOS = runtime.GOOS
 	}
 
+	checkDotfile := true
 	if configPath, ok := opts.LookupEnv("EGET_CONFIG"); ok && configPath != "" {
 		if fileExists(configPath) {
 			return configPath, nil
 		}
+		checkDotfile = false
 	}
 
-	dotfilePath := filepath.Join(opts.HomeDir, ".eget.toml")
-	if fileExists(dotfilePath) {
-		return dotfilePath, nil
+	if checkDotfile {
+		dotfilePath := filepath.Join(opts.HomeDir, ".eget.toml")
+		if fileExists(dotfilePath) {
+			return dotfilePath, nil
+		}
 	}
 
 	legacyPath := "eget.toml"
@@ -69,6 +85,25 @@ func resolveConfigPath(opts pathOptions) (string, error) {
 	}
 
 	return "", os.ErrNotExist
+}
+
+func resolveWritablePath(opts pathOptions) (string, error) {
+	if opts.LookupEnv == nil {
+		opts.LookupEnv = os.LookupEnv
+	}
+	if opts.GOOS == "" {
+		opts.GOOS = runtime.GOOS
+	}
+
+	if configPath, ok := opts.LookupEnv("EGET_CONFIG"); ok && configPath != "" {
+		return configPath, nil
+	}
+
+	if path, err := resolveConfigPath(opts); err == nil {
+		return path, nil
+	}
+
+	return filepath.Join(opts.HomeDir, ".eget.toml"), nil
 }
 
 func getOSConfigPath(opts pathOptions) string {

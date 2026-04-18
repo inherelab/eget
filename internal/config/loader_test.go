@@ -106,6 +106,38 @@ func TestResolveConfigPathFallsBackToOSConfigDir(t *testing.T) {
 	}
 }
 
+func TestResolveConfigPathSkipsDotfileWhenEnvPathMissing(t *testing.T) {
+	tmp := t.TempDir()
+	homePath := filepath.Join(tmp, "home")
+	dotfile := filepath.Join(homePath, ".eget.toml")
+	fallbackPath := filepath.Join(tmp, "xdg", "eget", "eget.toml")
+
+	writeTestFile(t, dotfile, "title = 'home'\n")
+	writeTestFile(t, fallbackPath, "title = 'fallback'\n")
+
+	path, err := resolveConfigPath(pathOptions{
+		HomeDir: homePath,
+		GOOS:    "linux",
+		LookupEnv: func(key string) (string, bool) {
+			switch key {
+			case "EGET_CONFIG":
+				return filepath.Join(tmp, "missing.toml"), true
+			case "XDG_CONFIG_HOME":
+				return filepath.Join(tmp, "xdg"), true
+			default:
+				return "", false
+			}
+		},
+	})
+	if err != nil {
+		t.Fatalf("resolve path: %v", err)
+	}
+
+	if path != fallbackPath {
+		t.Fatalf("expected fallback path %q when env config is missing, got %q", fallbackPath, path)
+	}
+}
+
 func TestLoadFileSupportsLegacyRepoSections(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")
@@ -142,6 +174,25 @@ download_only = true
 	}
 	if len(repo.AssetFilters) != 2 {
 		t.Fatalf("expected repo asset filters to load, got %#v", repo.AssetFilters)
+	}
+}
+
+func TestLoadFileInitializesPackagesMapWhenSectionMissing(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+
+	writeTestFile(t, configPath, `
+[global]
+target = "~/bin"
+`)
+
+	cfg, err := LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("load file: %v", err)
+	}
+
+	if cfg.Packages == nil {
+		t.Fatal("expected packages map to be initialized")
 	}
 }
 
