@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/inherelab/eget/home"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type pathOptions struct {
@@ -16,7 +16,7 @@ type pathOptions struct {
 }
 
 func ResolveConfigPath() (string, error) {
-	homeDir, err := home.Home()
+	homeDir, err := util.Home()
 	if err != nil {
 		return "", err
 	}
@@ -29,7 +29,7 @@ func ResolveConfigPath() (string, error) {
 }
 
 func ResolveWritablePath() (string, error) {
-	homeDir, err := home.Home()
+	homeDir, err := util.Home()
 	if err != nil {
 		return "", err
 	}

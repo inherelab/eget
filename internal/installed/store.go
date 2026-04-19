@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/inherelab/eget/home"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type Options struct {
@@ -32,7 +32,7 @@ func NewStore(opts Options) *Store {
 }
 
 func DefaultStore() (*Store, error) {
-	homeDir, err := home.Home()
+	homeDir, err := util.Home()
 	if err != nil {
 		return nil, err
 	}

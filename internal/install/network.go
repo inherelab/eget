@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/inherelab/eget/home"
+	"github.com/inherelab/eget/internal/util"
 	pb "github.com/schollz/progressbar/v3"
 )
 
@@ -23,7 +23,7 @@ var downloadGet = Get
 
 func tokenFrom(value string) (string, error) {
 	if strings.HasPrefix(value, "@") {
-		file, err := home.Expand(value[1:])
+		file, err := util.Expand(value[1:])
 		if err != nil {
 			return "", err
 		}

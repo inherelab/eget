@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/inherelab/eget/home"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type fakeRunner struct {
@@ -168,11 +168,11 @@ proxy_url = "http://127.0.0.1:7890"
 		t.Fatalf("install target: %v", err)
 	}
 
-	expectedTarget, err := home.Expand("~/.local/bin")
+	expectedTarget, err := util.Expand("~/.local/bin")
 	if err != nil {
 		t.Fatalf("expand target: %v", err)
 	}
-	expectedCache, err := home.Expand("~/.cache/eget")
+	expectedCache, err := util.Expand("~/.cache/eget")
 	if err != nil {
 		t.Fatalf("expand cache: %v", err)
 	}
@@ -212,7 +212,7 @@ cache_dir = "~/.cache/eget"
 		t.Fatalf("download target: %v", err)
 	}
 
-	expectedCache, err := home.Expand("~/.cache/eget")
+	expectedCache, err := util.Expand("~/.cache/eget")
 	if err != nil {
 		t.Fatalf("expand cache: %v", err)
 	}

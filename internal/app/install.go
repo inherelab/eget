@@ -4,10 +4,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/inherelab/eget/home"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type RunResult = install.RunResult
@@ -167,7 +167,7 @@ func expandPath(value string) (string, error) {
 	if value == "" {
 		return "", nil
 	}
-	return home.Expand(value)
+	return util.Expand(value)
 }
 
 func extractOptionsMap(opts install.Options) map[string]interface{} {
