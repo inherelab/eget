@@ -120,6 +120,7 @@ header: Eget Manual
 ```toml
 [global]
 target = "~/.local/bin"
+cache_dir = "~/.cache/eget"
 system = "windows/amd64"
 
 ["inhere/markview"]
@@ -135,6 +136,18 @@ asset_filters = ["windows"]
   Config precedence for install resolution is:
 
       CLI > package > repo > global > default
+
+  `eget config --init` currently writes these defaults:
+
+      global.target = "~/.local/bin"
+      global.cache_dir = "~/.cache/eget"
+
+  Directory semantics:
+
+  * `target` is the default install directory
+  * `cache_dir` is the default download cache directory
+  * `download` falls back to `cache_dir` when `--to` is not provided
+  * remote downloads are reused from `cache_dir` when a cached file exists
 
 # EXAMPLES
 ```bash

@@ -52,6 +52,17 @@ eget <command> --options... arguments...
 
 `download` 与 `install` 复用同一条执行链路，只是 app 层会强制 `DownloadOnly=true`，并且不写 installed store。
 
+当目标是远程 URL 时，执行链路会优先检查 `cache_dir` 对应的缓存文件：
+
+- 命中缓存时直接复用，不再发起网络下载
+- 未命中时正常下载，并在成功后回写缓存
+
+当前缓存策略是最小实现：
+
+- 缓存键使用 URL hash
+- 文件名保留原始 URL 的扩展名，缺省时使用 `.bin`
+- 目前不做过期策略、ETag 或 Last-Modified 校验
+
 ## Add Flow
 
 `add` 不执行下载，只把一个可复用的安装描述写入 `[packages.<name>]`。
@@ -107,6 +118,15 @@ CLI 当前还保留：
 
 兼容旧 repo section，同时新增 managed packages。
 
+`config --init` 当前生成的默认全局配置为：
+
+```toml
+[global]
+target = "~/.local/bin"
+cache_dir = "~/.cache/eget"
+system = ""
+```
+
 路径查找优先级：
 
 1. `EGET_CONFIG`
@@ -118,6 +138,12 @@ CLI 当前还保留：
 ```text
 CLI > package > repo > global > default
 ```
+
+目录相关语义：
+
+- `target`: 默认安装目录
+- `cache_dir`: 默认下载缓存目录
+- `download` 未传 `--to` 时，app 层会把输出目录回退到 `cache_dir`
 
 ## Installed Store
 
