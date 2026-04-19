@@ -145,6 +145,7 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 		Tag:         opts.Tag,
 		Source:      opts.Source,
 		Output:      opts.To,
+		CacheDir:    opts.CacheDir,
 		System:      opts.System,
 		ExtractFile: opts.File,
 		All:         opts.All,
@@ -155,14 +156,15 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 
 func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 	base := installOptionsFromInstall(&InstallOptions{
-		Tag:    opts.Tag,
-		System: opts.System,
-		To:     opts.To,
-		File:   opts.File,
-		Asset:  opts.Asset,
-		Source: opts.Source,
-		All:    opts.All,
-		Quiet:  opts.Quiet,
+		Tag:      opts.Tag,
+		System:   opts.System,
+		To:       opts.To,
+		CacheDir: opts.CacheDir,
+		File:     opts.File,
+		Asset:    opts.Asset,
+		Source:   opts.Source,
+		All:      opts.All,
+		Quiet:    opts.Quiet,
 	})
 	base.DownloadOnly = true
 	return base
@@ -173,6 +175,7 @@ func installOptionsFromAdd(opts *AddOptions) install.Options {
 		Tag:         opts.Tag,
 		Source:      opts.Source,
 		Output:      opts.To,
+		CacheDir:    opts.CacheDir,
 		System:      opts.System,
 		ExtractFile: opts.File,
 		All:         opts.All,
@@ -183,12 +186,13 @@ func installOptionsFromAdd(opts *AddOptions) install.Options {
 
 func installOptionsFromUpdate(opts *UpdateOptions) install.Options {
 	return install.Options{
-		Tag:    opts.Tag,
-		Source: opts.Source,
-		Output: opts.To,
-		System: opts.System,
-		Quiet:  opts.Quiet,
-		Asset:  splitAssetFilters(opts.Asset),
+		Tag:      opts.Tag,
+		Source:   opts.Source,
+		Output:   opts.To,
+		CacheDir: opts.CacheDir,
+		System:   opts.System,
+		Quiet:    opts.Quiet,
+		Asset:    splitAssetFilters(opts.Asset),
 	}
 }
 

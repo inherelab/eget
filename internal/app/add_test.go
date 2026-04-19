@@ -22,6 +22,7 @@ func TestAddPackage(t *testing.T) {
 
 	opts := install.Options{
 		Output:      "~/.local/bin",
+		CacheDir:    "~/.cache/eget",
 		System:      "linux/amd64",
 		ExtractFile: "fzf",
 		Asset:       []string{"linux_amd64"},
@@ -50,6 +51,9 @@ func TestAddPackage(t *testing.T) {
 	}
 	if pkg.Target == nil || *pkg.Target != "~/.local/bin" {
 		t.Fatalf("expected target to be persisted, got %#v", pkg.Target)
+	}
+	if pkg.CacheDir == nil || *pkg.CacheDir != "~/.cache/eget" {
+		t.Fatalf("expected cache_dir to be persisted, got %#v", pkg.CacheDir)
 	}
 	if pkg.Source == nil || !*pkg.Source {
 		t.Fatalf("expected download_source to be persisted, got %#v", pkg.Source)

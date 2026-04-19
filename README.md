@@ -76,6 +76,7 @@ eget config set global.target ~/.local/bin
 - `--tag`
 - `--system`
 - `--to`
+- `--cache-dir`
 - `--file`
 - `--asset`
 - `--source`
@@ -91,6 +92,7 @@ eget config set global.target ~/.local/bin
 说明：
 
 - `--asset` 当前按单值字符串解析，再映射到内部 `[]string`。
+- `--cache-dir` 用于覆盖配置中的 `cache_dir`，控制远程下载缓存目录。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。
 
 ## 配置

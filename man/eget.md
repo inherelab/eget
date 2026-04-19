@@ -66,6 +66,10 @@ header: Eget Manual
 
 :    Set the output path or destination.
 
+  `--cache-dir=`
+
+:    Override the download cache directory used for remote assets.
+
   `--file=`
 
 :    Select a file to extract.

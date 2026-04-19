@@ -39,7 +39,7 @@ func TestMain_InstallStandardOrderRoutesAndBindsOptions(t *testing.T) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"install", "--tag", "nightly", "inhere/markview"})
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"install", "--tag", "nightly", "--cache-dir", "~/.cache/eget", "inhere/markview"})
 	if err != nil {
 		t.Fatalf("expected install command to parse, got %v", err)
 	}
@@ -56,6 +56,9 @@ func TestMain_InstallStandardOrderRoutesAndBindsOptions(t *testing.T) {
 	}
 	if opts.Tag != "nightly" {
 		t.Fatalf("expected tag nightly, got %q", opts.Tag)
+	}
+	if opts.CacheDir != "~/.cache/eget" {
+		t.Fatalf("expected cache dir ~/.cache/eget, got %q", opts.CacheDir)
 	}
 	if opts.Target != "inhere/markview" {
 		t.Fatalf("expected target inhere/markview, got %q", opts.Target)
