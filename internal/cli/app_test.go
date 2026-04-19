@@ -135,6 +135,39 @@ func TestMain_ListRoutesToListCommand(t *testing.T) {
 	}
 }
 
+func TestMain_UninstallRoutesToUninstallCommandAndAliases(t *testing.T) {
+	for _, name := range []string{"uninstall", "uni", "remove", "rm"} {
+		t.Run(name, func(t *testing.T) {
+			calls := make([]commandCall, 0, 1)
+			handler := func(cmdName string, options any) error {
+				calls = append(calls, commandCall{name: cmdName, options: options})
+				return nil
+			}
+
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{name, "fzf"})
+			if err != nil {
+				t.Fatalf("expected %s command to parse, got %v", name, err)
+			}
+			if len(calls) != 1 {
+				t.Fatalf("expected one handler call, got %d", len(calls))
+			}
+			if calls[0].name != "uninstall" {
+				t.Fatalf("expected command uninstall, got %q", calls[0].name)
+			}
+
+			opts, ok := calls[0].options.(*UninstallOptions)
+			if !ok {
+				t.Fatalf("expected UninstallOptions, got %T", calls[0].options)
+			}
+			if opts.Target != "fzf" {
+				t.Fatalf("expected uninstall target fzf, got %q", opts.Target)
+			}
+		})
+	}
+}
+
 func TestApp_RunWithArgsDoesNotLeakCommandStateAcrossRuns(t *testing.T) {
 	calls := make([]commandCall, 0, 4)
 	handler := func(name string, options any) error {

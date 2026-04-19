@@ -43,6 +43,10 @@ header: Eget Manual
 
 :    Save a managed package entry into `[packages.<name>]`.
 
+  `uninstall`
+
+:    Remove installed files and clear the installed-state record for a package or repo.
+
   `list`
 
 :    List managed packages and attach installed-state details when available.
@@ -165,6 +169,7 @@ asset_filters = ["windows"]
 eget install --tag nightly inhere/markview
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 eget add --name fzf --to ~/.local/bin junegunn/fzf
+eget uninstall fzf
 eget list
 eget update --all
 eget config --info

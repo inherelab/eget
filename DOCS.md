@@ -13,6 +13,7 @@ eget <command> --options... arguments...
 - `install`
 - `download`
 - `add`
+- `uninstall`
 - `list`
 - `update`
 - `config`
@@ -72,6 +73,18 @@ eget <command> --options... arguments...
 
 - `--name` 未提供时，默认使用 repo basename
 - 保存 repo、tag、system、target、file、asset_filters、download_source、all、quiet 等可复用字段
+
+## Uninstall Flow
+
+`uninstall` 按 package name 或 repo 解析目标：
+
+- 命中 package name 时，使用 `[packages.<name>]` 中的 repo
+- 否则允许直接传 repo
+- 从 installed store 读取 `ExtractedFiles`
+- 删除记录中的文件路径
+- 清理 installed store 对应 entry
+
+当前不会删除 `[packages.<name>]` 配置项。
 
 ## List Flow
 

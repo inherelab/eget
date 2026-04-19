@@ -14,10 +14,11 @@ import (
 )
 
 type cliService struct {
-	appService  app.Service
-	cfgService  app.ConfigService
-	listService app.ListService
-	updService  app.UpdateService
+	appService       app.Service
+	cfgService       app.ConfigService
+	listService      app.ListService
+	uninstallService app.UninstallService
+	updService       app.UpdateService
 }
 
 func newCLIService() (*cliService, error) {
@@ -53,6 +54,9 @@ func newCLIService() (*cliService, error) {
 	}
 	cfgService := app.ConfigService{ConfigPath: cfgPath}
 	listService := app.ListService{}
+	uninstallService := app.UninstallService{
+		Store: store,
+	}
 	appService := app.Service{
 		Runner: runner,
 		Store:  store,
@@ -62,10 +66,11 @@ func newCLIService() (*cliService, error) {
 		Install: &appService,
 	}
 	return &cliService{
-		appService:  appService,
-		cfgService:  cfgService,
-		listService: listService,
-		updService:  updService,
+		appService:       appService,
+		cfgService:       cfgService,
+		listService:      listService,
+		uninstallService: uninstallService,
+		updService:       updService,
 	}, nil
 }
 
@@ -82,6 +87,9 @@ func (s *cliService) handle(name string, options any) error {
 	case "add":
 		opts := options.(*AddOptions)
 		return s.cfgService.AddPackage(opts.Target, opts.Name, installOptionsFromAdd(opts))
+	case "uninstall":
+		opts := options.(*UninstallOptions)
+		return s.handleUninstall(opts)
 	case "list":
 		opts := options.(*ListOptions)
 		return s.handleList(opts)
@@ -94,6 +102,23 @@ func (s *cliService) handle(name string, options any) error {
 	default:
 		return ErrNotImplemented
 	}
+}
+
+func (s *cliService) handleUninstall(opts *UninstallOptions) error {
+	result, err := s.uninstallService.Uninstall(opts.Target)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("repo: %s\n", result.Repo)
+	if len(result.RemovedFiles) == 0 {
+		fmt.Println("removed_files: 0")
+		return nil
+	}
+	fmt.Printf("removed_files: %d\n", len(result.RemovedFiles))
+	for _, file := range result.RemovedFiles {
+		fmt.Printf("removed: %s\n", file)
+	}
+	return nil
 }
 
 func (s *cliService) handleList(opts *ListOptions) error {

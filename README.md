@@ -29,6 +29,7 @@ eget install --tag nightly inhere/markview
 eget install --to ~/.local/bin/fzf junegunn/fzf
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 eget add --name fzf --to ~/.local/bin junegunn/fzf
+eget uninstall fzf
 eget list
 eget update fzf
 eget update --all
@@ -52,6 +53,10 @@ eget config set global.target ~/.local/bin
 `add`
 
 - 将一个托管包写入配置文件的 `[packages.<name>]`。
+
+`uninstall`
+
+- 删除已安装文件并清理 installed store 记录，不移除 `[packages.<name>]` 配置。
 
 `list`
 

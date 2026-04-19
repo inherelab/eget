@@ -62,6 +62,7 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	app.add(newInstallCmd(handler))
 	app.add(newDownloadCmd(handler))
 	app.add(newAddCmd(handler))
+	app.add(newUninstallCmd(handler))
 	app.add(newListCmd(handler))
 	app.add(newUpdateCmd(handler))
 	app.add(newConfigCmd(handler))
