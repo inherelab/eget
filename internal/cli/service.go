@@ -14,9 +14,10 @@ import (
 )
 
 type cliService struct {
-	appService app.Service
-	cfgService app.ConfigService
-	updService app.UpdateService
+	appService  app.Service
+	cfgService  app.ConfigService
+	listService app.ListService
+	updService  app.UpdateService
 }
 
 func newCLIService() (*cliService, error) {
@@ -51,6 +52,7 @@ func newCLIService() (*cliService, error) {
 		return nil, err
 	}
 	cfgService := app.ConfigService{ConfigPath: cfgPath}
+	listService := app.ListService{}
 	appService := app.Service{
 		Runner: runner,
 		Store:  store,
@@ -60,9 +62,10 @@ func newCLIService() (*cliService, error) {
 		Install: &appService,
 	}
 	return &cliService{
-		appService: appService,
-		cfgService: cfgService,
-		updService: updService,
+		appService:  appService,
+		cfgService:  cfgService,
+		listService: listService,
+		updService:  updService,
 	}, nil
 }
 
@@ -79,6 +82,9 @@ func (s *cliService) handle(name string, options any) error {
 	case "add":
 		opts := options.(*AddOptions)
 		return s.cfgService.AddPackage(opts.Target, opts.Name, installOptionsFromAdd(opts))
+	case "list":
+		opts := options.(*ListOptions)
+		return s.handleList(opts)
 	case "config":
 		opts := options.(*ConfigOptions)
 		return s.handleConfig(opts)
@@ -88,6 +94,44 @@ func (s *cliService) handle(name string, options any) error {
 	default:
 		return ErrNotImplemented
 	}
+}
+
+func (s *cliService) handleList(opts *ListOptions) error {
+	_ = opts
+	items, err := s.listService.ListPackages()
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 {
+		fmt.Println("no managed packages found")
+		return nil
+	}
+	for i, item := range items {
+		if i > 0 {
+			fmt.Println()
+		}
+		fmt.Printf("name: %s\n", item.Name)
+		fmt.Printf("repo: %s\n", item.Repo)
+		if item.Target != "" {
+			fmt.Printf("target: %s\n", item.Target)
+		}
+		if item.Tag != "" {
+			fmt.Printf("tag: %s\n", item.Tag)
+		}
+		if item.Installed {
+			fmt.Println("installed: yes")
+			fmt.Printf("installed_at: %s\n", item.InstalledAt.Format(time.RFC3339))
+			if item.Asset != "" {
+				fmt.Printf("asset: %s\n", item.Asset)
+			}
+			if item.URL != "" {
+				fmt.Printf("url: %s\n", item.URL)
+			}
+		} else {
+			fmt.Println("installed: no")
+		}
+	}
+	return nil
 }
 
 func (s *cliService) handleConfig(opts *ConfigOptions) error {

@@ -110,6 +110,31 @@ func TestMain_ConfigInfoRoutesToConfigCommand(t *testing.T) {
 	}
 }
 
+func TestMain_ListRoutesToListCommand(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"list"})
+	if err != nil {
+		t.Fatalf("expected list command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if calls[0].name != "list" {
+		t.Fatalf("expected command list, got %q", calls[0].name)
+	}
+
+	if _, ok := calls[0].options.(*ListOptions); !ok {
+		t.Fatalf("expected ListOptions, got %T", calls[0].options)
+	}
+}
+
 func TestApp_RunWithArgsDoesNotLeakCommandStateAcrossRuns(t *testing.T) {
 	calls := make([]commandCall, 0, 4)
 	handler := func(name string, options any) error {

@@ -13,6 +13,7 @@ eget <command> --options... arguments...
 - `install`
 - `download`
 - `add`
+- `list`
 - `update`
 - `config`
 
@@ -71,6 +72,15 @@ eget <command> --options... arguments...
 
 - `--name` 未提供时，默认使用 repo basename
 - 保存 repo、tag、system、target、file、asset_filters、download_source、all、quiet 等可复用字段
+
+## List Flow
+
+`list` 以配置中的 managed packages 为主表：
+
+- 读取 `[packages.<name>]`
+- 按 package name 排序
+- 通过 repo 键关联 installed store
+- 输出 managed package 定义与最近安装状态
 
 ## Update Flow
 

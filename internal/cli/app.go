@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ErrNotImplemented  = errors.New("not implemented")
+	ErrNotImplemented = errors.New("not implemented")
 )
 
 type CommandHandler func(name string, options any) error
@@ -62,6 +62,7 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	app.add(newInstallCmd(handler))
 	app.add(newDownloadCmd(handler))
 	app.add(newAddCmd(handler))
+	app.add(newListCmd(handler))
 	app.add(newUpdateCmd(handler))
 	app.add(newConfigCmd(handler))
 	return app

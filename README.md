@@ -29,6 +29,7 @@ eget install --tag nightly inhere/markview
 eget install --to ~/.local/bin/fzf junegunn/fzf
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 eget add --name fzf --to ~/.local/bin junegunn/fzf
+eget list
 eget update fzf
 eget update --all
 eget config --info
@@ -51,6 +52,10 @@ eget config set global.target ~/.local/bin
 `add`
 
 - 将一个托管包写入配置文件的 `[packages.<name>]`。
+
+`list`
+
+- 列出本地 managed packages，并尽可能关联最近一次安装状态。
 
 `update`
 
@@ -176,6 +181,7 @@ make test
 - `cmd/eget`: 命令入口
 - `internal/cli`: `capp` 命令注册与参数绑定
 - `internal/app`: install/add/update/config 用例编排
+- `internal/app`: install/add/list/update/config 用例编排
 - `internal/install`: 查找、下载、校验、提取执行链路
 - `internal/config`: 配置加载、合并、写回
 - `internal/installed`: 安装记录存储
