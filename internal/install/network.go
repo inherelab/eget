@@ -2,18 +2,23 @@ package install
 
 import (
 	"crypto/tls"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/inherelab/eget/home"
 	pb "github.com/schollz/progressbar/v3"
 )
+
+var downloadGet = Get
 
 func tokenFrom(value string) (string, error) {
 	if strings.HasPrefix(value, "@") {
@@ -137,7 +142,7 @@ func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar
 		return err
 	}
 
-	resp, err := Get(url, opts.DisableSSL)
+	resp, err := downloadGet(url, opts.DisableSSL)
 	if err != nil {
 		return err
 	}
@@ -154,4 +159,16 @@ func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar
 	bar := getbar(resp.ContentLength)
 	_, err = io.Copy(io.MultiWriter(out, bar), resp.Body)
 	return err
+}
+
+func CacheFilePath(cacheDir, url string) string {
+	if cacheDir == "" || url == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(url))
+	ext := filepath.Ext(url)
+	if ext == "" {
+		ext = ".bin"
+	}
+	return filepath.Join(cacheDir, hex.EncodeToString(sum[:])+ext)
 }

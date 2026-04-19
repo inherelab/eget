@@ -89,37 +89,11 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		return RunResult{}, err
 	}
 
-	buf := &bytes.Buffer{}
-	err = Download(url, buf, func(size int64) *pb.ProgressBar {
-		pbout := r.Stderr
-		if pbout == nil || opts.Quiet {
-			pbout = io.Discard
-		}
-		return pb.NewOptions64(size,
-			pb.OptionSetWriter(pbout),
-			pb.OptionShowBytes(true),
-			pb.OptionSetWidth(10),
-			pb.OptionThrottle(65*time.Millisecond),
-			pb.OptionShowCount(),
-			pb.OptionSpinnerType(14),
-			pb.OptionFullWidth(),
-			pb.OptionSetDescription("Downloading"),
-			pb.OptionOnCompletion(func() {
-				fmt.Fprint(pbout, "\n")
-			}),
-			pb.OptionSetTheme(pb.Theme{
-				Saucer:        "=",
-				SaucerHead:    ">",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}))
-	}, opts)
+	body, err := r.downloadBody(url, opts)
 	if err != nil {
 		return RunResult{}, fmt.Errorf("%s (URL: %s)", err, url)
 	}
 
-	body := buf.Bytes()
 	sumAsset := checksumAsset(url, assets)
 
 	verifier, err := r.Service.SelectVerifier(sumAsset, &opts)
@@ -194,6 +168,53 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	return result, nil
+}
+
+func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
+	cachePath := CacheFilePath(opts.CacheDir, url)
+	if cachePath != "" && !IsLocalFile(url) {
+		if data, err := os.ReadFile(cachePath); err == nil {
+			return data, nil
+		}
+	}
+
+	buf := &bytes.Buffer{}
+	err := Download(url, buf, func(size int64) *pb.ProgressBar {
+		pbout := r.Stderr
+		if pbout == nil || opts.Quiet {
+			pbout = io.Discard
+		}
+		return pb.NewOptions64(size,
+			pb.OptionSetWriter(pbout),
+			pb.OptionShowBytes(true),
+			pb.OptionSetWidth(10),
+			pb.OptionThrottle(65*time.Millisecond),
+			pb.OptionShowCount(),
+			pb.OptionSpinnerType(14),
+			pb.OptionFullWidth(),
+			pb.OptionSetDescription("Downloading"),
+			pb.OptionOnCompletion(func() {
+				fmt.Fprint(pbout, "\n")
+			}),
+			pb.OptionSetTheme(pb.Theme{
+				Saucer:        "=",
+				SaucerHead:    ">",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}))
+	}, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	body := buf.Bytes()
+	if cachePath != "" && !IsLocalFile(url) {
+		if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err == nil {
+			_ = os.WriteFile(cachePath, body, 0o644)
+		}
+	}
+	return body, nil
 }
 
 func (r *InstallRunner) resolveCandidate(target string, candidates []string) (string, error) {
