@@ -216,7 +216,7 @@ func promptIndex(choices []string) (int, error) {
 }
 
 func printConfigList(cfg *cfgpkg.File) {
-	if cfg.Global.Target != nil || cfg.Global.System != nil || cfg.Global.CacheDir != nil {
+	if cfg.Global.Target != nil || cfg.Global.System != nil || cfg.Global.CacheDir != nil || cfg.Global.ProxyURL != nil {
 		fmt.Println("[global]")
 		if cfg.Global.Target != nil {
 			fmt.Printf("target = %s\n", *cfg.Global.Target)
@@ -226,6 +226,9 @@ func printConfigList(cfg *cfgpkg.File) {
 		}
 		if cfg.Global.CacheDir != nil {
 			fmt.Printf("cache_dir = %s\n", *cfg.Global.CacheDir)
+		}
+		if cfg.Global.ProxyURL != nil {
+			fmt.Printf("proxy_url = %s\n", *cfg.Global.ProxyURL)
 		}
 	}
 

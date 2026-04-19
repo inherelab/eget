@@ -124,6 +124,7 @@ CLI 当前还保留：
 [global]
 target = "~/.local/bin"
 cache_dir = "~/.cache/eget"
+proxy_url = "http://127.0.0.1:7890"
 system = ""
 ```
 
@@ -143,6 +144,7 @@ CLI > package > repo > global > default
 
 - `target`: 默认安装目录
 - `cache_dir`: 默认下载缓存目录
+- `proxy_url`: 全局远程请求代理，优先于环境变量代理并同时作用于 GitHub 查询与远程下载
 - `download` 未传 `--to` 时，app 层会把输出目录回退到 `cache_dir`
 
 ## Installed Store

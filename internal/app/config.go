@@ -75,9 +75,11 @@ func (s ConfigService) ConfigInit() (string, error) {
 	file := cfgpkg.NewFile()
 	target := "~/.local/bin"
 	cacheDir := "~/.cache/eget"
+	proxyURL := ""
 	empty := ""
 	file.Global.Target = &target
 	file.Global.CacheDir = &cacheDir
+	file.Global.ProxyURL = &proxyURL
 	file.Global.System = &empty
 	if err := cfgpkg.Save(path, file); err != nil {
 		return "", err
@@ -202,6 +204,8 @@ func getSectionField(section *cfgpkg.Section, field string) (string, error) {
 		return derefString(section.System), nil
 	case "cache_dir":
 		return derefString(section.CacheDir), nil
+	case "proxy_url":
+		return derefString(section.ProxyURL), nil
 	case "repo":
 		return derefString(section.Repo), nil
 	case "file":
@@ -223,6 +227,8 @@ func setSectionField(section *cfgpkg.Section, field, value string) error {
 		section.System = stringPtr(value)
 	case "cache_dir":
 		section.CacheDir = stringPtr(value)
+	case "proxy_url":
+		section.ProxyURL = stringPtr(value)
 	case "repo":
 		section.Repo = stringPtr(value)
 	case "file":

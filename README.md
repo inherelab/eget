@@ -115,6 +115,7 @@ eget config set global.target ~/.local/bin
 [global]
 target = "~/.local/bin"
 cache_dir = "~/.cache/eget"
+proxy_url = "http://127.0.0.1:7890"
 system = "windows/amd64"
 
 ["inhere/markview"]
@@ -131,6 +132,7 @@ asset_filters = ["windows"]
 
 - `target`
 - `cache_dir`
+- `proxy_url`
 - `system`
 - `tag`
 - `file`
@@ -144,11 +146,13 @@ asset_filters = ["windows"]
 
 - `eget config --init` 会写入 `global.target = "~/.local/bin"`
 - `eget config --init` 会写入 `global.cache_dir = "~/.cache/eget"`
+- `eget config --init` 会写入 `global.proxy_url = ""`
 
 目录语义：
 
 - `target` 是默认安装目录
 - `cache_dir` 是默认下载缓存目录
+- `proxy_url` 是全局远程请求代理，GitHub 查询和远程下载都会使用它
 - `download` 在未指定 `--to` 时默认使用 `cache_dir`
 - `install`/`download` 对远程 URL 的原始下载内容会优先复用 `cache_dir` 中的缓存文件
 

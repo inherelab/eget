@@ -6,6 +6,7 @@ type Section struct {
 	All          *bool    `toml:"all"`
 	AssetFilters []string `toml:"asset_filters"`
 	CacheDir     *string  `toml:"cache_dir"`
+	ProxyURL     *string  `toml:"proxy_url"`
 	DownloadOnly *bool    `toml:"download_only"`
 	File         *string  `toml:"file"`
 	GithubToken  *string  `toml:"github_token"`
@@ -41,6 +42,7 @@ type Merged struct {
 	All          bool
 	AssetFilters []string
 	CacheDir     string
+	ProxyURL     string
 	DownloadOnly bool
 	File         string
 	GithubToken  string
@@ -60,6 +62,7 @@ type CLIOverrides struct {
 	All          *bool
 	AssetFilters *[]string
 	CacheDir     *string
+	ProxyURL     *string
 	DownloadOnly *bool
 	File         *string
 	GithubToken  *string

@@ -3,6 +3,7 @@ package install
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,5 +86,56 @@ func TestDownloadBodyWritesCacheAfterDownload(t *testing.T) {
 	}
 	if string(saved) != "network-data" {
 		t.Fatalf("expected cached network data, got %q", string(saved))
+	}
+}
+
+func TestNewHTTPGetterUsesProxyURL(t *testing.T) {
+	proxyFunc, err := proxyFuncFor("http://127.0.0.1:7890")
+	if err != nil {
+		t.Fatalf("proxyFuncFor: %v", err)
+	}
+	req, err := http.NewRequest(http.MethodGet, "https://example.com/tool.tar.gz", nil)
+	if err == nil {
+		proxyURL, err := proxyFunc(req)
+		if err != nil {
+			t.Fatalf("proxy func: %v", err)
+		}
+		if proxyURL == nil {
+			t.Fatal("expected proxy url to be returned")
+		}
+		if proxyURL.String() != "http://127.0.0.1:7890" {
+			t.Fatalf("expected proxy url http://127.0.0.1:7890, got %q", proxyURL.String())
+		}
+		return
+	}
+	t.Fatalf("new request: %v", err)
+}
+
+func TestProxyFuncForRejectsInvalidProxyURL(t *testing.T) {
+	_, err := proxyFuncFor("://bad-proxy")
+	if err == nil {
+		t.Fatal("expected invalid proxy url error")
+	}
+	if !strings.Contains(err.Error(), "invalid proxy_url") {
+		t.Fatalf("expected invalid proxy_url error, got %v", err)
+	}
+}
+
+func TestProxyFuncForFallsBackToEnvironment(t *testing.T) {
+	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:7891")
+	proxyFunc, err := proxyFuncFor("")
+	if err != nil {
+		t.Fatalf("proxyFuncFor env fallback: %v", err)
+	}
+	req := &http.Request{URL: &url.URL{Scheme: "https", Host: "example.com"}}
+	proxyURL, err := proxyFunc(req)
+	if err != nil {
+		t.Fatalf("proxy func env fallback: %v", err)
+	}
+	if proxyURL == nil {
+		t.Fatal("expected environment proxy url to be returned")
+	}
+	if proxyURL.String() != "http://127.0.0.1:7891" {
+		t.Fatalf("expected env proxy url http://127.0.0.1:7891, got %q", proxyURL.String())
 	}
 }

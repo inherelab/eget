@@ -148,6 +148,7 @@ func TestInstallTargetUsesConfiguredDefaults(t *testing.T) {
 [global]
 target = "~/.local/bin"
 cache_dir = "~/.cache/eget"
+proxy_url = "http://127.0.0.1:7890"
 `)
 	runner := &fakeRunner{
 		result: RunResult{
@@ -181,6 +182,9 @@ cache_dir = "~/.cache/eget"
 	}
 	if runner.opts.CacheDir != expectedCache {
 		t.Fatalf("expected configured cache dir, got %q", runner.opts.CacheDir)
+	}
+	if runner.opts.ProxyURL != "http://127.0.0.1:7890" {
+		t.Fatalf("expected configured proxy url, got %q", runner.opts.ProxyURL)
 	}
 }
 

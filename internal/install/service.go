@@ -38,8 +38,9 @@ func (f HTTPGetterFunc) Get(url string) (*http.Response, error) {
 }
 
 type Service struct {
-	BinaryModTime func(tool, output string) time.Time
-	GitHubGetter  sourcegithub.HTTPGetter
+	BinaryModTime       func(tool, output string) time.Time
+	GitHubGetter        sourcegithub.HTTPGetter
+	GitHubGetterFactory func(opts Options) sourcegithub.HTTPGetter
 
 	AllDetectorFactory    func() Detector
 	SystemDetectorFactory func(goos, goarch string) (Detector, error)
@@ -47,7 +48,7 @@ type Service struct {
 	DetectorChainFactory  func(detectors []Detector, system Detector) Detector
 
 	Sha256VerifierFactory      func(expected string) (Verifier, error)
-	Sha256AssetVerifierFactory func(assetURL string) Verifier
+	Sha256AssetVerifierFactory func(assetURL string, opts Options) Verifier
 	Sha256PrinterFactory       func() Verifier
 	NoVerifierFactory          func() Verifier
 
@@ -112,7 +113,11 @@ func (s *Service) SelectFinder(target string, opts *Options) (Finder, string, er
 		}
 
 		finder := sourcegithub.NewAssetFinder(repo, tag, opts.Prerelease, minTime)
-		finder.Getter = s.GitHubGetter
+		if s.GitHubGetterFactory != nil {
+			finder.Getter = s.GitHubGetterFactory(*opts)
+		} else {
+			finder.Getter = s.GitHubGetter
+		}
 		return finder, tool, nil
 	default:
 		return nil, "", fmt.Errorf("invalid argument (must be of the form `user/repo`)")
@@ -180,7 +185,7 @@ func (s *Service) SelectVerifier(sumAsset string, opts *Options) (Verifier, erro
 		if s.Sha256AssetVerifierFactory == nil {
 			return nil, fmt.Errorf("sha256 asset verifier factory is required")
 		}
-		return s.Sha256AssetVerifierFactory(sumAsset), nil
+		return s.Sha256AssetVerifierFactory(sumAsset, *opts), nil
 	case opts.Hash:
 		if s.Sha256PrinterFactory == nil {
 			return nil, fmt.Errorf("sha256 printer factory is required")

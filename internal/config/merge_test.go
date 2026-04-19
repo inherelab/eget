@@ -11,6 +11,7 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 			Quiet:        boolPtr(true),
 			ShowHash:     boolPtr(true),
 			CacheDir:     stringPtr("~/.cache/eget"),
+			ProxyURL:     stringPtr("http://127.0.0.1:7890"),
 			System:       stringPtr("linux/amd64"),
 			Target:       stringPtr("~/bin"),
 			UpgradeOnly:  boolPtr(true),
@@ -28,6 +29,9 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 	}
 	if merged.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected global cache dir to be applied, got %#v", merged)
+	}
+	if merged.ProxyURL != "http://127.0.0.1:7890" {
+		t.Fatalf("expected global proxy url to be applied, got %#v", merged)
 	}
 }
 
@@ -68,9 +72,9 @@ func TestMergeInstallOptionsUsesRepoSection(t *testing.T) {
 func TestMergeInstallOptionsCLIOverridesRepoAndGlobal(t *testing.T) {
 	merged := MergeInstallOptions(
 		Section{
-			Quiet: boolPtr(false),
+			Quiet:    boolPtr(false),
 			CacheDir: stringPtr("~/global-cache"),
-			Tag:   stringPtr("v1.0.0"),
+			Tag:      stringPtr("v1.0.0"),
 		},
 		Section{
 			Quiet:    boolPtr(true),

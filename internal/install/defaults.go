@@ -165,6 +165,9 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 	return &Service{
 		BinaryModTime: binaryModTime,
 		GitHubGetter:  githubGetter,
+		GitHubGetterFactory: func(opts Options) sourcegithub.HTTPGetter {
+			return NewHTTPGetter(opts)
+		},
 		AllDetectorFactory: func() Detector {
 			return &allDetector{}
 		},
@@ -180,8 +183,12 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 		Sha256VerifierFactory: func(expected string) (Verifier, error) {
 			return newSha256Verifier(expected)
 		},
-		Sha256AssetVerifierFactory: func(assetURL string) Verifier {
-			return &sha256AssetVerifier{AssetURL: assetURL, Getter: githubGetter}
+		Sha256AssetVerifierFactory: func(assetURL string, opts Options) Verifier {
+			getter := githubGetter
+			if getter == nil {
+				getter = NewHTTPGetter(opts)
+			}
+			return &sha256AssetVerifier{AssetURL: assetURL, Getter: getter}
 		},
 		Sha256PrinterFactory: func() Verifier {
 			return &sha256Printer{}
@@ -484,7 +491,10 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 					if err != nil {
 						return err
 					}
-					type link struct{ newname, oldname string; sym bool }
+					type link struct {
+						newname, oldname string
+						sym              bool
+					}
 					var links []link
 					for {
 						subf, err := subAr.Next()
@@ -728,20 +738,20 @@ func isExec(file string, mode os.FileMode) bool {
 }
 
 var (
-	installOSDarwin = systemOS{name: "darwin", regex: regexp.MustCompile(`(?i)(darwin|mac.?(os)?|osx)`)}
-	installOSWindows = systemOS{name: "windows", regex: regexp.MustCompile(`(?i)([^r]win|windows)`)}
-	installOSLinux = systemOS{name: "linux", regex: regexp.MustCompile(`(?i)(linux|ubuntu)`), anti: regexp.MustCompile(`(?i)(android)`), priority: regexp.MustCompile(`\.appimage$`)}
-	installOSNetBSD = systemOS{name: "netbsd", regex: regexp.MustCompile(`(?i)(netbsd)`)}
-	installOSFreeBSD = systemOS{name: "freebsd", regex: regexp.MustCompile(`(?i)(freebsd)`)}
-	installOSOpenBSD = systemOS{name: "openbsd", regex: regexp.MustCompile(`(?i)(openbsd)`)}
-	installOSAndroid = systemOS{name: "android", regex: regexp.MustCompile(`(?i)(android)`)}
-	installOSIllumos = systemOS{name: "illumos", regex: regexp.MustCompile(`(?i)(illumos)`)}
-	installOSSolaris = systemOS{name: "solaris", regex: regexp.MustCompile(`(?i)(solaris)`)}
-	installOSPlan9 = systemOS{name: "plan9", regex: regexp.MustCompile(`(?i)(plan9)`)}
-	installArchAMD64 = systemArch{name: "amd64", regex: regexp.MustCompile(`(?i)(x64|amd64|x86(-|_)?64)`)}
-	installArchI386 = systemArch{name: "386", regex: regexp.MustCompile(`(?i)(x32|amd32|x86(-|_)?32|i?386)`)}
-	installArchArm = systemArch{name: "arm", regex: regexp.MustCompile(`(?i)(arm32|armv6|arm\b)`)}
-	installArchArm64 = systemArch{name: "arm64", regex: regexp.MustCompile(`(?i)(arm64|armv8|aarch64)`)}
+	installOSDarwin    = systemOS{name: "darwin", regex: regexp.MustCompile(`(?i)(darwin|mac.?(os)?|osx)`)}
+	installOSWindows   = systemOS{name: "windows", regex: regexp.MustCompile(`(?i)([^r]win|windows)`)}
+	installOSLinux     = systemOS{name: "linux", regex: regexp.MustCompile(`(?i)(linux|ubuntu)`), anti: regexp.MustCompile(`(?i)(android)`), priority: regexp.MustCompile(`\.appimage$`)}
+	installOSNetBSD    = systemOS{name: "netbsd", regex: regexp.MustCompile(`(?i)(netbsd)`)}
+	installOSFreeBSD   = systemOS{name: "freebsd", regex: regexp.MustCompile(`(?i)(freebsd)`)}
+	installOSOpenBSD   = systemOS{name: "openbsd", regex: regexp.MustCompile(`(?i)(openbsd)`)}
+	installOSAndroid   = systemOS{name: "android", regex: regexp.MustCompile(`(?i)(android)`)}
+	installOSIllumos   = systemOS{name: "illumos", regex: regexp.MustCompile(`(?i)(illumos)`)}
+	installOSSolaris   = systemOS{name: "solaris", regex: regexp.MustCompile(`(?i)(solaris)`)}
+	installOSPlan9     = systemOS{name: "plan9", regex: regexp.MustCompile(`(?i)(plan9)`)}
+	installArchAMD64   = systemArch{name: "amd64", regex: regexp.MustCompile(`(?i)(x64|amd64|x86(-|_)?64)`)}
+	installArchI386    = systemArch{name: "386", regex: regexp.MustCompile(`(?i)(x32|amd32|x86(-|_)?32|i?386)`)}
+	installArchArm     = systemArch{name: "arm", regex: regexp.MustCompile(`(?i)(arm32|armv6|arm\b)`)}
+	installArchArm64   = systemArch{name: "arm64", regex: regexp.MustCompile(`(?i)(arm64|armv8|aarch64)`)}
 	installArchRiscv64 = systemArch{name: "riscv64", regex: regexp.MustCompile(`(?i)(riscv64)`)}
 )
 

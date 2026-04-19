@@ -52,6 +52,9 @@ func TestConfigInit(t *testing.T) {
 	if cfg.Global.CacheDir == nil || *cfg.Global.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected default global.cache_dir, got %#v", cfg.Global.CacheDir)
 	}
+	if cfg.Global.ProxyURL == nil || *cfg.Global.ProxyURL != "" {
+		t.Fatalf("expected default global.proxy_url, got %#v", cfg.Global.ProxyURL)
+	}
 	if cfg.Packages == nil {
 		t.Fatal("expected packages section to be initialized")
 	}
@@ -114,6 +117,18 @@ target = "~/.local/bin"
 	}
 	if value != "~/.cache/eget" {
 		t.Fatalf("expected updated global.cache_dir, got %q", value)
+	}
+
+	if err := svc.ConfigSet("global.proxy_url", "http://127.0.0.1:7890"); err != nil {
+		t.Fatalf("config set proxy_url: %v", err)
+	}
+
+	value, err = svc.ConfigGet("global.proxy_url")
+	if err != nil {
+		t.Fatalf("config get updated global.proxy_url: %v", err)
+	}
+	if value != "http://127.0.0.1:7890" {
+		t.Fatalf("expected updated global.proxy_url, got %q", value)
 	}
 
 	if err := svc.ConfigSet("global.target", "~/.local/bin"); err != nil {

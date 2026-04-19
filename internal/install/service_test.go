@@ -104,12 +104,20 @@ func TestSelectFinder(t *testing.T) {
 	svc.GitHubGetter = fakeHTTPGetterFunc(func(url string) (*http.Response, error) {
 		return nil, nil
 	})
+	svc.GitHubGetterFactory = func(opts Options) sourcegithub.HTTPGetter {
+		return fakeHTTPGetterFunc(func(url string) (*http.Response, error) {
+			if opts.ProxyURL != "http://127.0.0.1:7890" {
+				t.Fatalf("expected proxy url to propagate to finder getter, got %q", opts.ProxyURL)
+			}
+			return nil, nil
+		})
+	}
 	svc.BinaryModTime = func(tool, output string) time.Time {
 		return time.Unix(123, 0)
 	}
 
 	t.Run("repo target", func(t *testing.T) {
-		opts := &Options{Tag: "v1.2.3"}
+		opts := &Options{Tag: "v1.2.3", ProxyURL: "http://127.0.0.1:7890"}
 		finder, tool, err := svc.SelectFinder("inhere/markview", opts)
 		if err != nil {
 			t.Fatalf("SelectFinder(repo): %v", err)
@@ -237,7 +245,8 @@ func TestSelectVerifier(t *testing.T) {
 		}
 		return &fakeVerifier{name: "verify:" + expected}, nil
 	}
-	svc.Sha256AssetVerifierFactory = func(assetURL string) Verifier {
+	svc.Sha256AssetVerifierFactory = func(assetURL string, opts Options) Verifier {
+		_ = opts
 		return &fakeVerifier{name: "asset:" + assetURL}
 	}
 	svc.Sha256PrinterFactory = func() Verifier {

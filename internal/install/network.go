@@ -1,14 +1,15 @@
 package install
 
 import (
-	"crypto/tls"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,25 +68,29 @@ func setAuthHeader(req *http.Request, disableSSL bool) error {
 }
 
 func Get(url string, disableSSL bool) (*http.Response, error) {
+	return GetWithOptions(url, Options{DisableSSL: disableSSL})
+}
+
+func GetWithOptions(url string, opts Options) (*http.Response, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	if err := setAuthHeader(req, disableSSL); err != nil {
+	if err := setAuthHeader(req, opts.DisableSSL); err != nil {
 		return nil, err
 	}
 
-	client := &http.Client{Transport: &http.Transport{
-		Proxy:           http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: disableSSL},
-	}}
+	client, err := newHTTPClient(opts)
+	if err != nil {
+		return nil, err
+	}
 
 	return client.Do(req)
 }
 
 func NewHTTPGetter(opts Options) HTTPGetterFunc {
 	return HTTPGetterFunc(func(url string) (*http.Response, error) {
-		return Get(url, opts.DisableSSL)
+		return GetWithOptions(url, opts)
 	})
 }
 
@@ -113,7 +118,12 @@ func GetRateLimit(opts Options) (RateLimit, error) {
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	client, err := newHTTPClient(opts)
+	if err != nil {
+		return RateLimit{}, err
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return RateLimit{}, err
 	}
@@ -129,6 +139,28 @@ func GetRateLimit(opts Options) (RateLimit, error) {
 		return RateLimit{}, err
 	}
 	return parsed.Resources["core"], nil
+}
+
+func newHTTPClient(opts Options) (*http.Client, error) {
+	proxyFunc, err := proxyFuncFor(opts.ProxyURL)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{Transport: &http.Transport{
+		Proxy:           proxyFunc,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.DisableSSL},
+	}}, nil
+}
+
+func proxyFuncFor(proxyURL string) (func(*http.Request) (*url.URL, error), error) {
+	if proxyURL == "" {
+		return http.ProxyFromEnvironment, nil
+	}
+	parsed, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid proxy_url %q: %w", proxyURL, err)
+	}
+	return http.ProxyURL(parsed), nil
 }
 
 func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar, opts Options) error {

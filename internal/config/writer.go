@@ -52,6 +52,7 @@ func writeSectionBody(buf *bytes.Buffer, section Section) {
 	writeBool(buf, "all", section.All)
 	writeStrings(buf, "asset_filters", section.AssetFilters)
 	writeString(buf, "cache_dir", section.CacheDir)
+	writeString(buf, "proxy_url", section.ProxyURL)
 	writeBool(buf, "download_only", section.DownloadOnly)
 	writeString(buf, "file", section.File)
 	writeString(buf, "github_token", section.GithubToken)

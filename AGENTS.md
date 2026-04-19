@@ -22,4 +22,3 @@
 - 使用 git worktree 进行开发时，在 `.worktrees` 目录下创建分支
 
 ## 项目核心记忆
-

@@ -125,6 +125,7 @@ header: Eget Manual
 [global]
 target = "~/.local/bin"
 cache_dir = "~/.cache/eget"
+proxy_url = "http://127.0.0.1:7890"
 system = "windows/amd64"
 
 ["inhere/markview"]
@@ -145,11 +146,13 @@ asset_filters = ["windows"]
 
       global.target = "~/.local/bin"
       global.cache_dir = "~/.cache/eget"
+      global.proxy_url = ""
 
   Directory semantics:
 
   * `target` is the default install directory
   * `cache_dir` is the default download cache directory
+  * `proxy_url` is the global proxy for GitHub lookups and remote downloads
   * `download` falls back to `cache_dir` when `--to` is not provided
   * remote downloads are reused from `cache_dir` when a cached file exists
 

@@ -13,6 +13,7 @@ type Options struct {
 	Source       bool
 	Output       string
 	CacheDir     string
+	ProxyURL     string
 	System       string
 	ExtractFile  string
 	All          bool
