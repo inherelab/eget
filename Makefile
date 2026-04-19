@@ -1,50 +1,90 @@
-VERSION = $(shell GOOS=$(shell go env GOHOSTOS) GOARCH=$(shell go env GOHOSTARCH) \
-	go run tools/build-version.go)
-SYSTEM = ${GOOS}_${GOARCH}
-GOVARS = -X github.com/inherelab/eget/internal/version.Version=$(VERSION)
+## Eget — Makefile
+
+APP     := eget
+VERSION ?= 0.1.0
 GOEXE = $(shell go env GOEXE)
+BINARY  := $(APP)$(GOEXE)
+MAIN_DIR := ./cmd/eget
 
+# Build metadata
+GIT_HASH  := $(shell git rev-parse --short=8 HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+LDFLAGS := -s -w \
+	-X main.Version=$(VERSION) \
+	-X main.GitHash=$(GIT_HASH) \
+	-X 'main.BuildTime=$(BUILD_TIME)'
+
+.PHONY: all build backend clean help
+
+## all: build (default)
+all: build
+
+## build: build Go binary (current platform)
 build:
-	go build -trimpath -ldflags "-s -w $(GOVARS)" -o eget$(GOEXE) ./cmd/eget
+	@echo "🐹 Building Go binary ($(VERSION) @ $(GIT_HASH))..."
+	@go build -ldflags "$(LDFLAGS)" -o $(BINARY) $(MAIN_DIR)
+	@echo "✅ Binary: $(BINARY) ($$(du -sh $(BINARY) | cut -f1))"
 
-build-dist:
-	go build -trimpath -ldflags "-s -w $(GOVARS)" -o dist/bin/eget-$(VERSION)-$(SYSTEM) ./cmd/eget
-
+## install: install Go binary to $GOPATH/bin
 install:
-	go install -trimpath -ldflags "-s -w $(GOVARS)" ./cmd/eget
+	@go install -ldflags "$(LDFLAGS)" $(MAIN_DIR)
+	@echo "✅ Installed to GOPATH/bin"
 
-fmt:
-	gofmt -s -w .
+## run: build and run with current directory
+run: build
+	./$(BINARY)
 
-vet:
-	go vet
+# ─── Cross Compilation ────────────────────────────────────────────────────────
 
-eget:
-	go build -trimpath -ldflags "-s -w $(GOVARS)" -o eget$(GOEXE) ./cmd/eget
+DIST_DIR := dist
 
-test: eget
-	cd test; EGET_CONFIG=eget.toml EGET_BIN= TEST_EGET=../eget$(GOEXE) go run test_eget.go
+## build-all: cross-compile for all platforms
+build-all: build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows
 
-eget.1: man/eget.md
-	pandoc man/eget.md -s -t man -o eget.1
+## build-linux: compile for Linux amd64
+build-linux:
+	@echo "🐧 linux/amd64..."
+	@mkdir -p $(DIST_DIR)
+	@GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-linux-amd64 $(MAIN_DIR)
+	@echo "   → $(DIST_DIR)/$(APP)-linux-amd64"
 
-package: build-dist eget.1
-	mkdir -p dist/eget-$(VERSION)-$(SYSTEM)
-	cp README.md dist/eget-$(VERSION)-$(SYSTEM)
-	cp LICENSE dist/eget-$(VERSION)-$(SYSTEM)
-	cp eget.1 dist/eget-$(VERSION)-$(SYSTEM)
-	if [ "${GOOS}" = "windows" ]; then\
-		cp dist/bin/eget-$(VERSION)-$(SYSTEM) dist/eget-$(VERSION)-$(SYSTEM)/eget.exe;\
-		cd dist;\
-		zip -r -q -T eget-$(VERSION)-$(SYSTEM).zip eget-$(VERSION)-$(SYSTEM);\
-	else\
-		cp dist/bin/eget-$(VERSION)-$(SYSTEM) dist/eget-$(VERSION)-$(SYSTEM)/eget;\
-		cd dist;\
-		tar -czf eget-$(VERSION)-$(SYSTEM).tar.gz eget-$(VERSION)-$(SYSTEM);\
-	fi
+## build-linux-arm64: compile for Linux arm64
+build-linux-arm64:
+	@echo "🐧 linux/arm64..."
+	@mkdir -p $(DIST_DIR)
+	@GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-linux-arm64 $(MAIN_DIR)
+	@echo "   → $(DIST_DIR)/$(APP)-linux-arm64"
 
+## build-darwin: compile for macOS amd64
+build-darwin:
+	@echo "🍎 darwin/amd64..."
+	@mkdir -p $(DIST_DIR)
+	@GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-darwin-amd64 $(MAIN_DIR)
+	@echo "   → $(DIST_DIR)/$(APP)-darwin-amd64"
+
+## build-darwin-arm64: compile for macOS Apple Silicon
+build-darwin-arm64:
+	@echo "🍎 darwin/arm64..."
+	@mkdir -p $(DIST_DIR)
+	@GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-darwin-arm64 $(MAIN_DIR)
+	@echo "   → $(DIST_DIR)/$(APP)-darwin-arm64"
+
+## build-windows: compile for Windows amd64
+build-windows:
+	@echo "🪟 windows/amd64..."
+	@mkdir -p $(DIST_DIR)
+	@GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-windows-amd64.exe $(MAIN_DIR)
+	@echo "   → $(DIST_DIR)/$(APP)-windows-amd64.exe"
+
+## clean: remove build artifacts
 clean:
-	rm -f test/eget.1 test/fd test/micro test/nvim test/pandoc test/rg.exe test/fzf test/LICENSE.txt test/install-license.txt test/tmp.eget.toml
-	rm -rf dist
+	@rm -f $(BINARY)
+	@rm -rf $(DIST_DIR)
+	@echo "🧹 Cleaned"
 
-.PHONY: build clean install package fmt vet test
+## help: show this help
+help:
+	@echo "Skillc Build System"
+	@echo ""
+	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /'

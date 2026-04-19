@@ -9,6 +9,12 @@ import (
 )
 
 var (
+	version string
+	gitHash string
+	buildTime string
+)
+
+var (
 	ErrNotImplemented = errors.New("not implemented")
 )
 
@@ -17,6 +23,13 @@ type CommandHandler func(name string, options any) error
 type App struct {
 	inner     *capp.App
 	resetters []func()
+}
+
+// SetBuildInfo sets the build information for the application.
+func SetBuildInfo(versionStr, gitHashStr, buildTimeStr string) {
+	version = versionStr
+	gitHash = gitHashStr
+	buildTime = buildTimeStr
 }
 
 func Main(args []string, stdout, stderr io.Writer) error {
@@ -54,7 +67,10 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 
 	inner := capp.NewApp()
 	inner.Name = "eget"
-	inner.Desc = "Easy install and download tool"
+	inner.Desc = fmt.Sprintf(
+		"Easy install and download tool (Version: %s, Git Hash: %s, Build Time: %s)",
+		version, gitHash, buildTime,
+	)
 	inner.HelpWriter = stdout
 	inner.SetOutput(stderr)
 
