@@ -20,6 +20,11 @@ import (
 )
 
 var downloadGet = Get
+var downloadGetWithOptions = GetWithOptions
+var httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+	return client.Do(req)
+}
+var proxyNoticeWriter io.Writer = os.Stderr
 
 func tokenFrom(value string) (string, error) {
 	if strings.HasPrefix(value, "@") {
@@ -85,7 +90,11 @@ func GetWithOptions(url string, opts Options) (*http.Response, error) {
 		return nil, err
 	}
 
-	return client.Do(req)
+	if isGitHubAPIRequest(req.URL) {
+		printProxyNotice("GitHub API request", opts.ProxyURL)
+	}
+
+	return httpDo(client, req)
 }
 
 func NewHTTPGetter(opts Options) HTTPGetterFunc {
@@ -123,7 +132,7 @@ func GetRateLimit(opts Options) (RateLimit, error) {
 		return RateLimit{}, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := httpDo(client, req)
 	if err != nil {
 		return RateLimit{}, err
 	}
@@ -174,7 +183,9 @@ func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar
 		return err
 	}
 
-	resp, err := downloadGet(url, opts.DisableSSL)
+	printProxyNotice("download request", opts.ProxyURL)
+
+	resp, err := downloadGetWithOptions(url, opts)
 	if err != nil {
 		return err
 	}
@@ -191,6 +202,17 @@ func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar
 	bar := getbar(resp.ContentLength)
 	_, err = io.Copy(io.MultiWriter(out, bar), resp.Body)
 	return err
+}
+
+func printProxyNotice(kind, proxyURL string) {
+	if proxyURL == "" || proxyNoticeWriter == nil {
+		return
+	}
+	fmt.Fprintf(proxyNoticeWriter, "Using proxy_url for %s: %s\n", kind, proxyURL)
+}
+
+func isGitHubAPIRequest(u *url.URL) bool {
+	return u != nil && strings.EqualFold(u.Host, "api.github.com")
 }
 
 func CacheFilePath(cacheDir, url string) string {

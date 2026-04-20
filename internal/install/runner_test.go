@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"net/url"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	pb "github.com/schollz/progressbar/v3"
 )
 
 func TestCacheFilePath(t *testing.T) {
@@ -33,9 +36,9 @@ func TestDownloadBodyUsesCacheWhenAvailable(t *testing.T) {
 	}
 
 	calls := 0
-	origGet := downloadGet
-	defer func() { downloadGet = origGet }()
-	downloadGet = func(url string, disableSSL bool) (*http.Response, error) {
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
 		calls++
 		return &http.Response{
 			StatusCode: http.StatusOK,
@@ -62,9 +65,9 @@ func TestDownloadBodyWritesCacheAfterDownload(t *testing.T) {
 	url := "https://example.com/tool.tar.gz"
 	cachePath := CacheFilePath(cacheDir, url)
 
-	origGet := downloadGet
-	defer func() { downloadGet = origGet }()
-	downloadGet = func(url string, disableSSL bool) (*http.Response, error) {
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader("network-data")),
@@ -86,6 +89,61 @@ func TestDownloadBodyWritesCacheAfterDownload(t *testing.T) {
 	}
 	if string(saved) != "network-data" {
 		t.Fatalf("expected cached network data, got %q", string(saved))
+	}
+}
+
+func TestDownloadPrintsProxyNoticeForRemoteRequest(t *testing.T) {
+	var notice bytes.Buffer
+	origNoticeWriter := proxyNoticeWriter
+	origGetWithOptions := downloadGetWithOptions
+	defer func() {
+		proxyNoticeWriter = origNoticeWriter
+		downloadGetWithOptions = origGetWithOptions
+	}()
+	proxyNoticeWriter = &notice
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		if opts.ProxyURL != "http://127.0.0.1:7890" {
+			t.Fatalf("expected proxy url to propagate, got %q", opts.ProxyURL)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("network-data")),
+		}, nil
+	}
+
+	err := Download("https://example.com/tool.tar.gz", io.Discard, func(size int64) *pb.ProgressBar {
+		return pb.NewOptions64(size, pb.OptionSetWriter(io.Discard))
+	}, Options{ProxyURL: "http://127.0.0.1:7890"})
+	if err != nil {
+		t.Fatalf("Download(): %v", err)
+	}
+
+	if got := notice.String(); !strings.Contains(got, "Using proxy_url for download request: http://127.0.0.1:7890") {
+		t.Fatalf("expected download proxy notice, got %q", got)
+	}
+}
+
+func TestDownloadSkipsProxyNoticeForLocalFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	localFile := filepath.Join(tmpDir, "tool.tar.gz")
+	if err := os.WriteFile(localFile, []byte("ok"), 0o644); err != nil {
+		t.Fatalf("write temp file: %v", err)
+	}
+
+	var notice bytes.Buffer
+	origNoticeWriter := proxyNoticeWriter
+	defer func() { proxyNoticeWriter = origNoticeWriter }()
+	proxyNoticeWriter = &notice
+
+	err := Download(localFile, io.Discard, func(size int64) *pb.ProgressBar {
+		return pb.NewOptions64(size, pb.OptionSetWriter(io.Discard))
+	}, Options{ProxyURL: "http://127.0.0.1:7890"})
+	if err != nil {
+		t.Fatalf("Download(local): %v", err)
+	}
+
+	if got := notice.String(); got != "" {
+		t.Fatalf("expected no proxy notice for local file, got %q", got)
 	}
 }
 
@@ -137,5 +195,59 @@ func TestProxyFuncForFallsBackToEnvironment(t *testing.T) {
 	}
 	if proxyURL.String() != "http://127.0.0.1:7891" {
 		t.Fatalf("expected env proxy url http://127.0.0.1:7891, got %q", proxyURL.String())
+	}
+}
+
+func TestGetWithOptionsPrintsProxyNoticeForGitHubAPI(t *testing.T) {
+	var notice bytes.Buffer
+	origNoticeWriter := proxyNoticeWriter
+	origHTTPDo := httpDo
+	defer func() {
+		proxyNoticeWriter = origNoticeWriter
+		httpDo = origHTTPDo
+	}()
+	proxyNoticeWriter = &notice
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{}`)),
+		}, nil
+	}
+
+	resp, err := GetWithOptions("https://api.github.com/repos/gookit/gitw/releases/latest", Options{ProxyURL: "http://127.0.0.1:7890"})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	_ = resp.Body.Close()
+
+	if got := notice.String(); !strings.Contains(got, "Using proxy_url for GitHub API request: http://127.0.0.1:7890") {
+		t.Fatalf("expected GitHub API proxy notice, got %q", got)
+	}
+}
+
+func TestGetWithOptionsSkipsProxyNoticeWithoutProxyURL(t *testing.T) {
+	var notice bytes.Buffer
+	origNoticeWriter := proxyNoticeWriter
+	origHTTPDo := httpDo
+	defer func() {
+		proxyNoticeWriter = origNoticeWriter
+		httpDo = origHTTPDo
+	}()
+	proxyNoticeWriter = &notice
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{}`)),
+		}, nil
+	}
+
+	resp, err := GetWithOptions("https://api.github.com/repos/gookit/gitw/releases/latest", Options{})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	_ = resp.Body.Close()
+
+	if got := notice.String(); got != "" {
+		t.Fatalf("expected no proxy notice without proxy_url, got %q", got)
 	}
 }
