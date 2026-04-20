@@ -1,0 +1,64 @@
+name: Tag-release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  release:
+    name: Release new version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go Faster
+        uses: WillAbides/setup-go-faster@v1.15.0
+        timeout-minutes: 3
+        with:
+          go-version: "stable"
+
+      - name: Setup ENV
+        # https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
+        run: |
+          echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$GITHUB_WORKFLOW" >> $GITHUB_ENV
+
+      - name: Mod tidy
+        run: |
+          go mod tidy
+
+      - name: Build bin package
+        run: |
+          make build-all
+          ./dist/eget-linux-amd64 -h
+
+      - name: Generate changelog
+        run: |
+          curl https://github.com/gookit/gitw/releases/latest/download/chlog-linux-amd64 -L -o /usr/local/bin/chlog
+          chmod a+x /usr/local/bin/chlog
+          chlog -c .github/changelog.yml -o changelog.md prev last
+          cat changelog.md
+
+      # https://github.com/softprops/action-gh-release
+      # 注意：需要在 仓库的设置中配置 Actions Workflow 权限，否则会报错
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          body_path: changelog.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            dist/eget-darwin-amd64
+            dist/eget-darwin-arm64
+            dist/eget-linux-amd64
+            dist/eget-linux-arm64
+            dist/eget-windows-amd64.exe
