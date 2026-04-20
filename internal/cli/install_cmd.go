@@ -25,7 +25,7 @@ func newInstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		snapshot := *opts
 		return handler(cmd.Name, &snapshot)
 	})
-	cmd.Aliases = []string{"ins"}
+	cmd.Aliases = []string{"i", "ins"}
 
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")
 	cmd.StringVar(&opts.System, "system", "", "Target system")
