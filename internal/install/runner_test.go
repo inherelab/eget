@@ -46,7 +46,8 @@ func TestDownloadBodyUsesCacheWhenAvailable(t *testing.T) {
 		}, nil
 	}
 
-	runner := &InstallRunner{Stderr: io.Discard}
+	var stderr bytes.Buffer
+	runner := &InstallRunner{Stderr: &stderr}
 	body, err := runner.downloadBody(url, Options{CacheDir: cacheDir})
 	if err != nil {
 		t.Fatalf("download body: %v", err)
@@ -57,6 +58,9 @@ func TestDownloadBodyUsesCacheWhenAvailable(t *testing.T) {
 	}
 	if calls != 0 {
 		t.Fatalf("expected no network calls, got %d", calls)
+	}
+	if got := stderr.String(); !strings.Contains(got, "Using cached file") {
+		t.Fatalf("expected cached-file notice, got %q", got)
 	}
 }
 

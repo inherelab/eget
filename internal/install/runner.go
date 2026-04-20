@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/goutil/x/ccolor"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	pb "github.com/schollz/progressbar/v3"
 )
@@ -108,9 +109,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 			return RunResult{}, err
 		}
 	} else if opts.Verify != "" {
-		if _, err := fmt.Fprintln(output, "Checksum verified"); err != nil {
-			return RunResult{}, err
-		}
+		ccolor.Fprintln(output, "<error>Checksum verified</>")
 	}
 
 	extractor, err := SelectExtractorAs[Extractor](r.Service, url, tool, &opts)
@@ -141,9 +140,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		if err := file.Extract(out); err != nil {
 			return "", err
 		}
-		if _, err := fmt.Fprintf(output, "Extracted `%s` to `%s`\n", file.ArchiveName, out); err != nil {
-			return "", err
-		}
+		ccolor.Fprintf(output, "Extracted <info>%s</> to <cyan>%s</>\n", file.ArchiveName, out)
 		return out, nil
 	}
 
@@ -172,8 +169,13 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 
 func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
 	cachePath := CacheFilePath(opts.CacheDir, url)
+	output := r.Stderr
+	if output == nil || opts.Quiet {
+		output = io.Discard
+	}
 	if cachePath != "" && !IsLocalFile(url) {
 		if data, err := os.ReadFile(cachePath); err == nil {
+			ccolor.Fprintf(output, "Using cached file <cyan>%s</>\n", cachePath)
 			return data, nil
 		}
 	}

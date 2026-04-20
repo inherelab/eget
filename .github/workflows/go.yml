@@ -31,10 +31,6 @@ jobs:
       with:
         go-version: ${{ matrix.go_version }}
 
-    - uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
-
     - name: Run staticcheck
       uses: reviewdog/action-staticcheck@v1
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
