@@ -8,13 +8,20 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` 用于查找、下载并提取预构建二进制。
+`eget` 用于从 GitHub 查找、下载并提取预构建二进制。
 
-> Froked from https://github.com/zyedidia/eget and refer from https://github.com/gmatheu/eget
+> Forked from https://github.com/zyedidia/eget and refer from https://github.com/gmatheu/eget
 
 ## 功能特性
 
-
+- 显式子命令 CLI：统一使用 `eget <command> --options... arguments...` 形式，命令职责清晰，便于扩展和自动化调用。
+- 多种目标输入：`install` 和 `download` 支持 `owner/repo`、GitHub 仓库 URL、直接下载 URL 以及本地文件。
+- 下载、校验、提取一体化：内置资源发现、系统/资产筛选、SHA-256 自动校验与归档提取流程，减少手工步骤。
+- 缓存与代理支持：支持 `cache_dir` 下载缓存复用，以及 `proxy_url` 统一代理 GitHub 查询与远程下载请求。
+- 托管包生命周期管理：通过 `add`、`list`、`update`、`uninstall` 管理本地 package 定义、安装状态和卸载流程。
+- 安装状态可追踪：独立记录 installed store，保存最近一次安装的资源、时间、输出文件等信息，便于查询与回收。
+- 配置分层合并：支持 `global`、repo section、`packages.<name>` 多层配置，并按约定优先级合并安装参数。
+- 默认配置目录统一：配置文件和 installed store 默认写入 `~/.config/eget/`，同时兼容旧路径读取。
 
 ## 命令风格
 
@@ -207,7 +214,6 @@ make test
 
 - `cmd/eget`: 命令入口
 - `internal/cli`: `capp` 命令注册与参数绑定
-- `internal/app`: install/add/update/config 用例编排
 - `internal/app`: install/add/list/update/config 用例编排
 - `internal/install`: 查找、下载、校验、提取执行链路
 - `internal/config`: 配置加载、合并、写回

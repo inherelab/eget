@@ -8,7 +8,7 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` helps locate, download, and extract prebuilt binaries.
+`eget` helps locate, download, and extract prebuilt binaries from GitHub.
 
 > Forked from https://github.com/zyedidia/eget and inspired by https://github.com/gmatheu/eget
 
@@ -20,6 +20,17 @@ The target argument accepted by `install` and `download` can be:
 - GitHub repository URL
 - Direct download URL
 - Local file
+
+## Features
+
+- Explicit subcommand CLI: uses the consistent `eget <command> --options... arguments...` form, with clear command boundaries and better automation ergonomics.
+- Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, direct download URLs, and local files.
+- Unified download, verify, and extract flow: built-in asset discovery, system/asset selection, SHA-256 verification, and archive extraction reduce manual steps.
+- Cache and proxy support: supports `cache_dir` for download reuse and `proxy_url` for both GitHub lookups and remote download requests.
+- Managed package lifecycle: supports `add`, `list`, `update`, and `uninstall` for package definitions, installed state, and cleanup workflows.
+- Traceable installed state: keeps a dedicated installed store with the latest asset, install time, and extracted files for each package.
+- Layered configuration merging: supports `global`, repo sections, and `packages.<name>` with predictable option precedence.
+- Unified default config directory: configuration and installed-state files default to `~/.config/eget/`, while legacy paths remain readable.
 
 ## Command Style
 
