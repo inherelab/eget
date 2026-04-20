@@ -120,18 +120,10 @@ func (s *Store) Remove(target string) error {
 }
 
 func (s *Store) fallbackPath() string {
-	switch s.opts.GOOS {
-	case "windows":
-		if dir, ok := s.opts.LookupEnv("LOCALAPPDATA"); ok && dir != "" {
-			return filepath.Join(dir, "eget", "installed.toml")
-		}
-		return filepath.Join(s.opts.HomeDir, "LocalAppData", "eget", "installed.toml")
-	default:
-		if dir, ok := s.opts.LookupEnv("XDG_CONFIG_HOME"); ok && dir != "" {
-			return filepath.Join(dir, "eget", "installed.toml")
-		}
-		return filepath.Join(s.opts.HomeDir, ".config", "eget", "installed.toml")
+	if dir, ok := s.opts.LookupEnv("XDG_CONFIG_HOME"); ok && dir != "" {
+		return filepath.Join(dir, "eget", "installed.toml")
 	}
+	return filepath.Join(s.opts.HomeDir, ".config", "eget", "installed.toml")
 }
 
 func NormalizeRepoName(target string) string {

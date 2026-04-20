@@ -8,7 +8,7 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` helps locate, download, and extract prebuilt binaries. The current version has been restructured into an explicit subcommand CLI, with the entry point in `cmd/eget/main.go` and business logic concentrated under `internal/`.
+`eget` helps locate, download, and extract prebuilt binaries.
 
 > Forked from https://github.com/zyedidia/eget and inspired by https://github.com/gmatheu/eget
 
@@ -124,8 +124,9 @@ Notes:
 The config file is resolved in this order:
 
 1. `EGET_CONFIG`
-2. `~/.eget.toml`
+2. `~/.config/eget/eget.toml`
 3. XDG / LocalAppData fallback path
+4. Legacy `~/.eget.toml`
 
 Supported config sections:
 
@@ -178,6 +179,8 @@ This writes:
 - `global.cache_dir = "~/.cache/eget"`
 - `global.proxy_url = ""`
 
+By default, the file is created at `~/.config/eget/eget.toml`.
+
 Directory semantics:
 
 - `target` is the default install directory
@@ -185,6 +188,8 @@ Directory semantics:
 - `proxy_url` is the global proxy for remote requests; both GitHub lookups and remote downloads use it
 - `download` uses `cache_dir` by default when `--to` is not provided
 - `install` and `download` will reuse cached remote download contents from `cache_dir` when available
+
+The installed-state store also defaults to `~/.config/eget/installed.toml`.
 
 ## Build And Test
 
@@ -194,6 +199,8 @@ make test
 ```
 
 ## Project Structure
+
+The current version has been restructured into an explicit subcommand CLI, with the entry point in `cmd/eget/main.go` and business logic concentrated under `internal/`.
 
 - `cmd/eget`: command entry point
 - `internal/cli`: `capp` command registration and argument binding

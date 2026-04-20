@@ -154,8 +154,9 @@ system = ""
 路径查找优先级：
 
 1. `EGET_CONFIG`
-2. `~/.eget.toml`
-3. 平台 fallback 路径
+2. `~/.config/eget/eget.toml`
+3. 旧路径 `~/.eget.toml`
+4. 平台 fallback 路径
 
 安装选项合并优先级：
 
@@ -169,6 +170,11 @@ CLI > package > repo > global > default
 - `cache_dir`: 默认下载缓存目录
 - `proxy_url`: 全局远程请求代理，优先于环境变量代理并同时作用于 GitHub 查询与远程下载
 - `download` 未传 `--to` 时，app 层会把输出目录回退到 `cache_dir`
+
+默认写入路径：
+
+- 配置文件默认写入 `~/.config/eget/eget.toml`
+- installed store 默认写入 `~/.config/eget/installed.toml`
 
 ## Installed Store
 

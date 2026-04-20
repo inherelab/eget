@@ -118,8 +118,9 @@ header: Eget Manual
   Eget reads configuration from:
 
   1. **`EGET_CONFIG`**
-  2. **`~/.eget.toml`**
-  3. XDG / LocalAppData fallback paths
+  2. **`~/.config/eget/eget.toml`**
+  3. legacy **`~/.eget.toml`**
+  4. XDG / LocalAppData fallback paths
 
   Supported sections:
 
@@ -156,6 +157,8 @@ asset_filters = ["windows"]
       global.cache_dir = "~/.cache/eget"
       global.proxy_url = ""
 
+  By default, the config file is written to **`~/.config/eget/eget.toml`**.
+
   Directory semantics:
 
   * `target` is the default install directory
@@ -163,6 +166,8 @@ asset_filters = ["windows"]
   * `proxy_url` is the global proxy for GitHub lookups and remote downloads
   * `download` falls back to `cache_dir` when `--to` is not provided
   * remote downloads are reused from `cache_dir` when a cached file exists
+
+  The installed-state store defaults to **`~/.config/eget/installed.toml`**.
 
 # EXAMPLES
 ```bash

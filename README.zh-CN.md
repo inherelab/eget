@@ -8,18 +8,13 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` 用于查找、下载并提取预构建二进制。当前版本已经重构为显式子命令 CLI，入口在 `cmd/eget/main.go`，业务逻辑集中在 `internal/`。
+`eget` 用于查找、下载并提取预构建二进制。
 
 > Froked from https://github.com/zyedidia/eget and refer from https://github.com/gmatheu/eget
 
-## 支持的目标
+## 功能特性
 
-`install` 和 `download` 的目标参数可以是：
 
-- `owner/repo`
-- GitHub 仓库 URL
-- 直接下载 URL
-- 本地文件
 
 ## 命令风格
 
@@ -62,6 +57,15 @@ eget config --list
 eget config get global.target
 eget config set global.target ~/.local/bin
 ```
+
+### 支持的目标
+
+`install` 和 `download` 的目标参数可以是：
+
+- `owner/repo`
+- GitHub 仓库 URL
+- 直接下载 URL
+- 本地文件
 
 ## 当前命令
 
@@ -124,8 +128,9 @@ eget config set global.target ~/.local/bin
 配置文件位置按以下顺序解析：
 
 1. `EGET_CONFIG`
-2. `~/.eget.toml`
+2. `~/.config/eget/eget.toml`
 3. XDG / LocalAppData fallback 路径
+4. 旧路径 `~/.eget.toml`
 
 配置同时支持：
 
@@ -177,6 +182,8 @@ eget config --init
 - `global.cache_dir = "~/.cache/eget"`
 - `global.proxy_url = ""`
 
+默认会写入 `~/.config/eget/eget.toml`。
+
 目录语义：
 
 - `target` 是默认安装目录
@@ -184,6 +191,8 @@ eget config --init
 - `proxy_url` 是全局远程请求代理，GitHub 查询和远程下载都会使用它
 - `download` 在未指定 `--to` 时默认使用 `cache_dir`
 - `install`/`download` 对远程 URL 的原始下载内容会优先复用 `cache_dir` 中的缓存文件
+
+安装记录 store 默认也会写入 `~/.config/eget/installed.toml`。
 
 ## 构建与测试
 
@@ -193,6 +202,8 @@ make test
 ```
 
 ## 开发结构
+
+当前版本已经重构为显式子命令 CLI，入口在 `cmd/eget/main.go`，业务逻辑集中在 `internal/`。
 
 - `cmd/eget`: 命令入口
 - `internal/cli`: `capp` 命令注册与参数绑定

@@ -73,11 +73,11 @@ func TestResolveConfigPathFallsBackToOSConfigDir(t *testing.T) {
 			wantPath: filepath.Join(tmp, "xdg", "eget", "eget.toml"),
 		},
 		{
-			name:     "localappdata",
+			name:     "windows uses xdg env when set",
 			goos:     "windows",
-			envKey:   "LOCALAPPDATA",
-			envValue: filepath.Join(tmp, "localapp"),
-			wantPath: filepath.Join(tmp, "localapp", "eget", "eget.toml"),
+			envKey:   "XDG_CONFIG_HOME",
+			envValue: filepath.Join(tmp, "xdg-win"),
+			wantPath: filepath.Join(tmp, "xdg-win", "eget", "eget.toml"),
 		},
 	}
 
@@ -135,6 +135,50 @@ func TestResolveConfigPathSkipsDotfileWhenEnvPathMissing(t *testing.T) {
 
 	if path != fallbackPath {
 		t.Fatalf("expected fallback path %q when env config is missing, got %q", fallbackPath, path)
+	}
+}
+
+func TestResolveWritablePathDefaultsToOSConfigDir(t *testing.T) {
+	tmp := t.TempDir()
+	homePath := filepath.Join(tmp, "home")
+	xdgHome := filepath.Join(tmp, "xdg")
+	wantPath := filepath.Join(xdgHome, "eget", "eget.toml")
+
+	path, err := resolveWritablePath(pathOptions{
+		HomeDir: homePath,
+		GOOS:    "linux",
+		LookupEnv: func(key string) (string, bool) {
+			if key == "XDG_CONFIG_HOME" {
+				return xdgHome, true
+			}
+			return "", false
+		},
+	})
+	if err != nil {
+		t.Fatalf("resolve writable path: %v", err)
+	}
+
+	if path != wantPath {
+		t.Fatalf("expected writable path %q, got %q", wantPath, path)
+	}
+}
+
+func TestResolveWritablePathDefaultsToHomeConfigDirOnWindows(t *testing.T) {
+	tmp := t.TempDir()
+	homePath := filepath.Join(tmp, "home")
+	wantPath := filepath.Join(homePath, ".config", "eget", "eget.toml")
+
+	path, err := resolveWritablePath(pathOptions{
+		HomeDir:   homePath,
+		GOOS:      "windows",
+		LookupEnv: func(string) (string, bool) { return "", false },
+	})
+	if err != nil {
+		t.Fatalf("resolve writable path: %v", err)
+	}
+
+	if path != wantPath {
+		t.Fatalf("expected writable path %q, got %q", wantPath, path)
 	}
 }
 

@@ -170,6 +170,23 @@ func TestResolvePathFallsBackToXDGLocation(t *testing.T) {
 	}
 }
 
+func TestResolvePathDefaultsToHomeConfigDirOnWindows(t *testing.T) {
+	tmp := t.TempDir()
+	homeDir := filepath.Join(tmp, "home")
+	wantPath := filepath.Join(homeDir, ".config", "eget", "installed.toml")
+
+	store := NewStore(Options{
+		HomeDir:   homeDir,
+		GOOS:      "windows",
+		LookupEnv: func(string) (string, bool) { return "", false },
+	})
+
+	path := store.Path()
+	if path != wantPath {
+		t.Fatalf("expected fallback path %q, got %q", wantPath, path)
+	}
+}
+
 func writeInstalledFile(t *testing.T, path, content string) {
 	t.Helper()
 

@@ -103,22 +103,14 @@ func resolveWritablePath(opts pathOptions) (string, error) {
 		return path, nil
 	}
 
-	return filepath.Join(opts.HomeDir, ".eget.toml"), nil
+	return getOSConfigPath(opts), nil
 }
 
 func getOSConfigPath(opts pathOptions) string {
-	switch opts.GOOS {
-	case "windows":
-		if dir, ok := opts.LookupEnv("LOCALAPPDATA"); ok && dir != "" {
-			return filepath.Join(dir, "eget", "eget.toml")
-		}
-		return filepath.Join(opts.HomeDir, "LocalAppData", "eget", "eget.toml")
-	default:
-		if dir, ok := opts.LookupEnv("XDG_CONFIG_HOME"); ok && dir != "" {
-			return filepath.Join(dir, "eget", "eget.toml")
-		}
-		return filepath.Join(opts.HomeDir, ".config", "eget", "eget.toml")
+	if dir, ok := opts.LookupEnv("XDG_CONFIG_HOME"); ok && dir != "" {
+		return filepath.Join(dir, "eget", "eget.toml")
 	}
+	return filepath.Join(opts.HomeDir, ".config", "eget", "eget.toml")
 }
 
 func fileExists(path string) bool {
