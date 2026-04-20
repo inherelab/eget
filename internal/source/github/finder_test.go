@@ -54,7 +54,7 @@ func TestAssetFinderFindMatchFallback(t *testing.T) {
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
 			"https://api.github.com/repos/inhere/markview/releases/tags/v1.2.3": jsonResponse(http.StatusNotFound, `{"message":"not found"}`),
-			"https://api.github.com/repos/inhere/markview/releases?page=1":   jsonResponse(http.StatusOK, `[{"tag_name":"release-v1.2.3","created_at":"2026-04-18T00:00:00Z","assets":[{"browser_download_url":"https://example.com/match.tar.gz"}]}]`),
+			"https://api.github.com/repos/inhere/markview/releases?page=1":      jsonResponse(http.StatusOK, `[{"tag_name":"release-v1.2.3","created_at":"2026-04-18T00:00:00Z","assets":[{"browser_download_url":"https://example.com/match.tar.gz"}]}]`),
 		},
 	}
 	finder := NewAssetFinder("inhere/markview", "tags/v1.2.3", false, time.Time{})
@@ -72,7 +72,7 @@ func TestAssetFinderFindMatchFallback(t *testing.T) {
 func TestAssetFinderFindPrereleaseLatest(t *testing.T) {
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/inhere/markview/releases":        jsonResponse(http.StatusOK, `[{"tag_name":"v2.0.0-rc1"}]`),
+			"https://api.github.com/repos/inhere/markview/releases":                 jsonResponse(http.StatusOK, `[{"tag_name":"v2.0.0-rc1"}]`),
 			"https://api.github.com/repos/inhere/markview/releases/tags/v2.0.0-rc1": jsonResponse(http.StatusOK, `{"assets":[{"browser_download_url":"https://example.com/rc1.tar.gz"}],"created_at":"2026-04-18T00:00:00Z"}`),
 		},
 	}

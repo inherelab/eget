@@ -85,7 +85,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		return RunResult{}, err
 	}
 
-	if _, err := fmt.Fprintf(output, "%s\n", url); err != nil {
+	if _, err := fmt.Fprintf(output, "Asset %s\n", url); err != nil {
 		return RunResult{}, err
 	}
 

@@ -71,6 +71,7 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 		"Easy install and download tool (%s, Hash: %s, Build at: %s)",
 		version, gitHash, buildTime,
 	)
+	inner.Version = version
 	inner.HelpWriter = stdout
 	inner.SetOutput(stderr)
 

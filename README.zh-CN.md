@@ -46,6 +46,7 @@ eget install --tag nightly owner/repo
 ## 示例
 
 ```bash
+# install
 eget install --tag nightly inhere/markview
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # download

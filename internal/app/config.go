@@ -228,6 +228,9 @@ func setSectionField(section *cfgpkg.Section, field, value string) error {
 	case "cache_dir":
 		section.CacheDir = stringPtr(value)
 	case "proxy_url":
+		if !strings.HasPrefix(value, "http") {
+			value = "http://" + value
+		}
 		section.ProxyURL = stringPtr(value)
 	case "repo":
 		section.Repo = stringPtr(value)

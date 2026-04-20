@@ -12,15 +12,6 @@
 
 > Forked from https://github.com/zyedidia/eget and inspired by https://github.com/gmatheu/eget
 
-## Supported Targets
-
-The target argument accepted by `install` and `download` can be:
-
-- `owner/repo`
-- GitHub repository URL
-- Direct download URL
-- Local file
-
 ## Features
 
 - Explicit subcommand CLI: uses the consistent `eget <command> --options... arguments...` form, with clear command boundaries and better automation ergonomics.
@@ -73,6 +64,15 @@ eget config --list
 eget config get global.target
 eget config set global.target ~/.local/bin
 ```
+
+### Supported Targets
+
+The target argument accepted by `install` and `download` can be:
+
+- `owner/repo`
+- GitHub repository URL
+- Direct download URL
+- Local file
 
 ## Available Commands
 
