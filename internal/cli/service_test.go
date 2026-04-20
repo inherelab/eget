@@ -1,6 +1,12 @@
 package cli
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+
+	cfgpkg "github.com/inherelab/eget/internal/config"
+)
 
 func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 	installOpts := installOptionsFromInstall(&InstallOptions{
@@ -68,5 +74,22 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 	})
 	if updateOpts.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected update cache dir to propagate, got %q", updateOpts.CacheDir)
+	}
+}
+
+func TestPrintConfigListIncludesHeaderComment(t *testing.T) {
+	cfg := cfgpkg.NewFile()
+	target := "~/.local/bin"
+	cfg.Global.Target = &target
+
+	var out bytes.Buffer
+	printConfigList(&out, "testdata/eget.toml", true, cfg)
+
+	got := out.String()
+	if !strings.Contains(got, "# testdata/eget.toml, exists: true") {
+		t.Fatalf("expected header comment, got %q", got)
+	}
+	if !strings.Contains(got, "[global]") {
+		t.Fatalf("expected global section, got %q", got)
 	}
 }

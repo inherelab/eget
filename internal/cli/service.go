@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -166,36 +167,33 @@ func (s *cliService) handleList(opts *ListOptions) error {
 }
 
 func (s *cliService) handleConfig(opts *ConfigOptions) error {
-	switch {
-	case opts.Info:
-		info, err := s.cfgService.ConfigInfo()
-		if err != nil {
-			return err
-		}
-		fmt.Printf("path: %s\nexists: %t\n", info.Path, info.Exists)
-		return nil
-	case opts.Init:
+	switch opts.Action {
+	case "init":
 		path, err := s.cfgService.ConfigInit()
 		if err != nil {
 			return err
 		}
 		fmt.Printf("initialized: %s\n", path)
 		return nil
-	case opts.List:
+	case "list", "ls", "show":
+		info, err := s.cfgService.ConfigInfo()
+		if err != nil {
+			return err
+		}
 		cfg, err := s.cfgService.ConfigList()
 		if err != nil {
 			return err
 		}
-		printConfigList(cfg)
+		printConfigList(os.Stdout, info.Path, info.Exists, cfg)
 		return nil
-	case opts.Action == "get":
+	case "get":
 		value, err := s.cfgService.ConfigGet(opts.Key)
 		if err != nil {
 			return err
 		}
 		fmt.Println(value)
 		return nil
-	case opts.Action == "set":
+	case "set":
 		return s.cfgService.ConfigSet(opts.Key, opts.Value)
 	default:
 		return fmt.Errorf("config action is required")
@@ -291,20 +289,21 @@ func promptIndex(choices []string) (int, error) {
 	return picked - 1, nil
 }
 
-func printConfigList(cfg *cfgpkg.File) {
+func printConfigList(out io.Writer, path string, exists bool, cfg *cfgpkg.File) {
+	fmt.Fprintf(out, "# %s, exists: %t\n", path, exists)
 	if cfg.Global.Target != nil || cfg.Global.System != nil || cfg.Global.CacheDir != nil || cfg.Global.ProxyURL != nil {
-		fmt.Println("[global]")
+		fmt.Fprintln(out, "[global]")
 		if cfg.Global.Target != nil {
-			fmt.Printf("target = %s\n", *cfg.Global.Target)
+			fmt.Fprintf(out, "target = %s\n", *cfg.Global.Target)
 		}
 		if cfg.Global.System != nil {
-			fmt.Printf("system = %s\n", *cfg.Global.System)
+			fmt.Fprintf(out, "system = %s\n", *cfg.Global.System)
 		}
 		if cfg.Global.CacheDir != nil {
-			fmt.Printf("cache_dir = %s\n", *cfg.Global.CacheDir)
+			fmt.Fprintf(out, "cache_dir = %s\n", *cfg.Global.CacheDir)
 		}
 		if cfg.Global.ProxyURL != nil {
-			fmt.Printf("proxy_url = %s\n", *cfg.Global.ProxyURL)
+			fmt.Fprintf(out, "proxy_url = %s\n", *cfg.Global.ProxyURL)
 		}
 	}
 
@@ -315,7 +314,7 @@ func printConfigList(cfg *cfgpkg.File) {
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			fmt.Printf("[repo.%s]\n", name)
+			fmt.Fprintf(out, "[repo.%s]\n", name)
 		}
 	}
 
@@ -327,15 +326,15 @@ func printConfigList(cfg *cfgpkg.File) {
 		sort.Strings(names)
 		for _, name := range names {
 			section := cfg.Packages[name]
-			fmt.Printf("[packages.%s]\n", name)
+			fmt.Fprintf(out, "[packages.%s]\n", name)
 			if section.Repo != nil {
-				fmt.Printf("repo = %s\n", *section.Repo)
+				fmt.Fprintf(out, "repo = %s\n", *section.Repo)
 			}
 			if section.Target != nil {
-				fmt.Printf("target = %s\n", *section.Target)
+				fmt.Fprintf(out, "target = %s\n", *section.Target)
 			}
 			if section.CacheDir != nil {
-				fmt.Printf("cache_dir = %s\n", *section.CacheDir)
+				fmt.Fprintf(out, "cache_dir = %s\n", *section.CacheDir)
 			}
 		}
 	}

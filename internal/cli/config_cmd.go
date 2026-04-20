@@ -3,9 +3,6 @@ package cli
 import "github.com/gookit/goutil/cflag/capp"
 
 type ConfigOptions struct {
-	Info   bool
-	Init   bool
-	List   bool
 	Action string
 	Key    string
 	Value  string
@@ -26,11 +23,19 @@ func newConfigCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	})
 
 	cmd.Aliases = []string{"cfg"}
+	cmd.LongHelp = `<info>Config actions</>:
+  init                Initialize the config file with default values
+  list | ls | show    Print current config values and file status
+  get KEY             Print one config value
+  set KEY VALUE       Update one config value
 
-	cmd.BoolVar(&opts.Info, "info", false, "Show config information")
-	cmd.BoolVar(&opts.Init, "init", false, "Initialize config file")
-	cmd.BoolVar(&opts.List, "list", false, "List config values")
-	cmd.AddArg("action", "Config action, allowed: get, set", false, nil)
+<info>Examples</>:
+  eget config init
+  eget config list
+  eget config get global.target
+  eget config set global.target ~/.local/bin`
+
+    cmd.AddArg("action", "Config action: init, list, ls, show, get, set", false, nil)
 	cmd.AddArg("key", "Config key", false, nil)
 	cmd.AddArg("value", "Config value for set", false, nil)
 	return cmd, func() {

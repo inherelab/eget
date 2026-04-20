@@ -86,9 +86,8 @@ eget update --all
 ```bash
 # config
 eget add --name fzf --to ~/.local/bin junegunn/fzf
-eget config --info
-eget config --init
-eget config --list
+eget config init
+eget config list|show
 eget config get global.target
 eget config set global.target ~/.local/bin
 ```
@@ -132,7 +131,7 @@ eget config set global.target ~/.local/bin
 
 `config`(alias: `cfg`)
 
-- 支持 `--info`、`--init`、`--list`、`get KEY`、`set KEY VALUE`。
+- 支持 `init`、`list` / `ls` / `show`、`get KEY`、`set KEY VALUE`。
 
 ## 主要选项
 
@@ -218,7 +217,7 @@ asset_filters = ["windows"]
 默认初始化配置：
 
 ```bash
-eget config --init
+eget config init
 ```
 
 会写入:

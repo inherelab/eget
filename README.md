@@ -85,9 +85,8 @@ eget update --all
 ```bash
 # config
 eget add --name fzf --to ~/.local/bin junegunn/fzf
-eget config --info
-eget config --init
-eget config --list
+eget config init
+eget config list|show
 eget config get global.target
 eget config set global.target ~/.local/bin
 ```
@@ -131,7 +130,7 @@ The target argument accepted by `install` and `download` can be:
 
 `config` (alias: `cfg`)
 
-- Supports `--info`, `--init`, `--list`, `get KEY`, and `set KEY VALUE`.
+- Supports `init`, `list` / `ls` / `show`, `get KEY`, and `set KEY VALUE`.
 
 ## Main Options
 
@@ -217,7 +216,7 @@ Common fields:
 Default initialization:
 
 ```bash
-eget config --init
+eget config init
 ```
 
 This writes:

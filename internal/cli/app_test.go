@@ -81,7 +81,7 @@ func TestMain_InstallRejectsFlagsAfterTarget(t *testing.T) {
 	}
 }
 
-func TestMain_ConfigInfoRoutesToConfigCommand(t *testing.T) {
+func TestMain_ConfigActionRoutesToConfigCommand(t *testing.T) {
 	calls := make([]commandCall, 0, 1)
 	handler := func(name string, options any) error {
 		calls = append(calls, commandCall{name: name, options: options})
@@ -90,7 +90,7 @@ func TestMain_ConfigInfoRoutesToConfigCommand(t *testing.T) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"config", "--info"})
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"config", "list"})
 	if err != nil {
 		t.Fatalf("expected config command to parse, got %v", err)
 	}
@@ -105,8 +105,8 @@ func TestMain_ConfigInfoRoutesToConfigCommand(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected ConfigOptions, got %T", calls[0].options)
 	}
-	if !opts.Info {
-		t.Fatalf("expected info flag to be true")
+	if opts.Action != "list" {
+		t.Fatalf("expected action list, got %q", opts.Action)
 	}
 }
 
