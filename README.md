@@ -47,6 +47,8 @@ eget install --tag nightly owner/repo
 
 ```bash
 eget install --tag nightly inhere/markview
+eget install --add junegunn/fzf
+eget install --add --name rg BurntSushi/ripgrep
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # download
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
@@ -79,6 +81,7 @@ The target argument accepted by `install` and `download` can be:
 `install` (aliases: `i`, `ins`)
 
 - Resolve, download, verify, and extract a target, then record installation state.
+- With `--add`, a successful install also writes the repo target to `[packages.<name>]`; use `--name` to override the package name.
 
 `download` (alias: `dl`)
 
@@ -94,7 +97,7 @@ The target argument accepted by `install` and `download` can be:
 
 `list` (alias: `ls`)
 
-- Lists local managed packages and attaches recent installed-state details when available.
+- Lists the union of local managed packages and installed-store entries, and attaches recent installed-state details when available.
 
 `update` (alias: `up`)
 
@@ -118,6 +121,11 @@ The target argument accepted by `install` and `download` can be:
 - `--all`
 - `--quiet`
 
+`install` additionally supports:
+
+- `--add`
+- `--name`
+
 `update` additionally supports:
 
 - `--all`
@@ -128,6 +136,7 @@ Notes:
 
 - `--asset` is currently parsed as a single string and then mapped to internal `[]string`.
 - `--cache-dir` overrides `cache_dir` from config and controls the remote download cache directory.
+- `install --add` only applies to repo targets and appends the managed package definition after a successful install.
 - Argument order follows the `cflag/capp` parser constraint and must be `CMD --OPTIONS... ARGUMENTS...`.
 
 ## Configuration

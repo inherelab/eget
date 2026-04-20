@@ -9,9 +9,11 @@ type InstallOptions struct {
 	CacheDir string
 	File     string
 	Asset    string
+	Name     string
 	Source   bool
 	All      bool
 	Quiet    bool
+	Add      bool
 	Target   string
 }
 
@@ -33,9 +35,11 @@ func newInstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.CacheDir, "cache-dir", "", "Download cache directory")
 	cmd.StringVar(&opts.File, "file", "", "File to extract")
 	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter")
+	cmd.StringVar(&opts.Name, "name", "", "Managed package name when used with --add")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
 	cmd.BoolVar(&opts.All, "all", false, "Extract all files")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
+	cmd.BoolVar(&opts.Add, "add", false, "Add installed repo target to managed packages")
 	cmd.AddArg("target", "Installation target", true, nil)
 	return cmd, func() {
 		*opts = InstallOptions{}

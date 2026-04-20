@@ -13,6 +13,8 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 		Source:   true,
 		All:      true,
 		Quiet:    true,
+		Add:      true,
+		Name:     "tool",
 	})
 	if installOpts.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected install cache dir to propagate, got %q", installOpts.CacheDir)

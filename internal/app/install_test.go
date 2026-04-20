@@ -40,6 +40,22 @@ func (f *fakeInstalledStore) Record(target string, entry storepkg.Entry) error {
 	return f.err
 }
 
+type fakeConfigRecorder struct {
+	repo  string
+	name  string
+	opts  install.Options
+	err   error
+	calls int
+}
+
+func (f *fakeConfigRecorder) AddPackage(repo, name string, opts install.Options) error {
+	f.calls++
+	f.repo = repo
+	f.name = name
+	f.opts = opts
+	return f.err
+}
+
 func TestInstallTargetRunsInstallFlowAndRecordsInstalledState(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	runner := &fakeRunner{
@@ -236,5 +252,75 @@ func TestInstallTargetReturnsRunnerErrorWithoutRecording(t *testing.T) {
 	}
 	if store.calls != 0 {
 		t.Fatalf("expected store to not be called on runner error, got %d", store.calls)
+	}
+}
+
+func TestInstallTargetWithAddRecordsManagedPackage(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/junegunn/fzf/releases/download/v1.0.0/fzf.tar.gz",
+			Tool:           "fzf",
+			ExtractedFiles: []string{"./fzf"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	config := &fakeConfigRecorder{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+		Config: config,
+	}
+
+	opts := install.Options{
+		Output:      "~/.local/bin",
+		ExtractFile: "fzf",
+		Asset:       []string{"linux"},
+		Tag:         "v1.0.0",
+	}
+
+	_, err := svc.InstallTarget("junegunn/fzf", opts, InstallExtras{AddToConfig: true, PackageOpts: opts})
+	if err != nil {
+		t.Fatalf("install target with add: %v", err)
+	}
+
+	if config.calls != 1 {
+		t.Fatalf("expected config add to be called once, got %d", config.calls)
+	}
+	if config.repo != "junegunn/fzf" {
+		t.Fatalf("expected config repo junegunn/fzf, got %q", config.repo)
+	}
+	if config.name != "" {
+		t.Fatalf("expected empty explicit name, got %q", config.name)
+	}
+	if config.opts.ExtractFile != "fzf" {
+		t.Fatalf("expected extract file to be forwarded, got %q", config.opts.ExtractFile)
+	}
+	if config.opts.Tag != "v1.0.0" {
+		t.Fatalf("expected tag to be forwarded, got %q", config.opts.Tag)
+	}
+	if len(config.opts.Asset) != 1 || config.opts.Asset[0] != "linux" {
+		t.Fatalf("expected asset filter to be forwarded, got %#v", config.opts.Asset)
+	}
+}
+
+func TestInstallTargetWithAddRejectsNonRepoTarget(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://example.com/tool.tar.gz",
+			ExtractedFiles: []string{"./tool"},
+		},
+	}
+	config := &fakeConfigRecorder{}
+	svc := Service{
+		Runner: runner,
+		Config: config,
+	}
+
+	_, err := svc.InstallTarget("https://example.com/tool.tar.gz", install.Options{}, InstallExtras{AddToConfig: true})
+	if err == nil {
+		t.Fatal("expected install --add with non-repo target to fail")
+	}
+	if config.calls != 0 {
+		t.Fatalf("expected config add to not be called, got %d", config.calls)
 	}
 }

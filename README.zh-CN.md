@@ -48,6 +48,8 @@ eget install --tag nightly owner/repo
 ```bash
 # install
 eget install --tag nightly inhere/markview
+eget install --add junegunn/fzf
+eget install --add --name rg BurntSushi/ripgrep
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # download
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
@@ -80,6 +82,7 @@ eget config set global.target ~/.local/bin
 `install`(alias: `i`, `ins`)
 
 - 查找、下载、校验、提取目标，并记录安装状态。
+- 传入 `--add` 时，安装成功后会自动将 repo 目标写入 `[packages.<name>]`；可配合 `--name` 指定包名。
 
 `download`(alias: `dl`)
 
@@ -95,7 +98,7 @@ eget config set global.target ~/.local/bin
 
 `list`(alias: `ls`)
 
-- 列出本地 managed packages，并尽可能关联最近一次安装状态。
+- 列出本地 managed packages 与 installed store 的并集，并尽可能关联最近一次安装状态。
 
 `update`(alias: `up`)
 
@@ -119,6 +122,11 @@ eget config set global.target ~/.local/bin
 - `--all`
 - `--quiet`
 
+`install` 额外支持：
+
+- `--add`
+- `--name`
+
 `update` 额外支持：
 
 - `--all`
@@ -129,6 +137,7 @@ eget config set global.target ~/.local/bin
 
 - `--asset` 当前按单值字符串解析，再映射到内部 `[]string`。
 - `--cache-dir` 用于覆盖配置中的 `cache_dir`，控制远程下载缓存目录。
+- `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。
 
 ## 配置

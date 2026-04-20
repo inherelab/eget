@@ -14,7 +14,7 @@ type fakeInstallService struct {
 	err     error
 }
 
-func (f *fakeInstallService) InstallTarget(target string, opts install.Options) (RunResult, error) {
+func (f *fakeInstallService) InstallTarget(target string, opts install.Options, extras ...InstallExtras) (RunResult, error) {
 	f.targets = append(f.targets, target)
 	f.options = append(f.options, opts)
 	return f.result, f.err

@@ -2,6 +2,7 @@ package app
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -38,33 +39,57 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 		return nil, err
 	}
 
-	names := make([]string, 0, len(cfg.Packages))
-	for name := range cfg.Packages {
+	byName := make(map[string]ListItem, len(cfg.Packages))
+	for name, pkg := range cfg.Packages {
+		repo := derefString(pkg.Repo)
+		byName[name] = ListItem{
+			Name:   name,
+			Repo:   repo,
+			Target: derefString(pkg.Target),
+			Tag:    derefString(pkg.Tag),
+		}
+	}
+
+	if installed != nil && installed.Installed != nil {
+		for repo, entry := range installed.Installed {
+			name := repoName(repo)
+			item, ok := byName[name]
+			if !ok {
+				item = ListItem{
+					Name: name,
+					Repo: repo,
+				}
+			}
+			if item.Repo == "" {
+				item.Repo = repo
+			}
+			item.Installed = true
+			item.InstalledAt = entry.InstalledAt
+			item.Asset = entry.Asset
+			item.URL = entry.URL
+			byName[name] = item
+		}
+	}
+
+	names := make([]string, 0, len(byName))
+	for name := range byName {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	items := make([]ListItem, 0, len(names))
 	for _, name := range names {
-		pkg := cfg.Packages[name]
-		repo := derefString(pkg.Repo)
-		item := ListItem{
-			Name:   name,
-			Repo:   repo,
-			Target: derefString(pkg.Target),
-			Tag:    derefString(pkg.Tag),
-		}
-		if installed != nil && installed.Installed != nil {
-			if entry, ok := installed.Installed[repo]; ok {
-				item.Installed = true
-				item.InstalledAt = entry.InstalledAt
-				item.Asset = entry.Asset
-				item.URL = entry.URL
-			}
-		}
-		items = append(items, item)
+		items = append(items, byName[name])
 	}
 	return items, nil
+}
+
+func repoName(repo string) string {
+	parts := strings.Split(repo, "/")
+	if len(parts) == 2 && parts[1] != "" {
+		return parts[1]
+	}
+	return repo
 }
 
 func (s ListService) loadConfig() (*cfgpkg.File, error) {

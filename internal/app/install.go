@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"path"
 	"time"
 
@@ -20,17 +21,28 @@ type InstalledStore interface {
 	Record(target string, entry storepkg.Entry) error
 }
 
+type PackageAdder interface {
+	AddPackage(repo, name string, opts install.Options) error
+}
+
+type InstallExtras struct {
+	AddToConfig bool
+	PackageName string
+	PackageOpts install.Options
+}
+
 type ReleaseInfoFunc func(repo, url string) (string, time.Time, error)
 
 type Service struct {
 	Runner      Runner
 	Store       InstalledStore
+	Config      PackageAdder
 	Now         func() time.Time
 	ReleaseInfo ReleaseInfoFunc
 	LoadConfig  func() (*cfgpkg.File, error)
 }
 
-func (s Service) InstallTarget(target string, opts install.Options) (RunResult, error) {
+func (s Service) InstallTarget(target string, opts install.Options, extras ...InstallExtras) (RunResult, error) {
 	opts, err := s.resolveInstallOptions(target, opts, false)
 	if err != nil {
 		return RunResult{}, err
@@ -63,6 +75,20 @@ func (s Service) InstallTarget(target string, opts install.Options) (RunResult, 
 			ReleaseDate:    releaseDate,
 		}
 		if err := s.Store.Record(target, entry); err != nil {
+			return RunResult{}, err
+		}
+	}
+
+	if len(extras) > 0 && extras[0].AddToConfig {
+		if s.Config == nil {
+			return RunResult{}, fmt.Errorf("config service is required")
+		}
+		repo, err := install.NormalizeRepoTarget(target)
+		if err != nil {
+			return RunResult{}, err
+		}
+		addOpts := extras[0].PackageOpts
+		if err := s.Config.AddPackage(repo, extras[0].PackageName, addOpts); err != nil {
 			return RunResult{}, err
 		}
 	}

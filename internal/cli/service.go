@@ -60,6 +60,7 @@ func newCLIService() (*cliService, error) {
 	appService := app.Service{
 		Runner: runner,
 		Store:  store,
+		Config: &cfgService,
 		Now:    time.Now,
 	}
 	updService := app.UpdateService{
@@ -78,7 +79,12 @@ func (s *cliService) handle(name string, options any) error {
 	switch name {
 	case "install":
 		opts := options.(*InstallOptions)
-		_, err := s.appService.InstallTarget(opts.Target, installOptionsFromInstall(opts))
+		cliInstallOpts := installOptionsFromInstall(opts)
+		_, err := s.appService.InstallTarget(opts.Target, cliInstallOpts, app.InstallExtras{
+			AddToConfig: opts.Add,
+			PackageName: opts.Name,
+			PackageOpts: cliInstallOpts,
+		})
 		return err
 	case "download":
 		opts := options.(*DownloadOptions)

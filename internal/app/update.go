@@ -10,7 +10,7 @@ import (
 )
 
 type Installer interface {
-	InstallTarget(target string, opts install.Options) (RunResult, error)
+	InstallTarget(target string, opts install.Options, extras ...InstallExtras) (RunResult, error)
 }
 
 type UpdateService struct {
