@@ -36,6 +36,7 @@ jobs:
       - name: Build bin package
         run: |
           make build-all
+          ls -alh ./dist
           ./dist/eget-linux-amd64 -h
 
       - name: Generate changelog
@@ -46,7 +47,7 @@ jobs:
           cat changelog.md
 
       # https://github.com/softprops/action-gh-release
-      # 注意：需要在 仓库的设置中配置 Actions Workflow 权限，否则会报错
+      # 注意：需要在 仓库的设置中配置 Actions Workflow 权限(Read and write permissions)，否则会报错
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v3
         env:

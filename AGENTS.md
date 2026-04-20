@@ -20,5 +20,21 @@
 ## 开发规范
 
 - 使用 git worktree 进行开发时，在 `.worktrees` 目录下创建分支
+- 关键的方法或逻辑点需要添加注释说明
+
+### Go单元测试编写
+
+- 使用 `github.com/gookit/goutil/testutil/assert` 断言结果
+- 同一个方法的多个用例使用 `t.Run()` 包裹
+
+require 断言结果的写法：
+
+```go
+Require(t, assert.Eq(t, 1, res.ID))
+
+// Standard assertion
+assert.Eq(t, expected, actual)
+```
 
 ## 项目核心记忆
+
