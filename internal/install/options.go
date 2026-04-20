@@ -10,6 +10,7 @@ import (
 type Options struct {
 	Tag          string
 	Prerelease   bool
+	Name         string
 	Source       bool
 	Output       string
 	CacheDir     string

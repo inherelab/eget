@@ -10,7 +10,7 @@
 
 `eget` 用于从 GitHub 查找、下载并提取预构建二进制。
 
-> Forked from https://github.com/zyedidia/eget and refer from https://github.com/gmatheu/eget
+> Forked from https://github.com/zyedidia/eget 重构并增强了工具的功能。
 
 ## 功能特性
 
@@ -22,6 +22,15 @@
 - 安装状态可追踪：独立记录 installed store，保存最近一次安装的资源、时间、输出文件等信息，便于查询与回收。
 - 配置分层合并：支持 `global`、repo section、`packages.<name>` 多层配置，并按约定优先级合并安装参数。
 - 默认配置目录统一：配置文件和 installed store 默认写入 `~/.config/eget/`，同时兼容旧路径读取。
+
+## 安装
+
+- 从 Releases 下载安装 [https://github.com/inherelab/eget/releases](https://github.com/inherelab/eget/releases)
+- 使用命令 `go install` 安装。(require Go sdk)
+
+```bash
+go install github.com/inherelab/eget/cmd/eget@latest
+```
 
 ## 命令风格
 
@@ -45,12 +54,23 @@ eget install --tag nightly owner/repo
 
 ## 示例
 
+**安装示例**
+
 ```bash
 # install
 eget install --tag nightly inhere/markview
+# 安装并指定可执行文件名
+eget install --name chlog gookit/gitw
+# 安装到指定目录
+eget install --to ~/.local/bin/fzf junegunn/fzf
+# 安装 并 记录
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
-eget install --to ~/.local/bin/fzf junegunn/fzf
+```
+
+**其他命令示例**
+
+```bash
 # download
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 # uninstall
@@ -59,6 +79,11 @@ eget list
 # update
 eget update fzf
 eget update --all
+```
+
+**配置命令示例**
+
+```bash
 # config
 eget add --name fzf --to ~/.local/bin junegunn/fzf
 eget config --info
@@ -82,6 +107,7 @@ eget config set global.target ~/.local/bin
 `install`(alias: `i`, `ins`)
 
 - 查找、下载、校验、提取目标，并记录安装状态。
+- 可通过 `--name` 指定安装后的可执行文件名；未指定 `--to` 时，也会作为单文件资产的重命名提示。
 - 传入 `--add` 时，安装成功后会自动将 repo 目标写入 `[packages.<name>]`；可配合 `--name` 指定包名。
 
 `download`(alias: `dl`)
@@ -137,6 +163,7 @@ eget config set global.target ~/.local/bin
 
 - `--asset` 当前按单值字符串解析，再映射到内部 `[]string`。
 - `--cache-dir` 用于覆盖配置中的 `cache_dir`，控制远程下载缓存目录。
+- `install --name` 可用于指定单文件可执行资产的输出文件名，例如将 `chlog-windows-amd64.exe` 安装为 `chlog.exe`。
 - `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。
 

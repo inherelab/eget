@@ -102,6 +102,7 @@ func mergeInstallOptions(global, repo, pkg cfgpkg.Section, cli install.Options) 
 
 	return install.Options{
 		Tag:          merged.Tag,
+		Name:         cli.Name,
 		Source:       merged.Source,
 		Output:       merged.Target,
 		CacheDir:     merged.CacheDir,

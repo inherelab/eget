@@ -218,6 +218,7 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 func installOptionsFromInstall(opts *InstallOptions) install.Options {
 	return install.Options{
 		Tag:         opts.Tag,
+		Name:        opts.Name,
 		Source:      opts.Source,
 		Output:      opts.To,
 		CacheDir:    opts.CacheDir,

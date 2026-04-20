@@ -10,7 +10,7 @@
 
 `eget` helps locate, download, and extract prebuilt binaries from GitHub.
 
-> Forked from https://github.com/zyedidia/eget and inspired by https://github.com/gmatheu/eget
+> Forked from https://github.com/zyedidia/eget Refactored and enhanced the tool's functionality.
 
 ## Features
 
@@ -22,6 +22,15 @@
 - Traceable installed state: keeps a dedicated installed store with the latest asset, install time, and extracted files for each package.
 - Layered configuration merging: supports `global`, repo sections, and `packages.<name>` with predictable option precedence.
 - Unified default config directory: configuration and installed-state files default to `~/.config/eget/`, while legacy paths remain readable.
+
+## Install
+
+- Download from Releases [https://github.com/inherelab/eget/releases](https://github.com/inherelab/eget/releases)
+- Install by `go install` command(require Go sdk)
+
+```bash
+go install github.com/inherelab/eget/cmd/eget@latest
+```
 
 ## Command Style
 
@@ -45,11 +54,22 @@ eget install --tag nightly owner/repo
 
 ## Examples
 
+**Install Examples**
+
 ```bash
 eget install --tag nightly inhere/markview
+# Install and override the executable name
+eget install --name chlog gookit/gitw
+# Install to a custom directory
+eget install --to ~/.local/bin/fzf junegunn/fzf
+# Install and record the package definition
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
-eget install --to ~/.local/bin/fzf junegunn/fzf
+```
+
+**Others Examples**
+
+```bash
 # download
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 # uninstall
@@ -58,6 +78,11 @@ eget list
 # update
 eget update fzf
 eget update --all
+```
+
+**Config Examples**
+
+```bash
 # config
 eget add --name fzf --to ~/.local/bin junegunn/fzf
 eget config --info
@@ -81,6 +106,7 @@ The target argument accepted by `install` and `download` can be:
 `install` (aliases: `i`, `ins`)
 
 - Resolve, download, verify, and extract a target, then record installation state.
+- `--name` can be used to override the installed executable name; without `--to`, it also acts as the rename hint for single-file assets.
 - With `--add`, a successful install also writes the repo target to `[packages.<name>]`; use `--name` to override the package name.
 
 `download` (alias: `dl`)
@@ -136,6 +162,7 @@ Notes:
 
 - `--asset` is currently parsed as a single string and then mapped to internal `[]string`.
 - `--cache-dir` overrides `cache_dir` from config and controls the remote download cache directory.
+- `install --name` can rename a single executable asset, for example installing `chlog-windows-amd64.exe` as `chlog.exe`.
 - `install --add` only applies to repo targets and appends the managed package definition after a successful install.
 - Argument order follows the `cflag/capp` parser constraint and must be `CMD --OPTIONS... ARGUMENTS...`.
 

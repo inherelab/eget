@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -136,7 +137,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		Asset: path.Base(url),
 	}
 	extract := func(file ExtractedFile) (string, error) {
-		out := outputPath(file, opts.Output, opts.All)
+		out := outputPath(file, opts.Output, opts.All, opts.Name)
 		if err := file.Extract(out); err != nil {
 			return "", err
 		}
@@ -317,9 +318,9 @@ func replaceTagInURL(url, newTag string) string {
 	return url
 }
 
-func outputPath(file ExtractedFile, output string, all bool) string {
+func outputPath(file ExtractedFile, output string, all bool, preferredName string) string {
 	mode := file.Mode()
-	out := filepath.Base(file.Name)
+	out := resolvedOutputName(file.Name, mode, preferredName)
 	if output == "-" {
 		return "-"
 	}
@@ -337,6 +338,56 @@ func outputPath(file ExtractedFile, output string, all bool) string {
 		return filepath.Join(os.Getenv("EGET_BIN"), out)
 	}
 	return out
+}
+
+func resolvedOutputName(name string, mode os.FileMode, preferredName string) string {
+	base := filepath.Base(name)
+	if preferredName != "" {
+		return applyPreferredName(base, preferredName)
+	}
+	if !isExec(base, mode) {
+		return base
+	}
+	return heuristicExecutableName(base)
+}
+
+func applyPreferredName(originalName, preferredName string) string {
+	ext := executableSuffix(originalName)
+	if preferredName == "" {
+		return originalName
+	}
+	if filepath.Ext(preferredName) != "" || ext == "" {
+		return preferredName
+	}
+	return preferredName + ext
+}
+
+func heuristicExecutableName(name string) string {
+	ext := executableSuffix(name)
+	base := strings.TrimSuffix(name, ext)
+	patterns := []string{
+		`(?i)[-_.](windows|darwin|linux|freebsd|openbsd|netbsd|android|illumos|solaris|plan9|macos|osx)[-_.](amd64|x86_64|x64|386|x86|i386|arm64|aarch64|armv?6|armv?7|arm|riscv64)$`,
+		`(?i)[-_.](amd64|x86_64|x64|386|x86|i386|arm64|aarch64|armv?6|armv?7|arm|riscv64)[-_.](windows|darwin|linux|freebsd|openbsd|netbsd|android|illumos|solaris|plan9|macos|osx)$`,
+		`(?i)[-_.](windows|darwin|linux|freebsd|openbsd|netbsd|android|illumos|solaris|plan9|macos|osx)$`,
+	}
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		if trimmed := re.ReplaceAllString(base, ""); trimmed != "" && trimmed != base {
+			return trimmed + ext
+		}
+	}
+	return name
+}
+
+func executableSuffix(name string) string {
+	switch {
+	case strings.HasSuffix(strings.ToLower(name), ".exe"):
+		return ".exe"
+	case strings.HasSuffix(strings.ToLower(name), ".appimage"):
+		return ".appimage"
+	default:
+		return ""
+	}
 }
 
 func isDirectory(path string) bool {

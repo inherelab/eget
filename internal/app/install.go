@@ -172,6 +172,7 @@ func (s Service) resolveInstallOptions(target string, cli install.Options, prefe
 
 	return install.Options{
 		Tag:          merged.Tag,
+		Name:         cli.Name,
 		Source:       merged.Source,
 		Output:       output,
 		CacheDir:     cacheDir,

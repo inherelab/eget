@@ -255,3 +255,27 @@ func TestGetWithOptionsSkipsProxyNoticeWithoutProxyURL(t *testing.T) {
 		t.Fatalf("expected no proxy notice without proxy_url, got %q", got)
 	}
 }
+
+func TestOutputPathUsesHeuristicExecutableRename(t *testing.T) {
+	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
+	got := outputPath(file, "", false, "")
+	if got != "chlog.exe" {
+		t.Fatalf("expected heuristic output name chlog.exe, got %q", got)
+	}
+}
+
+func TestOutputPathUsesPreferredNameForExecutable(t *testing.T) {
+	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
+	got := outputPath(file, "", false, "chlog")
+	if got != "chlog.exe" {
+		t.Fatalf("expected preferred output name chlog.exe, got %q", got)
+	}
+}
+
+func TestOutputPathUsesPreferredNameWithExplicitExtension(t *testing.T) {
+	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
+	got := outputPath(file, "", false, "custom-name.exe")
+	if got != "custom-name.exe" {
+		t.Fatalf("expected preferred explicit output name custom-name.exe, got %q", got)
+	}
+}

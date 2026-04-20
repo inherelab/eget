@@ -19,6 +19,9 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 	if installOpts.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected install cache dir to propagate, got %q", installOpts.CacheDir)
 	}
+	if installOpts.Name != "tool" {
+		t.Fatalf("expected install name to propagate, got %q", installOpts.Name)
+	}
 
 	downloadOpts := installOptionsFromDownload(&DownloadOptions{
 		Tag:      "nightly",
