@@ -1,0 +1,16 @@
+[global]
+cache_dir = "~/.cache/eget"
+proxy_url = ""
+system = ""
+target = "~/.local/bin"
+
+[api_cache]
+enable = false
+cache_time = 300
+
+[ghproxy]
+enable = false
+host_url = ""
+support_api = true
+
+[packages]

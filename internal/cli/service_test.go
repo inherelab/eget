@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -185,6 +186,85 @@ func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
 		t.Fatalf("expected source verbose to be enabled")
 	}
 	configureVerbose(false, &out)
+}
+
+func TestHandleConfigInitRejectsOverwriteWithoutConfirmation(t *testing.T) {
+	svc := &cliService{
+		cfgService: app.ConfigService{
+			ConfigPath: "testdata/eget.toml",
+			Load: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				target := "~/bin"
+				cfg.Global.Target = &target
+				return cfg, nil
+			},
+		},
+	}
+
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdin = r
+	defer func() { os.Stdin = origStdin }()
+
+	if _, err := w.WriteString("n\n"); err != nil {
+		t.Fatalf("write stdin: %v", err)
+	}
+	_ = w.Close()
+
+	err = svc.handleConfig(&ConfigOptions{Action: "init"})
+	if err == nil {
+		t.Fatal("expected overwrite rejection error")
+	}
+	if !strings.Contains(err.Error(), "cancelled") {
+		t.Fatalf("expected cancellation error, got %v", err)
+	}
+}
+
+func TestHandleConfigInitAllowsOverwriteWithConfirmation(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+
+	svc := &cliService{
+		cfgService: app.ConfigService{
+			ConfigPath: configPath,
+		},
+	}
+
+	if err := os.WriteFile(configPath, []byte("[global]\ntarget = \"~/bin\"\n"), 0o644); err != nil {
+		t.Fatalf("write existing config: %v", err)
+	}
+
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdin = r
+	defer func() { os.Stdin = origStdin }()
+
+	if _, err := w.WriteString("y\n"); err != nil {
+		t.Fatalf("write stdin: %v", err)
+	}
+	_ = w.Close()
+
+	if err := svc.handleConfig(&ConfigOptions{Action: "init"}); err != nil {
+		t.Fatalf("expected overwrite confirmation to allow init, got %v", err)
+	}
+
+	cfg, err := cfgpkg.LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.Global.Target == nil || *cfg.Global.Target != "~/.local/bin" {
+		t.Fatalf("expected config to be overwritten with defaults, got %#v", cfg.Global.Target)
+	}
 }
 
 type fakeRunnerForCLI struct {

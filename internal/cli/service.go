@@ -194,6 +194,19 @@ func (s *cliService) handleList(opts *ListOptions) error {
 func (s *cliService) handleConfig(opts *ConfigOptions) error {
 	switch opts.Action {
 	case "init":
+		info, err := s.cfgService.ConfigInfo()
+		if err != nil {
+			return err
+		}
+		if info.Exists {
+			confirmed, err := promptConfirmOverwrite(info.Path)
+			if err != nil {
+				return err
+			}
+			if !confirmed {
+				return fmt.Errorf("config init cancelled")
+			}
+		}
 		path, err := s.cfgService.ConfigInit()
 		if err != nil {
 			return err
@@ -336,6 +349,21 @@ func promptIndex(choices []string) (int, error) {
 		return 0, err
 	}
 	return picked - 1, nil
+}
+
+func promptConfirmOverwrite(path string) (bool, error) {
+	fmt.Fprintf(os.Stderr, "Config file already exists: %s\n", path)
+	fmt.Fprint(os.Stderr, "Overwrite it? [y/N]: ")
+
+	var answer string
+	if _, err := fmt.Fscanln(os.Stdin, &answer); err != nil {
+		if err == io.EOF {
+			return false, nil
+		}
+		return false, err
+	}
+	answer = strings.ToLower(strings.TrimSpace(answer))
+	return answer == "y" || answer == "yes", nil
 }
 
 func printConfigList(out io.Writer, path string, exists bool, cfg *cfgpkg.File) {
