@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
@@ -114,7 +115,11 @@ func (s *cliService) handle(name string, options any) error {
 		return err
 	case "add":
 		opts := options.(*AddOptions)
-		return s.cfgService.AddPackage(opts.Target, opts.Name, installOptionsFromAdd(opts))
+		err := s.cfgService.AddPackage(opts.Target, opts.Name, installOptionsFromAdd(opts))
+		if err == nil {
+			ccolor.Infof("✓ Added package config: %s -> %s\n", opts.Name, opts.Target)
+		}
+		return err
 	case "uninstall":
 		opts := options.(*UninstallOptions)
 		return s.handleUninstall(opts)
@@ -212,7 +217,7 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("initialized: %s\n", path)
+		ccolor.Successf("✓ Initialized config: %s\n", path)
 		return nil
 	case "list", "ls", "show":
 		info, err := s.cfgService.ConfigInfo()
@@ -233,7 +238,11 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		fmt.Println(value)
 		return nil
 	case "set":
-		return s.cfgService.ConfigSet(opts.Key, opts.Value)
+		err := s.cfgService.ConfigSet(opts.Key, opts.Value)
+		if err == nil {
+			ccolor.Successf("✓ Set config: %s = %s\n", opts.Key, opts.Value)
+		}
+		return err
 	default:
 		return fmt.Errorf("config action is required")
 	}

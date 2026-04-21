@@ -262,14 +262,14 @@ func printProxyNotice(kind, proxyURL string) {
 	if proxyURL == "" || proxyNoticeWriter == nil {
 		return
 	}
-	ccolor.Fprintf(proxyNoticeWriter, "- Using <ylw>proxy_url for %s</>: %s\n", kind, proxyURL)
+	ccolor.Fprintf(proxyNoticeWriter, " - Using <ylw>proxy_url for %s</>: %s\n", kind, proxyURL)
 }
 
 func printAPICacheNotice(cachePath string) {
 	if cachePath == "" || apiCacheNoticeWriter == nil {
 		return
 	}
-	ccolor.Fprintf(apiCacheNoticeWriter, "- Using <ylw>api_cache file</>: %s\n", cachePath)
+	ccolor.Fprintf(apiCacheNoticeWriter, " - Using <ylw>api_cache file</>: %s\n", filepath.Base(cachePath))
 }
 
 func verbosef(format string, args ...any) {

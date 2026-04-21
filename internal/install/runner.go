@@ -184,7 +184,7 @@ func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
 	}
 	if cachePath != "" && !IsLocalFile(url) {
 		if data, err := os.ReadFile(cachePath); err == nil {
-			ccolor.Fprintf(output, "Using cached file <cyan>%s</>\n", cachePath)
+			ccolor.Fprintf(output, " - Using cached file <cyan>%s</>\n", filepath.Base(cachePath))
 			return data, nil
 		}
 	}
@@ -279,7 +279,7 @@ func (r *InstallRunner) resolveFallback(target string, opts Options, original er
 func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile) (ExtractedFile, bool, error) {
 	if selected, ok := autoSelectExtractedFile(candidates, runtime.GOARCH); ok {
 		if r.Stderr != nil {
-			ccolor.Fprintf(r.Stderr, "<yellow>Auto-selected extracted file '%s' for %s</>\n", selected.ArchiveName, runtime.GOARCH)
+			ccolor.Fprintf(r.Stderr, "🪄 <yellow>Auto-selected extracted file '%s' for %s</>\n", selected.ArchiveName, runtime.GOARCH)
 		}
 		return selected, false, nil
 	}
