@@ -288,7 +288,7 @@ func splitAssetFilters(value string) []string {
 	if value == "" {
 		return nil
 	}
-	return []string{value}
+	return strings.Split(value, ",")
 }
 
 func promptIndex(choices []string) (int, error) {

@@ -165,7 +165,7 @@ func (s *Service) SelectDetector(opts *Options) (Detector, error) {
 
 	detectors := make([]Detector, len(opts.Asset))
 	for i, asset := range opts.Asset {
-		anti := strings.HasPrefix(asset, "^")
+		anti := strings.HasPrefix(asset, "^") // exclude
 		if anti {
 			asset = asset[1:]
 		}

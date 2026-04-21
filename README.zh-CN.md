@@ -38,15 +38,7 @@ go install github.com/inherelab/eget/cmd/eget@latest
 eget <command> --options... arguments...
 ```
 
-根命令不再兼容旧写法，以下形式都不再支持：
-
-```bash
-eget REPO
-eget --tag nightly REPO
-eget install REPO --tag nightly
-```
-
-必须改为：
+示例：
 
 ```bash
 eget install --tag nightly owner/repo

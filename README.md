@@ -38,15 +38,7 @@ go install github.com/inherelab/eget/cmd/eget@latest
 eget <command> --options... arguments...
 ```
 
-The root command no longer supports the legacy forms below:
-
-```bash
-eget REPO
-eget --tag nightly REPO
-eget install REPO --tag nightly
-```
-
-Use this form instead:
+example:
 
 ```bash
 eget install --tag nightly owner/repo
