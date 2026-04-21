@@ -14,6 +14,7 @@ import (
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	"github.com/inherelab/eget/internal/util"
 )
 
 func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
@@ -186,6 +187,67 @@ func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
 		t.Fatalf("expected source verbose to be enabled")
 	}
 	configureVerbose(false, &out)
+}
+
+func TestHandleListOutdatedPrintsOnlyOutdatedInstalledPackages(t *testing.T) {
+	svc := &cliService{
+		listService: app.ListService{
+			LatestTag: func(repo string) (string, error) {
+				switch repo {
+				case "BurntSushi/ripgrep":
+					return "v14.0.0", nil
+				case "junegunn/fzf":
+					return "v0.50.0", nil
+				default:
+					return "", nil
+				}
+			},
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{
+					Installed: map[string]storepkg.Entry{
+						"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+						"junegunn/fzf":       {Repo: "junegunn/fzf", Tag: "v0.50.0"},
+					},
+				}, nil
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handleList(&ListOptions{Outdated: true})
+	if err != nil {
+		t.Fatalf("handle list outdated: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "repo: BurntSushi/ripgrep") {
+		t.Fatalf("expected outdated repo in output, got %q", got)
+	}
+	if !strings.Contains(got, "latest_tag: v14.0.0") {
+		t.Fatalf("expected latest_tag in output, got %q", got)
+	}
+	if strings.Contains(got, "repo: junegunn/fzf") {
+		t.Fatalf("expected up-to-date repo to be omitted, got %q", got)
+	}
 }
 
 func TestHandleConfigInitRejectsOverwriteWithoutConfirmation(t *testing.T) {

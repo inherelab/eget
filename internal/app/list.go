@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -15,19 +16,36 @@ type InstalledLoader interface {
 }
 
 type ListItem struct {
-	Name        string
-	Repo        string
-	Target      string
-	Tag         string
-	Installed   bool
-	InstalledAt time.Time
-	Asset       string
-	URL         string
+	Name         string
+	Repo         string
+	Target       string
+	Tag          string
+	InstalledTag string
+	Installed    bool
+	InstalledAt  time.Time
+	Asset        string
+	URL          string
+}
+
+type OutdatedItem struct {
+	Name         string
+	Repo         string
+	Target       string
+	InstalledTag string
+	LatestTag    string
+	InstalledAt  time.Time
+}
+
+type OutdatedCheckFailure struct {
+	Name  string
+	Repo  string
+	Error error
 }
 
 type ListService struct {
 	LoadConfig    func() (*cfgpkg.File, error)
 	LoadInstalled func() (*storepkg.Config, error)
+	LatestTag     func(repo string) (string, error)
 }
 
 func (s ListService) ListPackages() ([]ListItem, error) {
@@ -74,6 +92,7 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 				item.Repo = repo
 			}
 			item.Installed = true
+			item.InstalledTag = entry.Tag
 			item.InstalledAt = entry.InstalledAt
 			item.Asset = entry.Asset
 			item.URL = entry.URL
@@ -92,6 +111,56 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 		items = append(items, byName[name])
 	}
 	return items, nil
+}
+
+func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFailure, error) {
+	if s.LatestTag == nil {
+		return nil, nil, fmt.Errorf("latest tag checker is required")
+	}
+
+	items, err := s.ListPackages()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	outdated := make([]OutdatedItem, 0, len(items))
+	failures := make([]OutdatedCheckFailure, 0)
+	for _, item := range items {
+		if !item.Installed || item.Repo == "" {
+			continue
+		}
+		if item.InstalledTag == "" {
+			failures = append(failures, OutdatedCheckFailure{
+				Name:  item.Name,
+				Repo:  item.Repo,
+				Error: fmt.Errorf("installed tag is empty"),
+			})
+			continue
+		}
+
+		latestTag, err := s.LatestTag(item.Repo)
+		if err != nil {
+			failures = append(failures, OutdatedCheckFailure{
+				Name:  item.Name,
+				Repo:  item.Repo,
+				Error: err,
+			})
+			continue
+		}
+		if latestTag == "" || latestTag == item.InstalledTag {
+			continue
+		}
+
+		outdated = append(outdated, OutdatedItem{
+			Name:         item.Name,
+			Repo:         item.Repo,
+			Target:       item.Target,
+			InstalledTag: item.InstalledTag,
+			LatestTag:    latestTag,
+			InstalledAt:  item.InstalledAt,
+		})
+	}
+	return outdated, failures, nil
 }
 
 func repoName(repo string) string {

@@ -157,6 +157,32 @@ func TestMain_ListRoutesToListCommand(t *testing.T) {
 	}
 }
 
+func TestMain_ListOutdatedBindsOption(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"list", "--outdated"})
+	if err != nil {
+		t.Fatalf("expected list --outdated command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+
+	opts, ok := calls[0].options.(*ListOptions)
+	if !ok {
+		t.Fatalf("expected ListOptions, got %T", calls[0].options)
+	}
+	if !opts.Outdated {
+		t.Fatalf("expected outdated flag to be true")
+	}
+}
+
 func TestMain_UninstallRoutesToUninstallCommandAndAliases(t *testing.T) {
 	for _, name := range []string{"uninstall", "uni", "remove", "rm"} {
 		t.Run(name, func(t *testing.T) {

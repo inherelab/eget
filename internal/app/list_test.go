@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -174,5 +175,103 @@ func TestListPackagesMergesInstalledStateIntoExplicitPackageName(t *testing.T) {
 	}
 	if items[0].InstalledAt != now {
 		t.Fatalf("expected installed_at %v, got %v", now, items[0].InstalledAt)
+	}
+}
+
+func TestListOutdatedPackagesIncludesInstalledOnlyEntries(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["fzf"] = cfgpkg.Section{
+				Repo: util.StringPtr("junegunn/fzf"),
+			}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{
+				Installed: map[string]storepkg.Entry{
+					"BurntSushi/ripgrep": {
+						Repo:        "BurntSushi/ripgrep",
+						InstalledAt: now,
+						Tag:         "v13.0.0",
+					},
+					"junegunn/fzf": {
+						Repo:        "junegunn/fzf",
+						InstalledAt: now,
+						Tag:         "v0.50.0",
+					},
+				},
+			}, nil
+		},
+		LatestTag: func(repo string) (string, error) {
+			switch repo {
+			case "BurntSushi/ripgrep":
+				return "v14.0.0", nil
+			case "junegunn/fzf":
+				return "v0.50.0", nil
+			default:
+				return "", nil
+			}
+		},
+	}
+
+	items, failures, err := svc.ListOutdatedPackages()
+	if err != nil {
+		t.Fatalf("list outdated packages: %v", err)
+	}
+	if len(failures) != 0 {
+		t.Fatalf("expected no failures, got %#v", failures)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 outdated item, got %#v", items)
+	}
+	if items[0].Name != "ripgrep" {
+		t.Fatalf("expected installed-only outdated item name ripgrep, got %#v", items[0])
+	}
+	if items[0].InstalledTag != "v13.0.0" || items[0].LatestTag != "v14.0.0" {
+		t.Fatalf("expected outdated tag comparison, got %#v", items[0])
+	}
+}
+
+func TestListOutdatedPackagesSkipsFailedChecks(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{
+				Installed: map[string]storepkg.Entry{
+					"junegunn/fzf": {
+						Repo:        "junegunn/fzf",
+						InstalledAt: now,
+						Tag:         "v0.50.0",
+					},
+					"BurntSushi/ripgrep": {
+						Repo:        "BurntSushi/ripgrep",
+						InstalledAt: now,
+						Tag:         "v13.0.0",
+					},
+				},
+			}, nil
+		},
+		LatestTag: func(repo string) (string, error) {
+			if repo == "junegunn/fzf" {
+				return "", fmt.Errorf("github api failed")
+			}
+			return "v14.0.0", nil
+		},
+	}
+
+	items, failures, err := svc.ListOutdatedPackages()
+	if err != nil {
+		t.Fatalf("list outdated packages: %v", err)
+	}
+	if len(items) != 1 || items[0].Repo != "BurntSushi/ripgrep" {
+		t.Fatalf("expected only successful outdated item, got %#v", items)
+	}
+	if len(failures) != 1 || failures[0].Repo != "junegunn/fzf" {
+		t.Fatalf("expected one failed check, got %#v", failures)
 	}
 }

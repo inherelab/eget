@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -63,7 +64,11 @@ func newCLIService() (*cliService, error) {
 		return nil, err
 	}
 	cfgService := app.ConfigService{ConfigPath: cfgPath}
-	listService := app.ListService{}
+	listService := app.ListService{
+		LatestTag: func(repo string) (string, error) {
+			return latestGitHubTag(repo, defaultOpts)
+		},
+	}
 	uninstallService := app.UninstallService{
 		Store: store,
 	}
@@ -160,7 +165,35 @@ func (s *cliService) handleUninstall(opts *UninstallOptions) error {
 }
 
 func (s *cliService) handleList(opts *ListOptions) error {
-	_ = opts
+	if opts != nil && opts.Outdated {
+		items, failures, err := s.listService.ListOutdatedPackages()
+		if err != nil {
+			return err
+		}
+		for _, failure := range failures {
+			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
+		}
+		if len(items) == 0 {
+			fmt.Println("no outdated packages found")
+			return nil
+		}
+		for i, item := range items {
+			if i > 0 {
+				fmt.Println()
+			}
+			fmt.Printf("name: %s\n", item.Name)
+			fmt.Printf("repo: %s\n", item.Repo)
+			if item.Target != "" {
+				fmt.Printf("target: %s\n", item.Target)
+			}
+			fmt.Printf("installed_tag: %s\n", item.InstalledTag)
+			fmt.Printf("latest_tag: %s\n", item.LatestTag)
+			if !item.InstalledAt.IsZero() {
+				fmt.Printf("installed_at: %s\n", item.InstalledAt.Format(time.RFC3339))
+			}
+		}
+		return nil
+	}
 	items, err := s.listService.ListPackages()
 	if err != nil {
 		return err
@@ -474,4 +507,28 @@ func binaryModTime(bin, output string) time.Time {
 		return time.Time{}
 	}
 	return info.ModTime()
+}
+
+func latestGitHubTag(repo string, opts install.Options) (string, error) {
+	resp, err := install.GetWithOptions(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), opts)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("latest tag check failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		Tag string `json:"tag_name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+	if payload.Tag == "" {
+		return "", fmt.Errorf("latest tag is empty")
+	}
+	return payload.Tag, nil
 }
