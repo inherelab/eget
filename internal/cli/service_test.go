@@ -2,13 +2,16 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
@@ -177,6 +180,59 @@ func TestHandleInstallPrintsAddedPackageMessage(t *testing.T) {
 	}
 }
 
+func TestNewCLIServiceWiresReleaseInfo(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmp, ".config"))
+
+	svc, err := newCLIService()
+	if err != nil {
+		t.Fatalf("newCLIService: %v", err)
+	}
+	if svc.appService.ReleaseInfo == nil {
+		t.Fatal("expected ReleaseInfo to be configured")
+	}
+}
+
+func TestLatestGitHubReleaseInfo(t *testing.T) {
+	origGetWithOptions := githubAPIGetWithOptions
+	defer func() { githubAPIGetWithOptions = origGetWithOptions }()
+
+	var requestedURL string
+	githubAPIGetWithOptions = func(rawURL string, opts install.Options) (*http.Response, error) {
+		requestedURL = rawURL
+		payload, err := json.Marshal(map[string]any{
+			"tag_name":   "v0.3.6",
+			"created_at": "2026-04-20T14:10:17Z",
+		})
+		if err != nil {
+			t.Fatalf("marshal payload: %v", err)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(bytes.NewReader(payload)),
+			Header:     make(http.Header),
+		}, nil
+	}
+
+	tag, createdAt, err := latestGitHubReleaseInfo("gookit/gitw", install.Options{})
+	if err != nil {
+		t.Fatalf("latestGitHubReleaseInfo: %v", err)
+	}
+	if requestedURL != "https://api.github.com/repos/gookit/gitw/releases/latest" {
+		t.Fatalf("unexpected request url: %s", requestedURL)
+	}
+	if tag != "v0.3.6" {
+		t.Fatalf("expected tag v0.3.6, got %q", tag)
+	}
+	wantTime := time.Date(2026, 4, 20, 14, 10, 17, 0, time.UTC)
+	if !createdAt.Equal(wantTime) {
+		t.Fatalf("expected created_at %s, got %s", wantTime, createdAt)
+	}
+}
+
 func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
 	var out bytes.Buffer
 	configureVerbose(true, &out)
@@ -218,28 +274,17 @@ func TestHandleListOutdatedPrintsOnlyOutdatedInstalledPackages(t *testing.T) {
 		},
 	}
 
-	origStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer r.Close()
-	defer w.Close()
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout }()
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
 
-	err = svc.handleList(&ListOptions{Outdated: true})
+	err := svc.handleList(&ListOptions{Outdated: true})
 	if err != nil {
 		t.Fatalf("handle list outdated: %v", err)
 	}
 
-	_ = w.Close()
-	var out bytes.Buffer
-	if _, err := io.Copy(&out, r); err != nil {
-		t.Fatalf("copy stdout: %v", err)
-	}
 	got := out.String()
-	if !strings.Contains(got, "last_version") {
+	if !strings.Contains(strings.ToLower(got), "latest version") {
 		t.Fatalf("expected last_version column in output, got %q", got)
 	}
 	if !strings.Contains(got, "BurntSushi/ripgrep") {
@@ -271,28 +316,17 @@ func TestHandleListPrintsTable(t *testing.T) {
 		},
 	}
 
-	origStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer r.Close()
-	defer w.Close()
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout }()
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
 
-	err = svc.handleList(&ListOptions{})
+	err := svc.handleList(&ListOptions{})
 	if err != nil {
 		t.Fatalf("handle list: %v", err)
 	}
 
-	_ = w.Close()
-	var out bytes.Buffer
-	if _, err := io.Copy(&out, r); err != nil {
-		t.Fatalf("copy stdout: %v", err)
-	}
 	got := out.String()
-	if !strings.Contains(got, "name") || !strings.Contains(got, "version") {
+	if !strings.Contains(strings.ToLower(got), "name") || !strings.Contains(strings.ToLower(got), "version") {
 		t.Fatalf("expected table headers in output, got %q", got)
 	}
 	if !strings.Contains(got, "chlog") || !strings.Contains(got, "v0.3.6") {

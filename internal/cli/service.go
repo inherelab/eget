@@ -28,6 +28,8 @@ type cliService struct {
 	updService       app.UpdateService
 }
 
+var githubAPIGetWithOptions = install.GetWithOptions
+
 func newCLIService() (*cliService, error) {
 	cfg, err := cfgpkg.Load()
 	if err != nil {
@@ -78,6 +80,9 @@ func newCLIService() (*cliService, error) {
 		Store:  store,
 		Config: &cfgService,
 		Now:    time.Now,
+		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+			return latestGitHubReleaseInfo(repo, defaultOpts)
+		},
 	}
 	updService := app.UpdateService{
 		Install: &appService,
@@ -501,27 +506,36 @@ func binaryModTime(bin, output string) time.Time {
 }
 
 func latestGitHubTag(repo string, opts install.Options) (string, error) {
-	resp, err := install.GetWithOptions(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), opts)
+	tag, _, err := latestGitHubReleaseInfo(repo, opts)
 	if err != nil {
 		return "", err
+	}
+	return tag, nil
+}
+
+func latestGitHubReleaseInfo(repo string, opts install.Options) (string, time.Time, error) {
+	resp, err := githubAPIGetWithOptions(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), opts)
+	if err != nil {
+		return "", time.Time{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("latest tag check failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+		return "", time.Time{}, fmt.Errorf("latest tag check failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
 	}
 
 	var payload struct {
-		Tag string `json:"tag_name"`
+		Tag       string    `json:"tag_name"`
+		CreatedAt time.Time `json:"created_at"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
 	if payload.Tag == "" {
-		return "", fmt.Errorf("latest tag is empty")
+		return "", time.Time{}, fmt.Errorf("latest tag is empty")
 	}
-	return payload.Tag, nil
+	return payload.Tag, payload.CreatedAt, nil
 }
 
 func printListItemDetails(item *app.ListItem) {
