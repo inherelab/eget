@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -275,6 +276,13 @@ func (r *InstallRunner) resolveFallback(target string, opts Options, original er
 }
 
 func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile) (ExtractedFile, bool, error) {
+	if selected, ok := autoSelectExtractedFile(candidates, runtime.GOARCH); ok {
+		if r.Stderr != nil {
+			fmt.Fprintf(r.Stderr, "\033[33mAuto-selected extracted file '%s' for %s\033[0m\n", selected.ArchiveName, runtime.GOARCH)
+		}
+		return selected, false, nil
+	}
+
 	if r.Prompt == nil {
 		return ExtractedFile{}, false, fmt.Errorf("%d candidates for target found", len(candidates))
 	}
@@ -294,6 +302,54 @@ func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile) (Extrac
 		return ExtractedFile{}, false, fmt.Errorf("selection %d is out of bounds", choice)
 	}
 	return candidates[choice], false, nil
+}
+
+func autoSelectExtractedFile(candidates []ExtractedFile, goarch string) (ExtractedFile, bool) {
+	if len(candidates) == 0 {
+		return ExtractedFile{}, false
+	}
+	patterns := archSelectionPatterns(goarch)
+	if len(patterns) == 0 {
+		return ExtractedFile{}, false
+	}
+
+	matches := make([]ExtractedFile, 0, len(candidates))
+	for _, candidate := range candidates {
+		name := strings.ToLower(strings.ReplaceAll(candidate.ArchiveName, "\\", "/"))
+		for _, pattern := range patterns {
+			if pattern.MatchString(name) {
+				matches = append(matches, candidate)
+				break
+			}
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0], true
+	}
+	return ExtractedFile{}, false
+}
+
+func archSelectionPatterns(goarch string) []*regexp.Regexp {
+	switch strings.ToLower(goarch) {
+	case "amd64":
+		return compileArchPatterns(`(^|/)(x64|amd64|x86_64)(/|$)`)
+	case "386":
+		return compileArchPatterns(`(^|/)(x86|i386|386)(/|$)`)
+	case "arm64":
+		return compileArchPatterns(`(^|/)(arm64|aarch64)(/|$)`)
+	case "arm":
+		return compileArchPatterns(`(^|/)(arm32|armv6|armv7|arm)(/|$)`)
+	default:
+		return nil
+	}
+}
+
+func compileArchPatterns(exprs ...string) []*regexp.Regexp {
+	patterns := make([]*regexp.Regexp, 0, len(exprs))
+	for _, expr := range exprs {
+		patterns = append(patterns, regexp.MustCompile(expr))
+	}
+	return patterns
 }
 
 func (r *InstallRunner) loadInstalled() (map[string]string, map[string]string, error) {

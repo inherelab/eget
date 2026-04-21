@@ -491,3 +491,31 @@ func TestOutputPathUsesPreferredNameWithExplicitExtension(t *testing.T) {
 		t.Fatalf("expected preferred explicit output name custom-name.exe, got %q", got)
 	}
 }
+
+func TestAutoSelectExtractedFileByArch(t *testing.T) {
+	candidates := []ExtractedFile{
+		{ArchiveName: `arm64\WinDirStat.exe`, Name: `arm64\WinDirStat.exe`, mode: 0o666},
+		{ArchiveName: `x86\WinDirStat.exe`, Name: `x86\WinDirStat.exe`, mode: 0o666},
+		{ArchiveName: `x64\WinDirStat.exe`, Name: `x64\WinDirStat.exe`, mode: 0o666},
+	}
+
+	selected, ok := autoSelectExtractedFile(candidates, "amd64")
+	if !ok {
+		t.Fatal("expected auto selection for amd64 candidates")
+	}
+	if selected.ArchiveName != `x64\WinDirStat.exe` {
+		t.Fatalf("expected x64 executable to be selected, got %q", selected.ArchiveName)
+	}
+}
+
+func TestAutoSelectExtractedFileKeepsPromptWhenAmbiguous(t *testing.T) {
+	candidates := []ExtractedFile{
+		{ArchiveName: `bin\tool.exe`, Name: `bin\tool.exe`, mode: 0o666},
+		{ArchiveName: `tools\tool.exe`, Name: `tools\tool.exe`, mode: 0o666},
+	}
+
+	_, ok := autoSelectExtractedFile(candidates, "amd64")
+	if ok {
+		t.Fatal("expected ambiguous candidates to keep prompt fallback")
+	}
+}
