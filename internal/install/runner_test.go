@@ -122,7 +122,7 @@ func TestDownloadPrintsProxyNoticeForRemoteRequest(t *testing.T) {
 		t.Fatalf("Download(): %v", err)
 	}
 
-	if got := notice.String(); !strings.Contains(got, "Using proxy_url for download request: http://127.0.0.1:7890") {
+	if got := notice.String(); !strings.Contains(got, "proxy_url for download request") {
 		t.Fatalf("expected download proxy notice, got %q", got)
 	}
 }
@@ -224,7 +224,7 @@ func TestGetWithOptionsPrintsProxyNoticeForGitHubAPI(t *testing.T) {
 	}
 	_ = resp.Body.Close()
 
-	if got := notice.String(); !strings.Contains(got, "Using proxy_url for GitHub API request: http://127.0.0.1:7890") {
+	if got := notice.String(); !strings.Contains(got, "proxy_url for GitHub API request") {
 		t.Fatalf("expected GitHub API proxy notice, got %q", got)
 	}
 }
@@ -282,10 +282,10 @@ func TestGetWithOptionsPrintsVerboseRequestAndResponse(t *testing.T) {
 	_ = resp.Body.Close()
 
 	got := verbose.String()
-	if !strings.Contains(got, "[verbose] request: GET https://api.github.com/repos/gookit/gitw/releases/latest") {
+	if !strings.Contains(got, "request: GET https://api.github.com/repos/gookit/gitw/releases/latest") {
 		t.Fatalf("expected verbose request log, got %q", got)
 	}
-	if !strings.Contains(got, "[verbose] response: https://api.github.com/repos/gookit/gitw/releases/latest 200 OK") {
+	if !strings.Contains(got, "response: https://api.github.com/repos/gookit/gitw/releases/latest 200 OK") {
 		t.Fatalf("expected verbose response log, got %q", got)
 	}
 }
@@ -303,7 +303,9 @@ func TestGetWithOptionsUsesAPICacheWhenAvailable(t *testing.T) {
 
 	calls := 0
 	origHTTPDo := httpDo
+	origNoticeWriter := apiCacheNoticeWriter
 	defer func() { httpDo = origHTTPDo }()
+	defer func() { apiCacheNoticeWriter = origNoticeWriter }()
 	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
 		calls++
 		return &http.Response{
@@ -312,6 +314,8 @@ func TestGetWithOptionsUsesAPICacheWhenAvailable(t *testing.T) {
 			Body:       io.NopCloser(strings.NewReader(`{"tag_name":"network"}`)),
 		}, nil
 	}
+	var notice bytes.Buffer
+	apiCacheNoticeWriter = &notice
 
 	resp, err := GetWithOptions(apiURL, Options{
 		APICacheEnabled: true,
@@ -332,6 +336,9 @@ func TestGetWithOptionsUsesAPICacheWhenAvailable(t *testing.T) {
 	}
 	if calls != 0 {
 		t.Fatalf("expected no network calls, got %d", calls)
+	}
+	if got := notice.String(); !strings.Contains(got, "api_cache file") {
+		t.Fatalf("expected api cache notice, got %q", got)
 	}
 }
 

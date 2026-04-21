@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/util"
 	pb "github.com/schollz/progressbar/v3"
 )
@@ -25,6 +26,7 @@ var httpDo = func(client *http.Client, req *http.Request) (*http.Response, error
 	return client.Do(req)
 }
 var proxyNoticeWriter io.Writer = os.Stderr
+var apiCacheNoticeWriter io.Writer = os.Stderr
 var verboseWriter io.Writer = os.Stderr
 var verboseEnabled bool
 
@@ -108,6 +110,7 @@ func GetWithOptions(url string, opts Options) (*http.Response, error) {
 			verbosef("api cache read error: %v", err)
 		} else if ok {
 			verbosef("api cache hit: %s", cachePath)
+			printAPICacheNotice(cachePath)
 			return resp, nil
 		} else {
 			verbosef("api cache miss: %s", cachePath)
@@ -259,14 +262,21 @@ func printProxyNotice(kind, proxyURL string) {
 	if proxyURL == "" || proxyNoticeWriter == nil {
 		return
 	}
-	fmt.Fprintf(proxyNoticeWriter, "Using proxy_url for %s: %s\n", kind, proxyURL)
+	ccolor.Fprintf(proxyNoticeWriter, "- Using <ylw>proxy_url for %s</>: %s\n", kind, proxyURL)
+}
+
+func printAPICacheNotice(cachePath string) {
+	if cachePath == "" || apiCacheNoticeWriter == nil {
+		return
+	}
+	ccolor.Fprintf(apiCacheNoticeWriter, "- Using <ylw>api_cache file</>: %s\n", cachePath)
 }
 
 func verbosef(format string, args ...any) {
 	if !verboseEnabled || verboseWriter == nil {
 		return
 	}
-	fmt.Fprintf(verboseWriter, "[verbose] "+format+"\n", args...)
+	ccolor.Fprintf(verboseWriter, "<ylw>verbose</> "+format+"\n", args...)
 }
 
 func VerboseEnabledForTest() bool {

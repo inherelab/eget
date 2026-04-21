@@ -92,7 +92,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 	verbosef("selected asset url: %s", url)
 
-	if _, err := fmt.Fprintf(output, "Asset %s\n", url); err != nil {
+	if _, err := fmt.Fprintf(output, "📦 Asset %s\n", url); err != nil {
 		return RunResult{}, err
 	}
 
@@ -149,7 +149,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 			return "", err
 		}
 		verbosef("extract output: %s", out)
-		ccolor.Fprintf(output, "Extracted <info>%s</> to <cyan>%s</>\n", file.ArchiveName, out)
+		ccolor.Fprintf(output, "✅ Extracted <info>%s</> to <cyan>%s</>\n", file.ArchiveName, out)
 		return out, nil
 	}
 
@@ -203,7 +203,7 @@ func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
 			pb.OptionShowCount(),
 			pb.OptionSpinnerType(14),
 			pb.OptionFullWidth(),
-			pb.OptionSetDescription("Downloading"),
+			pb.OptionSetDescription("⬇️ Downloading"),
 			pb.OptionOnCompletion(func() {
 				fmt.Fprint(pbout, "\n")
 			}),
