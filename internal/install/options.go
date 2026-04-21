@@ -11,6 +11,7 @@ type Options struct {
 	Tag          string
 	Prerelease   bool
 	Name         string
+	Verbose      bool
 	Source       bool
 	Output       string
 	CacheDir     string

@@ -256,6 +256,40 @@ func TestGetWithOptionsSkipsProxyNoticeWithoutProxyURL(t *testing.T) {
 	}
 }
 
+func TestGetWithOptionsPrintsVerboseRequestAndResponse(t *testing.T) {
+	var verbose bytes.Buffer
+	origVerboseEnabled := verboseEnabled
+	origVerboseWriter := verboseWriter
+	origHTTPDo := httpDo
+	defer func() {
+		verboseEnabled = origVerboseEnabled
+		verboseWriter = origVerboseWriter
+		httpDo = origHTTPDo
+	}()
+	SetVerbose(true, &verbose)
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{}`)),
+		}, nil
+	}
+
+	resp, err := GetWithOptions("https://api.github.com/repos/gookit/gitw/releases/latest", Options{})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	_ = resp.Body.Close()
+
+	got := verbose.String()
+	if !strings.Contains(got, "[verbose] request: GET https://api.github.com/repos/gookit/gitw/releases/latest") {
+		t.Fatalf("expected verbose request log, got %q", got)
+	}
+	if !strings.Contains(got, "[verbose] response: https://api.github.com/repos/gookit/gitw/releases/latest 200 OK") {
+		t.Fatalf("expected verbose response log, got %q", got)
+	}
+}
+
 func TestOutputPathUsesHeuristicExecutableRename(t *testing.T) {
 	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
 	got := outputPath(file, "", false, "")

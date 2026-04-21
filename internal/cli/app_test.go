@@ -110,6 +110,28 @@ func TestMain_ConfigActionRoutesToConfigCommand(t *testing.T) {
 	}
 }
 
+func TestMain_GlobalVerboseFlagParsesBeforeCommand(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	app := newApp(handler, &stdout, &stderr)
+	err := app.RunWithArgs([]string{"-v", "install", "inhere/markview"})
+	if err != nil {
+		t.Fatalf("expected verbose install command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if !app.Verbose() {
+		t.Fatalf("expected app verbose flag to be true")
+	}
+}
+
 func TestMain_ListRoutesToListCommand(t *testing.T) {
 	calls := make([]commandCall, 0, 1)
 	handler := func(name string, options any) error {

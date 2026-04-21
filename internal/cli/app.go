@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	version string
-	gitHash string
+	version   string
+	gitHash   string
 	buildTime string
 )
 
@@ -23,6 +23,7 @@ type CommandHandler func(name string, options any) error
 type App struct {
 	inner     *capp.App
 	resetters []func()
+	verbose   *bool
 }
 
 // SetBuildInfo sets the build information for the application.
@@ -35,7 +36,8 @@ func SetBuildInfo(versionStr, gitHashStr, buildTimeStr string) {
 func Main(args []string, stdout, stderr io.Writer) error {
 	var service *cliService
 	var serviceErr error
-	app := newApp(func(name string, options any) error {
+	var app *App
+	app = newApp(func(name string, options any) error {
 		if service == nil && serviceErr == nil {
 			service, serviceErr = newCLIService()
 		}
@@ -45,6 +47,7 @@ func Main(args []string, stdout, stderr io.Writer) error {
 		if service == nil {
 			return ErrNotImplemented
 		}
+		configureVerbose(app.Verbose(), stderr)
 		return service.handle(name, options)
 	}, stdout, stderr)
 	return app.RunWithArgs(args)
@@ -74,8 +77,11 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	inner.Version = version
 	inner.HelpWriter = stdout
 	inner.SetOutput(stderr)
+	verbose := false
+	inner.BoolVar(&verbose, "verbose", false, "Show verbose execution details")
+	inner.AddShortcuts("verbose", "v")
 
-	app := &App{inner: inner}
+	app := &App{inner: inner, verbose: &verbose}
 	app.add(newInstallCmd(handler))
 	app.add(newDownloadCmd(handler))
 	app.add(newAddCmd(handler))
@@ -95,7 +101,14 @@ func (a *App) RunWithArgs(args []string) error {
 	for _, reset := range a.resetters {
 		reset()
 	}
+	if a.verbose != nil {
+		*a.verbose = false
+	}
 	return a.inner.RunWithArgs(args)
+}
+
+func (a *App) Verbose() bool {
+	return a.verbose != nil && *a.verbose
 }
 
 func validateNoTrailingFlags(cmd *capp.Cmd) error {

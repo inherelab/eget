@@ -129,31 +129,33 @@ eget config set global.target ~/.local/bin
 
 `install`、`download`、`add` 共享这些安装相关选项：
 
-- `--tag`
-- `--system`
-- `--to`
-- `--cache-dir`
-- `--file`
-- `--asset`
-- `--source`
-- `--all`
-- `--quiet`
+- `--tag`: 指定发布版本标签；未提供时默认使用 `latest`。
+- `--system`: 指定目标系统与架构，例如 `windows/amd64`、`linux/arm64`。
+- `--to`: 指定安装或下载输出路径；可传目录，也可传完整文件路径。
+- `--cache-dir`: 指定远程下载缓存目录，命中缓存时会直接复用。
+- `--file`: 指定归档内要提取的文件，适用于压缩包内存在多个候选文件的场景。
+- `--asset`: 指定资源过滤关键词；可用逗号分隔多个过滤条件。
+- `--source`: 下载源码归档而不是预构建二进制。
+- `--all`: 提取归档中的全部文件，而不是只选择一个目标文件。
+- `--quiet`: 精简常规输出，适用于脚本或批处理场景。
 
 `install` 额外支持：
 
-- `--add`
-- `--name`
+- `--add`: 安装成功后，将 repo 目标追加到 `[packages.<name>]` 托管配置中。
+- `--name`: 指定托管包名；对于单文件可执行资产，也会作为默认输出文件名提示。
 
 `update` 额外支持：
 
-- `--all`
-- `--dry-run`
-- `--interactive`
+- `--all`: 更新全部托管包，而不是只更新单个目标。
+- `--dry-run`: 仅预览更新计划，不执行实际安装。
+- `--interactive`: 交互式选择要更新的托管包。
+
+全局选项：
+
+- `-v`, `--verbose`: 输出更详细的调试信息，例如请求的 API、响应摘要、asset 选择、缓存命中和关键流程节点。
 
 说明：
 
-- `--asset` 当前按单值字符串解析，再映射到内部 `[]string`。
-- `--cache-dir` 用于覆盖配置中的 `cache_dir`，控制远程下载缓存目录。
 - `install --name` 可用于指定单文件可执行资产的输出文件名，例如将 `chlog-windows-amd64.exe` 安装为 `chlog.exe`。
 - `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。

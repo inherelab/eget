@@ -6,9 +6,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
+
+var verboseWriter io.Writer = os.Stderr
+var verboseEnabled bool
+
+func SetVerbose(enabled bool, writer io.Writer) {
+	verboseEnabled = enabled
+	if writer == nil {
+		verboseWriter = io.Discard
+		return
+	}
+	verboseWriter = writer
+}
 
 type HTTPGetter interface {
 	Get(url string) (*http.Response, error)
@@ -82,6 +95,7 @@ func (f *AssetFinder) Find() ([]string, error) {
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/%s", f.Repo, f.Tag)
+	verbosef("github finder request: %s", url)
 	resp, err := f.Getter.Get(url)
 	if err != nil {
 		return nil, err
@@ -103,6 +117,7 @@ func (f *AssetFinder) Find() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	verbosef("github finder response: %s", truncateBody(body))
 
 	var release Release
 	if err := json.Unmarshal(body, &release); err != nil {
@@ -117,6 +132,7 @@ func (f *AssetFinder) Find() ([]string, error) {
 	for _, a := range release.Assets {
 		assets = append(assets, a.DownloadURL)
 	}
+	verbosef("github finder assets: %d", len(assets))
 
 	return assets, nil
 }
@@ -129,6 +145,7 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 
 	for page := 1; ; page++ {
 		url := fmt.Sprintf("https://api.github.com/repos/%s/releases?page=%d", f.Repo, page)
+		verbosef("github finder fallback request: %s", url)
 		resp, err := f.Getter.Get(url)
 		if err != nil {
 			return nil, err
@@ -147,6 +164,7 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		verbosef("github finder fallback response: %s", truncateBody(body))
 
 		var releases []Release
 		if err := json.Unmarshal(body, &releases); err != nil {
@@ -179,6 +197,7 @@ func (f *AssetFinder) getLatestTag() (string, error) {
 		return "", fmt.Errorf("github getter is required")
 	}
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases", f.Repo)
+	verbosef("github prerelease request: %s", url)
 	resp, err := f.Getter.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("pre-release finder: %w", err)
@@ -189,6 +208,7 @@ func (f *AssetFinder) getLatestTag() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("pre-release finder: %w", err)
 	}
+	verbosef("github prerelease response: %s", truncateBody(body))
 
 	var releases []Release
 	if err := json.Unmarshal(body, &releases); err != nil {
@@ -214,4 +234,24 @@ func NewSourceFinder(repo, tag, tool string) *SourceFinder {
 
 func (f *SourceFinder) Find() ([]string, error) {
 	return []string{fmt.Sprintf("https://github.com/%s/tarball/%s/%s.tar.gz", f.Repo, f.Tag, f.Tool)}, nil
+}
+
+func verbosef(format string, args ...any) {
+	if !verboseEnabled || verboseWriter == nil {
+		return
+	}
+	fmt.Fprintf(verboseWriter, "[verbose] "+format+"\n", args...)
+}
+
+func truncateBody(body []byte) string {
+	const limit = 240
+	text := strings.TrimSpace(string(body))
+	if len(text) <= limit {
+		return text
+	}
+	return text[:limit] + "...(truncated)"
+}
+
+func VerboseEnabledForTest() bool {
+	return verboseEnabled
 }

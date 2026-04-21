@@ -1,6 +1,7 @@
 package github
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -113,5 +114,37 @@ func TestAssetFinderGetterRequired(t *testing.T) {
 	}
 	if _, err := finder.FindMatch(); err == nil {
 		t.Fatal("expected getter required error for FindMatch")
+	}
+}
+
+func TestAssetFinderVerboseLogsResponseSummary(t *testing.T) {
+	var verbose bytes.Buffer
+	origVerboseEnabled := verboseEnabled
+	origVerboseWriter := verboseWriter
+	defer func() {
+		verboseEnabled = origVerboseEnabled
+		verboseWriter = origVerboseWriter
+	}()
+	SetVerbose(true, &verbose)
+
+	getter := &fakeGetter{
+		responses: map[string]*http.Response{
+			"https://api.github.com/repos/inhere/markview/releases/latest": jsonResponse(http.StatusOK, `{"assets":[{"browser_download_url":"https://example.com/tool.tar.gz"}],"created_at":"2026-04-18T00:00:00Z"}`),
+		},
+	}
+	finder := NewAssetFinder("inhere/markview", "latest", false, time.Time{})
+	finder.Getter = getter
+
+	_, err := finder.Find()
+	if err != nil {
+		t.Fatalf("Find(): %v", err)
+	}
+
+	got := verbose.String()
+	if !strings.Contains(got, "[verbose] github finder request: https://api.github.com/repos/inhere/markview/releases/latest") {
+		t.Fatalf("expected verbose finder request log, got %q", got)
+	}
+	if !strings.Contains(got, "[verbose] github finder assets: 1") {
+		t.Fatalf("expected verbose finder asset count, got %q", got)
 	}
 }

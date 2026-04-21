@@ -12,6 +12,7 @@ import (
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	sourcegithub "github.com/inherelab/eget/internal/source/github"
 )
 
 func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
@@ -150,6 +151,18 @@ func TestHandleInstallPrintsAddedPackageMessage(t *testing.T) {
 	if !strings.Contains(out.String(), "Added package config: chlog -> gookit/gitw") {
 		t.Fatalf("expected add-package message, got %q", out.String())
 	}
+}
+
+func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
+	var out bytes.Buffer
+	configureVerbose(true, &out)
+	if !install.VerboseEnabledForTest() {
+		t.Fatalf("expected install verbose to be enabled")
+	}
+	if !sourcegithub.VerboseEnabledForTest() {
+		t.Fatalf("expected source verbose to be enabled")
+	}
+	configureVerbose(false, &out)
 }
 
 type fakeRunnerForCLI struct {

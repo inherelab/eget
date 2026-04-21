@@ -128,31 +128,33 @@ The target argument accepted by `install` and `download` can be:
 
 `install`, `download`, and `add` share these installation-related options:
 
-- `--tag`
-- `--system`
-- `--to`
-- `--cache-dir`
-- `--file`
-- `--asset`
-- `--source`
-- `--all`
-- `--quiet`
+- `--tag`: Select a release tag; defaults to `latest` when omitted.
+- `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
+- `--to`: Set the install or download output path; accepts either a directory or a full file path.
+- `--cache-dir`: Set the remote download cache directory and reuse cached files on subsequent runs.
+- `--file`: Select a file to extract from an archive when multiple candidates exist.
+- `--asset`: Filter release assets by keyword; multiple filters can be separated by commas.
+- `--source`: Download the source archive instead of a prebuilt binary release.
+- `--all`: Extract all files from the archive instead of selecting a single target file.
+- `--quiet`: Reduce normal command output for scripting or batch use.
 
 `install` additionally supports:
 
-- `--add`
-- `--name`
+- `--add`: After a successful install, append the repo target to `[packages.<name>]` managed config.
+- `--name`: Override the managed package name; for single executable assets, it also acts as the default output-name hint.
 
 `update` additionally supports:
 
-- `--all`
-- `--dry-run`
-- `--interactive`
+- `--all`: Update all managed packages instead of a single target.
+- `--dry-run`: Preview the update plan without performing installation changes.
+- `--interactive`: Interactively select which managed packages to update.
+
+Global options:
+
+- `-v`, `--verbose`: Show more execution details such as API requests, response summaries, asset selection, cache hits, and key workflow steps.
 
 Notes:
 
-- `--asset` is currently parsed as a single string and then mapped to internal `[]string`.
-- `--cache-dir` overrides `cache_dir` from config and controls the remote download cache directory.
 - `install --name` can rename a single executable asset, for example installing `chlog-windows-amd64.exe` as `chlog.exe`.
 - `install --add` only applies to repo targets and appends the managed package definition after a successful install.
 - Argument order follows the `cflag/capp` parser constraint and must be `CMD --OPTIONS... ARGUMENTS...`.

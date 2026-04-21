@@ -62,10 +62,12 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, err
 	}
+	verbosef("target kind: %s", DetectTargetKind(target))
 	assets, err := finder.Find()
 	if err != nil {
 		return RunResult{}, err
 	}
+	verbosef("finder assets: %d", len(assets))
 
 	detector, err := r.Service.SelectDetector(&opts)
 	if err != nil {
@@ -86,6 +88,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	} else if err != nil {
 		return RunResult{}, err
 	}
+	verbosef("selected asset url: %s", url)
 
 	if _, err := fmt.Fprintf(output, "Asset %s\n", url); err != nil {
 		return RunResult{}, err
@@ -102,6 +105,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, err
 	}
+	verbosef("verifier: checksum_asset=%t verify_arg=%t", sumAsset != "", opts.Verify != "")
 	if err := verifier.Verify(body); err != nil {
 		return RunResult{}, err
 	}
@@ -117,6 +121,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, err
 	}
+	verbosef("extractor selected for tool=%s", tool)
 
 	bin, bins, err := extractor.Extract(body, opts.All)
 	if len(bins) != 0 && err != nil && !opts.All {
@@ -141,6 +146,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		if err := file.Extract(out); err != nil {
 			return "", err
 		}
+		verbosef("extract output: %s", out)
 		ccolor.Fprintf(output, "Extracted <info>%s</> to <cyan>%s</>\n", file.ArchiveName, out)
 		return out, nil
 	}

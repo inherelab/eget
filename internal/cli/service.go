@@ -13,6 +13,7 @@ import (
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	sourcegithub "github.com/inherelab/eget/internal/source/github"
 )
 
 type cliService struct {
@@ -123,6 +124,11 @@ func (s *cliService) handle(name string, options any) error {
 	default:
 		return ErrNotImplemented
 	}
+}
+
+func configureVerbose(verbose bool, stderr io.Writer) {
+	install.SetVerbose(verbose, stderr)
+	sourcegithub.SetVerbose(verbose, stderr)
 }
 
 func (s *cliService) handleUninstall(opts *UninstallOptions) error {

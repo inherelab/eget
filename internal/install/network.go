@@ -25,6 +25,17 @@ var httpDo = func(client *http.Client, req *http.Request) (*http.Response, error
 	return client.Do(req)
 }
 var proxyNoticeWriter io.Writer = os.Stderr
+var verboseWriter io.Writer = os.Stderr
+var verboseEnabled bool
+
+func SetVerbose(enabled bool, writer io.Writer) {
+	verboseEnabled = enabled
+	if writer == nil {
+		verboseWriter = io.Discard
+		return
+	}
+	verboseWriter = writer
+}
 
 func tokenFrom(value string) (string, error) {
 	if strings.HasPrefix(value, "@") {
@@ -94,7 +105,14 @@ func GetWithOptions(url string, opts Options) (*http.Response, error) {
 		printProxyNotice("GitHub API request", opts.ProxyURL)
 	}
 
-	return httpDo(client, req)
+	verbosef("request: %s %s", req.Method, req.URL.String())
+	resp, err := httpDo(client, req)
+	if err != nil {
+		verbosef("request error: %v", err)
+		return nil, err
+	}
+	verbosef("response: %s %s", req.URL.String(), resp.Status)
+	return resp, nil
 }
 
 func NewHTTPGetter(opts Options) HTTPGetterFunc {
@@ -190,6 +208,7 @@ func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar
 		return err
 	}
 	defer resp.Body.Close()
+	verbosef("download response bytes: %d", resp.ContentLength)
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
@@ -209,6 +228,17 @@ func printProxyNotice(kind, proxyURL string) {
 		return
 	}
 	fmt.Fprintf(proxyNoticeWriter, "Using proxy_url for %s: %s\n", kind, proxyURL)
+}
+
+func verbosef(format string, args ...any) {
+	if !verboseEnabled || verboseWriter == nil {
+		return
+	}
+	fmt.Fprintf(verboseWriter, "[verbose] "+format+"\n", args...)
+}
+
+func VerboseEnabledForTest() bool {
+	return verboseEnabled
 }
 
 func isGitHubAPIRequest(u *url.URL) bool {
