@@ -324,3 +324,31 @@ func TestInstallTargetWithAddRejectsNonRepoTarget(t *testing.T) {
 		t.Fatalf("expected config add to not be called, got %d", config.calls)
 	}
 }
+
+func TestInstallTargetWithAddUsesExplicitPackageName(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
+			ExtractedFiles: []string{"./chlog.exe"},
+		},
+	}
+	config := &fakeConfigRecorder{}
+	svc := Service{
+		Runner: runner,
+		Config: config,
+	}
+
+	opts := install.Options{Name: "chlog"}
+	_, err := svc.InstallTarget("gookit/gitw", opts, InstallExtras{
+		AddToConfig: true,
+		PackageName: "chlog",
+		PackageOpts: opts,
+	})
+	if err != nil {
+		t.Fatalf("install target with explicit package name: %v", err)
+	}
+
+	if config.name != "chlog" {
+		t.Fatalf("expected explicit package name chlog, got %q", config.name)
+	}
+}

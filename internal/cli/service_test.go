@@ -2,10 +2,16 @@ package cli
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
+	"github.com/inherelab/eget/internal/install"
+	storepkg "github.com/inherelab/eget/internal/installed"
 )
 
 func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
@@ -92,4 +98,76 @@ func TestPrintConfigListIncludesHeaderComment(t *testing.T) {
 	if !strings.Contains(got, "[global]") {
 		t.Fatalf("expected global section, got %q", got)
 	}
+}
+
+func TestHandleInstallPrintsAddedPackageMessage(t *testing.T) {
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() {
+		os.Stdout = origStdout
+	}()
+
+	svc := &cliService{
+		appService: app.Service{
+			Runner: &fakeRunnerForCLI{
+				result: app.RunResult{
+					URL:            "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
+					Tool:           "gitw",
+					ExtractedFiles: []string{"C:/Users/inhere/.local/bin/chlog.exe"},
+				},
+			},
+			Store:  &fakeInstalledStoreForCLI{},
+			Config: &fakeConfigRecorderForCLI{},
+			Now: func() time.Time {
+				return time.Unix(1710000000, 0)
+			},
+			LoadConfig: func() (*cfgpkg.File, error) {
+				return cfgpkg.NewFile(), nil
+			},
+		},
+	}
+
+	err = svc.handle("install", &InstallOptions{
+		Target: "gookit/gitw",
+		Add:    true,
+		Name:   "chlog",
+	})
+	if err != nil {
+		t.Fatalf("handle install: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	if !strings.Contains(out.String(), "Added package config: chlog -> gookit/gitw") {
+		t.Fatalf("expected add-package message, got %q", out.String())
+	}
+}
+
+type fakeRunnerForCLI struct {
+	result app.RunResult
+}
+
+func (f *fakeRunnerForCLI) Run(target string, opts install.Options) (app.RunResult, error) {
+	return f.result, nil
+}
+
+type fakeInstalledStoreForCLI struct{}
+
+func (f *fakeInstalledStoreForCLI) Record(target string, entry storepkg.Entry) error {
+	return nil
+}
+
+type fakeConfigRecorderForCLI struct{}
+
+func (f *fakeConfigRecorderForCLI) AddPackage(repo, name string, opts install.Options) error {
+	return nil
 }

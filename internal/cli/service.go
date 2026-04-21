@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/inherelab/eget/internal/app"
@@ -86,6 +87,19 @@ func (s *cliService) handle(name string, options any) error {
 			PackageName: opts.Name,
 			PackageOpts: cliInstallOpts,
 		})
+		if err == nil && opts.Add {
+			pkgName := opts.Name
+			if pkgName == "" {
+				if repo, repoErr := install.NormalizeRepoTarget(opts.Target); repoErr == nil {
+					if _, name, found := strings.Cut(repo, "/"); found {
+						pkgName = name
+					}
+				}
+			}
+			if pkgName != "" {
+				fmt.Printf("Added package config: %s -> %s\n", pkgName, opts.Target)
+			}
+		}
 		return err
 	case "download":
 		opts := options.(*DownloadOptions)

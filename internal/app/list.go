@@ -51,8 +51,17 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 	}
 
 	if installed != nil && installed.Installed != nil {
+		repoToName := make(map[string]string, len(byName))
+		for name, item := range byName {
+			if item.Repo != "" {
+				repoToName[item.Repo] = name
+			}
+		}
 		for repo, entry := range installed.Installed {
-			name := repoName(repo)
+			name := repoToName[repo]
+			if name == "" {
+				name = repoName(repo)
+			}
 			item, ok := byName[name]
 			if !ok {
 				item = ListItem{

@@ -133,3 +133,45 @@ func TestListPackagesIncludesInstalledOnlyEntries(t *testing.T) {
 		t.Fatalf("expected installed_at %v, got %v", now, items[1].InstalledAt)
 	}
 }
+
+func TestListPackagesMergesInstalledStateIntoExplicitPackageName(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["chlog"] = cfgpkg.Section{
+				Repo: stringPtr("gookit/gitw"),
+			}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{
+				Installed: map[string]storepkg.Entry{
+					"gookit/gitw": {
+						Repo:        "gookit/gitw",
+						InstalledAt: now,
+						Asset:       "chlog-windows-amd64.exe",
+						URL:         "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
+					},
+				},
+			}, nil
+		},
+	}
+
+	items, err := svc.ListPackages()
+	if err != nil {
+		t.Fatalf("list packages: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 merged list item, got %#v", items)
+	}
+	if items[0].Name != "chlog" {
+		t.Fatalf("expected explicit package name chlog, got %#v", items[0])
+	}
+	if !items[0].Installed {
+		t.Fatalf("expected explicit package to be marked installed, got %#v", items[0])
+	}
+	if items[0].InstalledAt != now {
+		t.Fatalf("expected installed_at %v, got %v", now, items[0].InstalledAt)
+	}
+}
