@@ -17,7 +17,7 @@
 - Explicit subcommand CLI: uses the consistent `eget <command> --options... arguments...` form, with clear command boundaries and better automation ergonomics.
 - Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, direct download URLs, and local files.
 - Unified download, verify, and extract flow: built-in asset discovery, system/asset selection, SHA-256 verification, and archive extraction reduce manual steps.
-- Cache and proxy support: supports `cache_dir` for download reuse and `proxy_url` for both GitHub lookups and remote download requests.
+- Cache and proxy support: supports `cache_dir` download reuse, `api_cache` for GitHub API response caching, and combined `proxy_url`/`ghproxy` remote request proxying.
 - Managed package lifecycle: supports `add`, `list`, `update`, and `uninstall` for package definitions, installed state, and cleanup workflows.
 - Traceable installed state: keeps a dedicated installed store with the latest asset, install time, and extracted files for each package.
 - Layered configuration merging: supports `global`, repo sections, and `packages.<name>` with predictable option precedence.
@@ -52,6 +52,8 @@ eget install --tag nightly owner/repo
 eget install --tag nightly inhere/markview
 # Install and override the executable name
 eget install --name chlog gookit/gitw
+# Install and override the asset name
+eget install --asset zip windirstat/windirstat
 # Install to a custom directory
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # Install and record the package definition
@@ -66,8 +68,9 @@ eget install --add --name rg BurntSushi/ripgrep
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 # uninstall
 eget uninstall fzf
-eget list
-# update
+# list config and installed store
+eget list|ls
+# update fzf
 eget update fzf
 eget update --all
 ```
@@ -183,6 +186,16 @@ cache_dir = "~/.cache/eget"
 proxy_url = "http://127.0.0.1:7890"
 system = "windows/amd64"
 
+[api_cache]
+enable = false
+cache_time = 300
+
+[ghproxy]
+enable = false
+host_url = ""
+support_api = true
+fallbacks = []
+
 ["inhere/markview"]
 tag = "nightly"
 
@@ -198,6 +211,12 @@ Common fields:
 - `target`
 - `cache_dir`
 - `proxy_url`
+- `api_cache.enable`
+- `api_cache.cache_time`
+- `ghproxy.enable`
+- `ghproxy.host_url`
+- `ghproxy.support_api`
+- `ghproxy.fallbacks`
 - `system`
 - `tag`
 - `file`
@@ -218,6 +237,11 @@ This writes:
 - `global.target = "~/.local/bin"`
 - `global.cache_dir = "~/.cache/eget"`
 - `global.proxy_url = ""`
+- `api_cache.enable = false`
+- `api_cache.cache_time = 300`
+- `ghproxy.enable = false`
+- `ghproxy.host_url = ""`
+- `ghproxy.support_api = true`
 
 By default, the file is created at `~/.config/eget/eget.toml`.
 
@@ -226,6 +250,11 @@ Directory semantics:
 - `target` is the default install directory
 - `cache_dir` is the default download cache directory
 - `proxy_url` is the global proxy for remote requests; both GitHub lookups and remote downloads use it
+- `api_cache` only caches GitHub API `GET` responses, and the cache file directory is derived as `{cache_dir}/api-cache/`
+- `cache_time` is measured in seconds; expired cache entries are refreshed from the network
+- `ghproxy` rewrites GitHub asset download URLs; when `support_api = true`, it also rewrites `api.github.com` requests
+- `ghproxy.fallbacks` are tried in order when the primary ghproxy host fails
+- `proxy_url` is the HTTP-layer proxy, while `ghproxy` rewrites request URLs; both can be enabled together
 - `download` uses `cache_dir` by default when `--to` is not provided
 - `install` and `download` will reuse cached remote download contents from `cache_dir` when available
 

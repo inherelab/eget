@@ -240,6 +240,56 @@ target = "~/bin"
 	}
 }
 
+func TestLoadFileSupportsAPICacheAndGhproxySections(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+
+	writeTestFile(t, configPath, `
+[global]
+target = "~/bin"
+
+[api_cache]
+enable = true
+cache_time = 300
+
+[ghproxy]
+enable = true
+host_url = "https://gh.felicity.ac.cn"
+support_api = true
+fallbacks = ["https://gh.llkk.cc", "https://gh.fhjhy.top"]
+`)
+
+	cfg, err := LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("load file: %v", err)
+	}
+
+	if cfg.ApiCache.Enable == nil || !*cfg.ApiCache.Enable {
+		t.Fatalf("expected api_cache.enable=true, got %#v", cfg.ApiCache.Enable)
+	}
+	if cfg.ApiCache.CacheTime == nil || *cfg.ApiCache.CacheTime != 300 {
+		t.Fatalf("expected api_cache.cache_time=300, got %#v", cfg.ApiCache.CacheTime)
+	}
+	if cfg.Ghproxy.Enable == nil || !*cfg.Ghproxy.Enable {
+		t.Fatalf("expected ghproxy.enable=true, got %#v", cfg.Ghproxy.Enable)
+	}
+	if cfg.Ghproxy.HostURL == nil || *cfg.Ghproxy.HostURL != "https://gh.felicity.ac.cn" {
+		t.Fatalf("expected ghproxy.host_url, got %#v", cfg.Ghproxy.HostURL)
+	}
+	if cfg.Ghproxy.SupportAPI == nil || !*cfg.Ghproxy.SupportAPI {
+		t.Fatalf("expected ghproxy.support_api=true, got %#v", cfg.Ghproxy.SupportAPI)
+	}
+	if len(cfg.Ghproxy.Fallbacks) != 2 {
+		t.Fatalf("expected ghproxy fallbacks to load, got %#v", cfg.Ghproxy.Fallbacks)
+	}
+	if _, ok := cfg.Repos["api_cache"]; ok {
+		t.Fatalf("expected api_cache to not be treated as repo section")
+	}
+	if _, ok := cfg.Repos["ghproxy"]; ok {
+		t.Fatalf("expected ghproxy to not be treated as repo section")
+	}
+}
+
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 

@@ -88,31 +88,77 @@ func Get(url string, disableSSL bool) (*http.Response, error) {
 }
 
 func GetWithOptions(url string, opts Options) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := setAuthHeader(req, opts.DisableSSL); err != nil {
-		return nil, err
-	}
-
 	client, err := newHTTPClient(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	if isGitHubAPIRequest(req.URL) {
+	originalURL, err := urlpkgParse(url)
+	if err != nil {
+		return nil, err
+	}
+
+	if isGitHubAPIRequest(originalURL) {
 		printProxyNotice("GitHub API request", opts.ProxyURL)
 	}
 
-	verbosef("request: %s %s", req.Method, req.URL.String())
-	resp, err := httpDo(client, req)
-	if err != nil {
-		verbosef("request error: %v", err)
-		return nil, err
+	cachePath, useAPICache := resolvedAPICachePath(opts, url, originalURL)
+	if useAPICache {
+		if resp, ok, err := loadAPICacheResponse(cachePath, opts.APICacheTime); err != nil {
+			verbosef("api cache read error: %v", err)
+		} else if ok {
+			verbosef("api cache hit: %s", cachePath)
+			return resp, nil
+		} else {
+			verbosef("api cache miss: %s", cachePath)
+		}
 	}
-	verbosef("response: %s %s", req.URL.String(), resp.Status)
-	return resp, nil
+
+	attempts := requestAttemptURLs(url, originalURL, opts)
+	var lastErr error
+	for i, attemptURL := range attempts {
+		req, err := http.NewRequest("GET", attemptURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		if err := setAuthHeader(req, opts.DisableSSL); err != nil {
+			return nil, err
+		}
+
+		if attemptURL != url {
+			verbosef("ghproxy rewrite: %s -> %s", url, attemptURL)
+		}
+		if len(attempts) > 1 {
+			verbosef("ghproxy attempt %d/%d: %s", i+1, len(attempts), attemptURL)
+		}
+
+		verbosef("request: %s %s", req.Method, req.URL.String())
+		resp, err := httpDo(client, req)
+		if err != nil {
+			verbosef("request error: %v", err)
+			lastErr = err
+			if i < len(attempts)-1 {
+				verbosef("ghproxy fallback: switching to next host")
+				continue
+			}
+			return nil, err
+		}
+		verbosef("response: %s %s", req.URL.String(), resp.Status)
+
+		if useAPICache && resp.StatusCode == http.StatusOK {
+			cachedResp, err := storeAPICacheResponse(cachePath, resp)
+			if err != nil {
+				verbosef("api cache write error: %v", err)
+				return resp, nil
+			}
+			verbosef("api cache store: %s", cachePath)
+			return cachedResp, nil
+		}
+
+		return resp, nil
+	}
+
+	return nil, lastErr
 }
 
 func NewHTTPGetter(opts Options) HTTPGetterFunc {
@@ -136,21 +182,7 @@ func (r RateLimit) ResetTime() time.Time {
 }
 
 func GetRateLimit(opts Options) (RateLimit, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/rate_limit", nil)
-	if err != nil {
-		return RateLimit{}, err
-	}
-	if err := setAuthHeader(req, opts.DisableSSL); err != nil {
-		return RateLimit{}, err
-	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	client, err := newHTTPClient(opts)
-	if err != nil {
-		return RateLimit{}, err
-	}
-
-	resp, err := httpDo(client, req)
+	resp, err := GetWithOptions("https://api.github.com/rate_limit", opts)
 	if err != nil {
 		return RateLimit{}, err
 	}
@@ -255,4 +287,123 @@ func CacheFilePath(cacheDir, url string) string {
 		ext = ".bin"
 	}
 	return filepath.Join(cacheDir, hex.EncodeToString(sum[:])+ext)
+}
+
+func APICacheFilePath(cacheDir, rawURL string) string {
+	if cacheDir == "" || rawURL == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(rawURL))
+	return filepath.Join(cacheDir, hex.EncodeToString(sum[:])+".json")
+}
+
+func requestAttemptURLs(rawURL string, parsed *url.URL, opts Options) []string {
+	if !opts.GhproxyEnabled {
+		return []string{rawURL}
+	}
+	if parsed == nil {
+		return []string{rawURL}
+	}
+	if !isGitHubDownloadRequest(parsed) && !(opts.GhproxySupportAPI && isGitHubAPIRequest(parsed)) {
+		return []string{rawURL}
+	}
+
+	hosts := make([]string, 0, 1+len(opts.GhproxyFallbacks))
+	if opts.GhproxyHostURL != "" {
+		hosts = append(hosts, opts.GhproxyHostURL)
+	}
+	hosts = append(hosts, opts.GhproxyFallbacks...)
+	if len(hosts) == 0 {
+		return []string{rawURL}
+	}
+
+	attempts := make([]string, 0, len(hosts))
+	seen := make(map[string]struct{}, len(hosts))
+	for _, host := range hosts {
+		host = strings.TrimRight(strings.TrimSpace(host), "/")
+		if host == "" {
+			continue
+		}
+		if _, ok := seen[host]; ok {
+			continue
+		}
+		seen[host] = struct{}{}
+		attempts = append(attempts, host+"/"+rawURL)
+	}
+	if len(attempts) == 0 {
+		return []string{rawURL}
+	}
+	return attempts
+}
+
+func resolvedAPICachePath(opts Options, rawURL string, parsed *url.URL) (string, bool) {
+	if !opts.APICacheEnabled || !isGitHubAPIRequest(parsed) {
+		return "", false
+	}
+	cacheDir := opts.APICacheDir
+	if cacheDir == "" {
+		return "", false
+	}
+	expanded, err := util.Expand(cacheDir)
+	if err != nil {
+		verbosef("api cache expand error: %v", err)
+		return "", false
+	}
+	return APICacheFilePath(expanded, rawURL), true
+}
+
+func loadAPICacheResponse(path string, cacheTime int) (*http.Response, bool, error) {
+	if path == "" {
+		return nil, false, nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	if cacheTime > 0 && time.Since(info.ModTime()) > time.Duration(cacheTime)*time.Second {
+		verbosef("api cache expired: %s", path)
+		return nil, false, nil
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return nil, false, err
+	}
+	return &http.Response{
+		StatusCode:    http.StatusOK,
+		Status:        "200 OK",
+		Body:          io.NopCloser(strings.NewReader(string(body))),
+		ContentLength: int64(len(body)),
+		Header:        make(http.Header),
+	}, true, nil
+}
+
+func storeAPICacheResponse(path string, resp *http.Response) (*http.Response, error) {
+	if path == "" || resp == nil || resp.Body == nil {
+		return resp, nil
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	_ = resp.Body.Close()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		return nil, err
+	}
+	resp.Body = io.NopCloser(strings.NewReader(string(body)))
+	resp.ContentLength = int64(len(body))
+	return resp, nil
+}
+
+func isGitHubDownloadRequest(u *url.URL) bool {
+	return u != nil && strings.EqualFold(u.Host, "github.com")
+}
+
+func urlpkgParse(rawURL string) (*url.URL, error) {
+	return url.Parse(rawURL)
 }

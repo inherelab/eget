@@ -8,24 +8,31 @@ import (
 )
 
 type Options struct {
-	Tag          string
-	Prerelease   bool
-	Name         string
-	Verbose      bool
-	Source       bool
-	Output       string
-	CacheDir     string
-	ProxyURL     string
-	System       string
-	ExtractFile  string
-	All          bool
-	Quiet        bool
-	DownloadOnly bool
-	UpgradeOnly  bool
-	Asset        []string
-	Hash         bool
-	Verify       string
-	DisableSSL   bool
+	Tag               string
+	Prerelease        bool
+	Name              string
+	Verbose           bool
+	Source            bool
+	Output            string
+	CacheDir          string
+	ProxyURL          string
+	APICacheEnabled   bool
+	APICacheDir       string
+	APICacheTime      int
+	GhproxyEnabled    bool
+	GhproxyHostURL    string
+	GhproxySupportAPI bool
+	GhproxyFallbacks  []string
+	System            string
+	ExtractFile       string
+	All               bool
+	Quiet             bool
+	DownloadOnly      bool
+	UpgradeOnly       bool
+	Asset             []string
+	Hash              bool
+	Verify            string
+	DisableSSL        bool
 }
 
 type TargetKind string

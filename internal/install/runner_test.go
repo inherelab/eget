@@ -290,6 +290,184 @@ func TestGetWithOptionsPrintsVerboseRequestAndResponse(t *testing.T) {
 	}
 }
 
+func TestGetWithOptionsUsesAPICacheWhenAvailable(t *testing.T) {
+	cacheDir := t.TempDir()
+	apiURL := "https://api.github.com/repos/gookit/gitw/releases/latest"
+	cachePath := APICacheFilePath(cacheDir, apiURL)
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
+		t.Fatalf("mkdir cache dir: %v", err)
+	}
+	if err := os.WriteFile(cachePath, []byte(`{"tag_name":"v0.3.6"}`), 0o644); err != nil {
+		t.Fatalf("write cache file: %v", err)
+	}
+
+	calls := 0
+	origHTTPDo := httpDo
+	defer func() { httpDo = origHTTPDo }()
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{"tag_name":"network"}`)),
+		}, nil
+	}
+
+	resp, err := GetWithOptions(apiURL, Options{
+		APICacheEnabled: true,
+		APICacheDir:     cacheDir,
+		APICacheTime:    300,
+	})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if string(body) != `{"tag_name":"v0.3.6"}` {
+		t.Fatalf("expected cached response body, got %q", string(body))
+	}
+	if calls != 0 {
+		t.Fatalf("expected no network calls, got %d", calls)
+	}
+}
+
+func TestGetWithOptionsWritesAPICacheAfterNetworkRequest(t *testing.T) {
+	cacheDir := t.TempDir()
+	apiURL := "https://api.github.com/repos/gookit/gitw/releases/latest"
+
+	origHTTPDo := httpDo
+	defer func() { httpDo = origHTTPDo }()
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{"tag_name":"v0.3.6"}`)),
+		}, nil
+	}
+
+	resp, err := GetWithOptions(apiURL, Options{
+		APICacheEnabled: true,
+		APICacheDir:     cacheDir,
+		APICacheTime:    300,
+	})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	defer resp.Body.Close()
+
+	_, err = io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+
+	cachePath := APICacheFilePath(cacheDir, apiURL)
+	saved, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatalf("read cache file: %v", err)
+	}
+	if string(saved) != `{"tag_name":"v0.3.6"}` {
+		t.Fatalf("expected cached response body, got %q", string(saved))
+	}
+}
+
+func TestGetWithOptionsUsesGhproxyForDownloads(t *testing.T) {
+	origHTTPDo := httpDo
+	defer func() { httpDo = origHTTPDo }()
+
+	var requested string
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		requested = req.URL.String()
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader("ok")),
+		}, nil
+	}
+
+	resp, err := GetWithOptions("https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe", Options{
+		GhproxyEnabled: true,
+		GhproxyHostURL: "https://gh.felicity.ac.cn",
+	})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	_ = resp.Body.Close()
+
+	want := "https://gh.felicity.ac.cn/https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe"
+	if requested != want {
+		t.Fatalf("expected ghproxy rewritten url %q, got %q", want, requested)
+	}
+}
+
+func TestGetWithOptionsUsesGhproxyForGitHubAPIWhenSupported(t *testing.T) {
+	origHTTPDo := httpDo
+	defer func() { httpDo = origHTTPDo }()
+
+	var requested string
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		requested = req.URL.String()
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{}`)),
+		}, nil
+	}
+
+	resp, err := GetWithOptions("https://api.github.com/repos/gookit/gitw/releases/latest", Options{
+		GhproxyEnabled:    true,
+		GhproxyHostURL:    "https://gh.felicity.ac.cn",
+		GhproxySupportAPI: true,
+	})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	_ = resp.Body.Close()
+
+	want := "https://gh.felicity.ac.cn/https://api.github.com/repos/gookit/gitw/releases/latest"
+	if requested != want {
+		t.Fatalf("expected ghproxy rewritten api url %q, got %q", want, requested)
+	}
+}
+
+func TestGetWithOptionsFallsBackToNextGhproxyHost(t *testing.T) {
+	origHTTPDo := httpDo
+	defer func() { httpDo = origHTTPDo }()
+
+	var requested []string
+	httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
+		requested = append(requested, req.URL.String())
+		if strings.Contains(req.URL.Host, "gh.felicity.ac.cn") {
+			return nil, io.EOF
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader("ok")),
+		}, nil
+	}
+
+	resp, err := GetWithOptions("https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe", Options{
+		GhproxyEnabled:   true,
+		GhproxyHostURL:   "https://gh.felicity.ac.cn",
+		GhproxyFallbacks: []string{"https://gh.llkk.cc"},
+	})
+	if err != nil {
+		t.Fatalf("GetWithOptions(): %v", err)
+	}
+	_ = resp.Body.Close()
+
+	if len(requested) != 2 {
+		t.Fatalf("expected 2 ghproxy attempts, got %#v", requested)
+	}
+	if !strings.Contains(requested[1], "gh.llkk.cc") {
+		t.Fatalf("expected fallback ghproxy host, got %#v", requested)
+	}
+}
+
 func TestOutputPathUsesHeuristicExecutableRename(t *testing.T) {
 	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
 	got := outputPath(file, "", false, "")

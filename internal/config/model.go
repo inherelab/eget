@@ -23,18 +23,34 @@ type Section struct {
 	DisableSSL   *bool    `toml:"disable_ssl"`
 }
 
+type APICacheSection struct {
+	Enable    *bool `toml:"enable"`
+	CacheTime *int  `toml:"cache_time"`
+}
+
+type GhproxySection struct {
+	Enable     *bool    `toml:"enable"`
+	HostURL    *string  `toml:"host_url"`
+	SupportAPI *bool    `toml:"support_api"`
+	Fallbacks  []string `toml:"fallbacks"`
+}
+
 type File struct {
 	Meta struct {
 		Keys     []string
 		MetaData *toml.MetaData
 	}
-	Global   Section `toml:"global"`
+	Global   Section         `toml:"global"`
+	ApiCache APICacheSection `toml:"api_cache"`
+	Ghproxy  GhproxySection  `toml:"ghproxy"`
 	Repos    map[string]Section
 	Packages map[string]Section `toml:"packages"`
 }
 
 type mergedFile struct {
 	Global   Section            `toml:"global"`
+	ApiCache APICacheSection    `toml:"api_cache"`
+	Ghproxy  GhproxySection     `toml:"ghproxy"`
 	Packages map[string]Section `toml:"packages"`
 }
 

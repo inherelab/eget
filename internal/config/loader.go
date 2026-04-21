@@ -36,6 +36,8 @@ func LoadFile(path string) (*File, error) {
 	}
 
 	conf.Global = decoded.Global
+	conf.ApiCache = decoded.ApiCache
+	conf.Ghproxy = decoded.Ghproxy
 	if decoded.Packages != nil {
 		conf.Packages = decoded.Packages
 	}
@@ -47,6 +49,8 @@ func LoadFile(path string) (*File, error) {
 	}
 
 	delete(repos, "global")
+	delete(repos, "api_cache")
+	delete(repos, "ghproxy")
 	delete(repos, "packages")
 
 	conf.Repos = repos

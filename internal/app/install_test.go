@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -201,6 +202,9 @@ proxy_url = "http://127.0.0.1:7890"
 	}
 	if runner.opts.ProxyURL != "http://127.0.0.1:7890" {
 		t.Fatalf("expected configured proxy url, got %q", runner.opts.ProxyURL)
+	}
+	if expected := filepath.Join(expectedCache, "api-cache"); runner.opts.APICacheDir != expected {
+		t.Fatalf("expected derived api cache dir, got %q", runner.opts.APICacheDir)
 	}
 }
 

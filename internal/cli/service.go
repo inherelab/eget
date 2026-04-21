@@ -25,7 +25,12 @@ type cliService struct {
 }
 
 func newCLIService() (*cliService, error) {
+	cfg, err := cfgpkg.Load()
+	if err != nil {
+		return nil, err
+	}
 	defaultOpts := install.Options{}
+	applyGlobalNetworkConfig(&defaultOpts, cfg)
 	runner := install.NewRunner(install.NewDefaultService(install.NewHTTPGetter(defaultOpts), binaryModTime))
 	runner.InstalledLoad = func() (map[string]string, map[string]string, error) {
 		store, err := storepkg.DefaultStore()
@@ -248,6 +253,30 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 	}
 }
 
+func applyGlobalNetworkConfig(opts *install.Options, cfg *cfgpkg.File) {
+	if opts == nil || cfg == nil {
+		return
+	}
+	if cfg.ApiCache.Enable != nil {
+		opts.APICacheEnabled = *cfg.ApiCache.Enable
+	}
+	if cfg.ApiCache.CacheTime != nil {
+		opts.APICacheTime = *cfg.ApiCache.CacheTime
+	}
+	if cfg.Ghproxy.Enable != nil {
+		opts.GhproxyEnabled = *cfg.Ghproxy.Enable
+	}
+	if cfg.Ghproxy.HostURL != nil {
+		opts.GhproxyHostURL = *cfg.Ghproxy.HostURL
+	}
+	if cfg.Ghproxy.SupportAPI != nil {
+		opts.GhproxySupportAPI = *cfg.Ghproxy.SupportAPI
+	}
+	if len(cfg.Ghproxy.Fallbacks) > 0 {
+		opts.GhproxyFallbacks = append([]string(nil), cfg.Ghproxy.Fallbacks...)
+	}
+}
+
 func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 	base := installOptionsFromInstall(&InstallOptions{
 		Tag:      opts.Tag,
@@ -324,6 +353,30 @@ func printConfigList(out io.Writer, path string, exists bool, cfg *cfgpkg.File) 
 		}
 		if cfg.Global.ProxyURL != nil {
 			fmt.Fprintf(out, "proxy_url = %s\n", *cfg.Global.ProxyURL)
+		}
+	}
+	if cfg.ApiCache.Enable != nil || cfg.ApiCache.CacheTime != nil {
+		fmt.Fprintln(out, "\n[api_cache]")
+		if cfg.ApiCache.Enable != nil {
+			fmt.Fprintf(out, "enable = %t\n", *cfg.ApiCache.Enable)
+		}
+		if cfg.ApiCache.CacheTime != nil {
+			fmt.Fprintf(out, "cache_time = %d\n", *cfg.ApiCache.CacheTime)
+		}
+	}
+	if cfg.Ghproxy.Enable != nil || cfg.Ghproxy.HostURL != nil || cfg.Ghproxy.SupportAPI != nil || len(cfg.Ghproxy.Fallbacks) > 0 {
+		fmt.Fprintln(out, "\n[ghproxy]")
+		if cfg.Ghproxy.Enable != nil {
+			fmt.Fprintf(out, "enable = %t\n", *cfg.Ghproxy.Enable)
+		}
+		if cfg.Ghproxy.HostURL != nil {
+			fmt.Fprintf(out, "host_url = %s\n", *cfg.Ghproxy.HostURL)
+		}
+		if cfg.Ghproxy.SupportAPI != nil {
+			fmt.Fprintf(out, "support_api = %t\n", *cfg.Ghproxy.SupportAPI)
+		}
+		if len(cfg.Ghproxy.Fallbacks) > 0 {
+			fmt.Fprintf(out, "fallbacks = %s\n", strings.Join(cfg.Ghproxy.Fallbacks, ", "))
 		}
 	}
 

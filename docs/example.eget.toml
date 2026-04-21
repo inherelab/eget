@@ -1,0 +1,24 @@
+[global]
+cache_dir = "~/.cache/eget"
+proxy_url = ""
+system = ""
+target = "~/.local/bin"
+
+# 配置 api 请求缓存策略
+[api_cache]
+enable = false # 是否启用
+cache_time = 300 # unit: s
+
+# https://github.akams.cn/ 这里可以看到很多代理地址
+[ghproxy]
+enable = false
+# https://ghfast.top/, https://gh-proxy.com/ ...
+host_url = ""
+support_api = true # 是否支持 api.github.com 接口
+fallbacks = []
+
+[packages]
+
+[packages."chlog"]
+name = "chlog"
+repo = "gookit/gitw"

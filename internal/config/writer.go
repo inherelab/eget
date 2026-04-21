@@ -20,6 +20,16 @@ func Save(path string, file *File) error {
 	var buf bytes.Buffer
 	writeSectionHeader(&buf, "global")
 	writeSectionBody(&buf, file.Global)
+	if hasAPICacheConfig(file.ApiCache) {
+		buf.WriteString("\n")
+		writeSectionHeader(&buf, "api_cache")
+		writeAPICacheBody(&buf, file.ApiCache)
+	}
+	if hasGhproxyConfig(file.Ghproxy) {
+		buf.WriteString("\n")
+		writeSectionHeader(&buf, "ghproxy")
+		writeGhproxyBody(&buf, file.Ghproxy)
+	}
 
 	repoNames := sortedKeys(file.Repos)
 	for _, name := range repoNames {
@@ -69,6 +79,18 @@ func writeSectionBody(buf *bytes.Buffer, section Section) {
 	writeBool(buf, "disable_ssl", section.DisableSSL)
 }
 
+func writeAPICacheBody(buf *bytes.Buffer, section APICacheSection) {
+	writeBool(buf, "enable", section.Enable)
+	writeInt(buf, "cache_time", section.CacheTime)
+}
+
+func writeGhproxyBody(buf *bytes.Buffer, section GhproxySection) {
+	writeBool(buf, "enable", section.Enable)
+	writeString(buf, "host_url", section.HostURL)
+	writeBool(buf, "support_api", section.SupportAPI)
+	writeStrings(buf, "fallbacks", section.Fallbacks)
+}
+
 func writeBool(buf *bytes.Buffer, key string, value *bool) {
 	if value == nil {
 		return
@@ -81,6 +103,13 @@ func writeString(buf *bytes.Buffer, key string, value *string) {
 		return
 	}
 	fmt.Fprintf(buf, "%s = %q\n", key, *value)
+}
+
+func writeInt(buf *bytes.Buffer, key string, value *int) {
+	if value == nil {
+		return
+	}
+	fmt.Fprintf(buf, "%s = %d\n", key, *value)
 }
 
 func writeStrings(buf *bytes.Buffer, key string, values []string) {
@@ -105,4 +134,12 @@ func sortedKeys[T any](items map[string]T) []string {
 
 func quoteKey(key string) string {
 	return fmt.Sprintf("%q", key)
+}
+
+func hasAPICacheConfig(section APICacheSection) bool {
+	return section.Enable != nil || section.CacheTime != nil
+}
+
+func hasGhproxyConfig(section GhproxySection) bool {
+	return section.Enable != nil || section.HostURL != nil || section.SupportAPI != nil || len(section.Fallbacks) > 0
 }

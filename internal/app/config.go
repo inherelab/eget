@@ -77,10 +77,21 @@ func (s ConfigService) ConfigInit() (string, error) {
 	cacheDir := "~/.cache/eget"
 	proxyURL := ""
 	empty := ""
+	apiCacheEnable := false
+	apiCacheTime := 300
+	ghproxyEnable := false
+	ghproxyHostURL := ""
+	ghproxySupportAPI := true
 	file.Global.Target = &target
 	file.Global.CacheDir = &cacheDir
 	file.Global.ProxyURL = &proxyURL
 	file.Global.System = &empty
+	file.ApiCache.Enable = &apiCacheEnable
+	file.ApiCache.CacheTime = &apiCacheTime
+	file.Ghproxy.Enable = &ghproxyEnable
+	file.Ghproxy.HostURL = &ghproxyHostURL
+	file.Ghproxy.SupportAPI = &ghproxySupportAPI
+	file.Ghproxy.Fallbacks = []string{}
 	if err := cfgpkg.Save(path, file); err != nil {
 		return "", err
 	}

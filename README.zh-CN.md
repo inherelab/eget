@@ -17,7 +17,7 @@
 - 显式子命令 CLI：统一使用 `eget <command> --options... arguments...` 形式，命令职责清晰，便于扩展和自动化调用。
 - 多种目标输入：`install` 和 `download` 支持 `owner/repo`、GitHub 仓库 URL、直接下载 URL 以及本地文件。
 - 下载、校验、提取一体化：内置资源发现、系统/资产筛选、SHA-256 自动校验与归档提取流程，减少手工步骤。
-- 缓存与代理支持：支持 `cache_dir` 下载缓存复用，以及 `proxy_url` 统一代理 GitHub 查询与远程下载请求。
+- 缓存与代理支持：支持 `cache_dir` 下载缓存复用、`api_cache` GitHub API 响应缓存，以及 `proxy_url`/`ghproxy` 组合代理远程请求。
 - 托管包生命周期管理：通过 `add`、`list`、`update`、`uninstall` 管理本地 package 定义、安装状态和卸载流程。
 - 安装状态可追踪：独立记录 installed store，保存最近一次安装的资源、时间、输出文件等信息，便于查询与回收。
 - 配置分层合并：支持 `global`、repo section、`packages.<name>` 多层配置，并按约定优先级合并安装参数。
@@ -53,6 +53,8 @@ eget install --tag nightly owner/repo
 eget install --tag nightly inhere/markview
 # 安装并指定可执行文件名
 eget install --name chlog gookit/gitw
+# 安装 zip 资产
+eget install --asset zip windirstat/windirstat
 # 安装到指定目录
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # 安装 并 记录
@@ -67,8 +69,9 @@ eget install --add --name rg BurntSushi/ripgrep
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 # uninstall
 eget uninstall fzf
-eget list
-# update
+# list config and installed store
+eget list|ls
+# update fzf
 eget update fzf
 eget update --all
 ```
@@ -184,6 +187,16 @@ cache_dir = "~/.cache/eget"
 proxy_url = "http://127.0.0.1:7890"
 system = "windows/amd64"
 
+[api_cache]
+enable = false
+cache_time = 300
+
+[ghproxy]
+enable = false
+host_url = ""
+support_api = true
+fallbacks = []
+
 ["inhere/markview"]
 tag = "nightly"
 
@@ -199,6 +212,12 @@ asset_filters = ["windows"]
 - `target`
 - `cache_dir`
 - `proxy_url`
+- `api_cache.enable`
+- `api_cache.cache_time`
+- `ghproxy.enable`
+- `ghproxy.host_url`
+- `ghproxy.support_api`
+- `ghproxy.fallbacks`
 - `system`
 - `tag`
 - `file`
@@ -218,6 +237,11 @@ eget config init
 - `global.target = "~/.local/bin"`
 - `global.cache_dir = "~/.cache/eget"`
 - `global.proxy_url = ""`
+- `api_cache.enable = false`
+- `api_cache.cache_time = 300`
+- `ghproxy.enable = false`
+- `ghproxy.host_url = ""`
+- `ghproxy.support_api = true`
 
 默认会写入 `~/.config/eget/eget.toml`。
 
@@ -226,6 +250,11 @@ eget config init
 - `target` 是默认安装目录
 - `cache_dir` 是默认下载缓存目录
 - `proxy_url` 是全局远程请求代理，GitHub 查询和远程下载都会使用它
+- `api_cache` 仅缓存 GitHub API 的 `GET` 响应，缓存文件目录派生为 `{cache_dir}/api-cache/`
+- `cache_time` 单位为秒；缓存过期后会重新请求并刷新缓存
+- `ghproxy` 会重写 GitHub 资源下载 URL；当 `support_api = true` 时，也会重写 `api.github.com` 请求
+- `ghproxy.fallbacks` 会在主代理失败时按顺序回退重试
+- `proxy_url` 是 HTTP 层代理，`ghproxy` 是请求 URL 重写，两者可以同时启用
 - `download` 在未指定 `--to` 时默认使用 `cache_dir`
 - `install`/`download` 对远程 URL 的原始下载内容会优先复用 `cache_dir` 中的缓存文件
 

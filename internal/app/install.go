@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"time"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -164,29 +165,58 @@ func (s Service) resolveInstallOptions(target string, cli install.Options, prefe
 	if err != nil {
 		return install.Options{}, err
 	}
+	apiCacheDir := ""
+	if cacheDir != "" {
+		apiCacheDir = filepath.Join(cacheDir, "api-cache")
+	}
 
 	output := targetDir
 	if preferCacheDir && cli.Output == "" && cacheDir != "" {
 		output = cacheDir
 	}
 
+	apiCacheEnabled := false
+	if cfg.ApiCache.Enable != nil {
+		apiCacheEnabled = *cfg.ApiCache.Enable
+	}
+	apiCacheTime := 0
+	if cfg.ApiCache.CacheTime != nil {
+		apiCacheTime = *cfg.ApiCache.CacheTime
+	}
+	ghproxyEnabled := false
+	if cfg.Ghproxy.Enable != nil {
+		ghproxyEnabled = *cfg.Ghproxy.Enable
+	}
+	ghproxyHostURL := derefString(cfg.Ghproxy.HostURL)
+	ghproxySupportAPI := false
+	if cfg.Ghproxy.SupportAPI != nil {
+		ghproxySupportAPI = *cfg.Ghproxy.SupportAPI
+	}
+
 	return install.Options{
-		Tag:          merged.Tag,
-		Name:         cli.Name,
-		Source:       merged.Source,
-		Output:       output,
-		CacheDir:     cacheDir,
-		ProxyURL:     merged.ProxyURL,
-		System:       merged.System,
-		ExtractFile:  merged.File,
-		All:          merged.All,
-		Quiet:        merged.Quiet,
-		DownloadOnly: merged.DownloadOnly,
-		UpgradeOnly:  merged.UpgradeOnly,
-		Asset:        append([]string(nil), merged.AssetFilters...),
-		Hash:         merged.ShowHash,
-		Verify:       merged.Verify,
-		DisableSSL:   merged.DisableSSL,
+		Tag:               merged.Tag,
+		Name:              cli.Name,
+		Source:            merged.Source,
+		Output:            output,
+		CacheDir:          cacheDir,
+		ProxyURL:          merged.ProxyURL,
+		APICacheEnabled:   apiCacheEnabled,
+		APICacheDir:       apiCacheDir,
+		APICacheTime:      apiCacheTime,
+		GhproxyEnabled:    ghproxyEnabled,
+		GhproxyHostURL:    ghproxyHostURL,
+		GhproxySupportAPI: ghproxySupportAPI,
+		GhproxyFallbacks:  append([]string(nil), cfg.Ghproxy.Fallbacks...),
+		System:            merged.System,
+		ExtractFile:       merged.File,
+		All:               merged.All,
+		Quiet:             merged.Quiet,
+		DownloadOnly:      merged.DownloadOnly,
+		UpgradeOnly:       merged.UpgradeOnly,
+		Asset:             append([]string(nil), merged.AssetFilters...),
+		Hash:              merged.ShowHash,
+		Verify:            merged.Verify,
+		DisableSSL:        merged.DisableSSL,
 	}, nil
 }
 
