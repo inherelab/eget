@@ -5,6 +5,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type fakeInstallService struct {
@@ -26,12 +27,12 @@ func TestUpdatePackageUsesManagedPackageConfig(t *testing.T) {
 		Install: installer,
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
-			cfg.Global.Target = stringPtr("~/bin")
+			cfg.Global.Target = util.StringPtr("~/bin")
 			cfg.Packages["fzf"] = cfgpkg.Section{
-				Repo:   stringPtr("junegunn/fzf"),
-				Target: stringPtr("~/.local/bin"),
-				System: stringPtr("linux/amd64"),
-				Tag:    stringPtr("nightly"),
+				Repo:   util.StringPtr("junegunn/fzf"),
+				Target: util.StringPtr("~/.local/bin"),
+				System: util.StringPtr("linux/amd64"),
+				Tag:    util.StringPtr("nightly"),
 			}
 			return cfg, nil
 		},
@@ -58,8 +59,8 @@ func TestUpdatePackageAllowsDirectRepo(t *testing.T) {
 		Install: installer,
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
-			cfg.Global.Target = stringPtr("~/bin")
-			cfg.Repos["junegunn/fzf"] = cfgpkg.Section{System: stringPtr("linux/amd64")}
+			cfg.Global.Target = util.StringPtr("~/bin")
+			cfg.Repos["junegunn/fzf"] = cfgpkg.Section{System: util.StringPtr("linux/amd64")}
 			return cfg, nil
 		},
 	}
@@ -82,8 +83,8 @@ func TestUpdateAllPackagesIteratesManagedPackages(t *testing.T) {
 		Install: installer,
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
-			cfg.Packages["fzf"] = cfgpkg.Section{Repo: stringPtr("junegunn/fzf")}
-			cfg.Packages["rg"] = cfgpkg.Section{Repo: stringPtr("BurntSushi/ripgrep")}
+			cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
 			return cfg, nil
 		},
 	}

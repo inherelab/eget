@@ -14,6 +14,7 @@ import (
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type cliService struct {
@@ -444,15 +445,15 @@ func printConfigList(out io.Writer, path string, exists bool, cfg *cfgpkg.File) 
 func binaryModTime(bin, output string) time.Time {
 	file := ""
 	dir := "."
-	if output != "" && isDirectory(output) {
+	if output != "" && util.IsDirectory(output) {
 		dir = output
 	} else if ebin := os.Getenv("EGET_BIN"); ebin != "" {
 		dir = ebin
 	}
 
-	if output != "" && !containsPathSeparator(output) {
+	if output != "" && !util.ContainsPathSeparator(output) {
 		bin = output
-	} else if output != "" && !isDirectory(output) {
+	} else if output != "" && !util.IsDirectory(output) {
 		file = output
 	}
 
@@ -464,21 +465,4 @@ func binaryModTime(bin, output string) time.Time {
 		return time.Time{}
 	}
 	return info.ModTime()
-}
-
-func isDirectory(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return info.IsDir()
-}
-
-func containsPathSeparator(value string) bool {
-	for _, ch := range value {
-		if ch == os.PathSeparator || ch == '/' || ch == '\\' {
-			return true
-		}
-	}
-	return false
 }

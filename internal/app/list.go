@@ -7,6 +7,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type InstalledLoader interface {
@@ -41,12 +42,12 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 
 	byName := make(map[string]ListItem, len(cfg.Packages))
 	for name, pkg := range cfg.Packages {
-		repo := derefString(pkg.Repo)
+		repo := util.DerefString(pkg.Repo)
 		byName[name] = ListItem{
 			Name:   name,
 			Repo:   repo,
-			Target: derefString(pkg.Target),
-			Tag:    derefString(pkg.Tag),
+			Target: util.DerefString(pkg.Target),
+			Tag:    util.DerefString(pkg.Tag),
 		}
 	}
 

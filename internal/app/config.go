@@ -6,6 +6,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type ConfigService struct {
@@ -159,34 +160,34 @@ func sectionFromInstallOptions(repo, name string, opts install.Options) cfgpkg.S
 	section := cfgpkg.Section{
 		AssetFilters: append([]string(nil), opts.Asset...),
 	}
-	section.Repo = stringPtr(repo)
-	section.Name = stringPtr(name)
+	section.Repo = util.StringPtr(repo)
+	section.Name = util.StringPtr(name)
 	if opts.Output != "" {
-		section.Target = stringPtr(opts.Output)
+		section.Target = util.StringPtr(opts.Output)
 	}
 	if opts.CacheDir != "" {
-		section.CacheDir = stringPtr(opts.CacheDir)
+		section.CacheDir = util.StringPtr(opts.CacheDir)
 	}
 	if opts.System != "" {
-		section.System = stringPtr(opts.System)
+		section.System = util.StringPtr(opts.System)
 	}
 	if opts.ExtractFile != "" {
-		section.File = stringPtr(opts.ExtractFile)
+		section.File = util.StringPtr(opts.ExtractFile)
 	}
 	if opts.Tag != "" {
-		section.Tag = stringPtr(opts.Tag)
+		section.Tag = util.StringPtr(opts.Tag)
 	}
 	if opts.Verify != "" {
-		section.Verify = stringPtr(opts.Verify)
+		section.Verify = util.StringPtr(opts.Verify)
 	}
 	if opts.Source {
-		section.Source = boolPtr(true)
+		section.Source = util.BoolPtr(true)
 	}
 	if opts.DisableSSL {
-		section.DisableSSL = boolPtr(true)
+		section.DisableSSL = util.BoolPtr(true)
 	}
 	if opts.All {
-		section.All = boolPtr(true)
+		section.All = util.BoolPtr(true)
 	}
 	return section
 }
@@ -210,21 +211,21 @@ func resolveSection(cfg *cfgpkg.File, key string) (*cfgpkg.Section, string, stri
 func getSectionField(section *cfgpkg.Section, field string) (string, error) {
 	switch field {
 	case "target":
-		return derefString(section.Target), nil
+		return util.DerefString(section.Target), nil
 	case "system":
-		return derefString(section.System), nil
+		return util.DerefString(section.System), nil
 	case "cache_dir":
-		return derefString(section.CacheDir), nil
+		return util.DerefString(section.CacheDir), nil
 	case "proxy_url":
-		return derefString(section.ProxyURL), nil
+		return util.DerefString(section.ProxyURL), nil
 	case "repo":
-		return derefString(section.Repo), nil
+		return util.DerefString(section.Repo), nil
 	case "file":
-		return derefString(section.File), nil
+		return util.DerefString(section.File), nil
 	case "tag":
-		return derefString(section.Tag), nil
+		return util.DerefString(section.Tag), nil
 	case "verify_sha256":
-		return derefString(section.Verify), nil
+		return util.DerefString(section.Verify), nil
 	default:
 		return "", fmt.Errorf("unsupported config field %q", field)
 	}
@@ -233,41 +234,26 @@ func getSectionField(section *cfgpkg.Section, field string) (string, error) {
 func setSectionField(section *cfgpkg.Section, field, value string) error {
 	switch field {
 	case "target":
-		section.Target = stringPtr(value)
+		section.Target = util.StringPtr(value)
 	case "system":
-		section.System = stringPtr(value)
+		section.System = util.StringPtr(value)
 	case "cache_dir":
-		section.CacheDir = stringPtr(value)
+		section.CacheDir = util.StringPtr(value)
 	case "proxy_url":
 		if !strings.HasPrefix(value, "http") {
 			value = "http://" + value
 		}
-		section.ProxyURL = stringPtr(value)
+		section.ProxyURL = util.StringPtr(value)
 	case "repo":
-		section.Repo = stringPtr(value)
+		section.Repo = util.StringPtr(value)
 	case "file":
-		section.File = stringPtr(value)
+		section.File = util.StringPtr(value)
 	case "tag":
-		section.Tag = stringPtr(value)
+		section.Tag = util.StringPtr(value)
 	case "verify_sha256":
-		section.Verify = stringPtr(value)
+		section.Verify = util.StringPtr(value)
 	default:
 		return fmt.Errorf("unsupported config field %q", field)
 	}
 	return nil
-}
-
-func derefString(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
-func boolPtr(value bool) *bool {
-	return &value
-}
-
-func stringPtr(value string) *string {
-	return &value
 }

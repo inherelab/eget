@@ -7,6 +7,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type fakeInstalledStoreWithLoad struct {
@@ -45,7 +46,7 @@ func TestUninstallPackageRemovesRecordedFilesAndInstalledEntry(t *testing.T) {
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
 			cfg.Packages["fzf"] = cfgpkg.Section{
-				Repo: stringPtr("junegunn/fzf"),
+				Repo: util.StringPtr("junegunn/fzf"),
 			}
 			return cfg, nil
 		},
@@ -113,7 +114,7 @@ func TestUninstallFailsWhenInstalledEntryMissing(t *testing.T) {
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
 			cfg.Packages["fzf"] = cfgpkg.Section{
-				Repo: stringPtr("junegunn/fzf"),
+				Repo: util.StringPtr("junegunn/fzf"),
 			}
 			return cfg, nil
 		},

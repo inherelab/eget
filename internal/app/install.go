@@ -187,7 +187,7 @@ func (s Service) resolveInstallOptions(target string, cli install.Options, prefe
 	if cfg.Ghproxy.Enable != nil {
 		ghproxyEnabled = *cfg.Ghproxy.Enable
 	}
-	ghproxyHostURL := derefString(cfg.Ghproxy.HostURL)
+	ghproxyHostURL := util.DerefString(cfg.Ghproxy.HostURL)
 	ghproxySupportAPI := false
 	if cfg.Ghproxy.SupportAPI != nil {
 		ghproxySupportAPI = *cfg.Ghproxy.SupportAPI

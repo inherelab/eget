@@ -7,6 +7,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type RemovableInstalledStore interface {
@@ -61,7 +62,7 @@ func (s UninstallService) resolveRepo(target string) (string, error) {
 		return "", err
 	}
 	if pkg, ok := cfg.Packages[target]; ok {
-		repo := derefString(pkg.Repo)
+		repo := util.DerefString(pkg.Repo)
 		if repo == "" {
 			return "", fmt.Errorf("package %q has no repo", target)
 		}

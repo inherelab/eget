@@ -7,6 +7,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
+	"github.com/inherelab/eget/internal/util"
 )
 
 type Installer interface {
@@ -31,7 +32,7 @@ func (s UpdateService) UpdatePackage(nameOrRepo string, cli install.Options) (Ru
 	}
 
 	if pkg, ok := cfg.Packages[nameOrRepo]; ok {
-		repo := derefString(pkg.Repo)
+		repo := util.DerefString(pkg.Repo)
 		if repo == "" {
 			return RunResult{}, fmt.Errorf("package %q has no repo", nameOrRepo)
 		}
@@ -67,7 +68,7 @@ func (s UpdateService) UpdateAllPackages(cli install.Options) ([]UpdateResult, e
 		}
 		results = append(results, UpdateResult{
 			Name:   name,
-			Target: derefString(cfg.Packages[name].Repo),
+			Target: util.DerefString(cfg.Packages[name].Repo),
 			Result: result,
 		})
 	}

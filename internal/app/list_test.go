@@ -6,6 +6,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 )
 
 func TestListPackagesMergesManagedPackagesWithInstalledState(t *testing.T) {
@@ -14,13 +15,13 @@ func TestListPackagesMergesManagedPackagesWithInstalledState(t *testing.T) {
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
 			cfg.Packages["rg"] = cfgpkg.Section{
-				Repo:   stringPtr("BurntSushi/ripgrep"),
-				Target: stringPtr("~/.local/bin"),
+				Repo:   util.StringPtr("BurntSushi/ripgrep"),
+				Target: util.StringPtr("~/.local/bin"),
 			}
 			cfg.Packages["fzf"] = cfgpkg.Section{
-				Repo:   stringPtr("junegunn/fzf"),
-				Tag:    stringPtr("nightly"),
-				Target: stringPtr("~/.local/bin"),
+				Repo:   util.StringPtr("junegunn/fzf"),
+				Tag:    util.StringPtr("nightly"),
+				Target: util.StringPtr("~/.local/bin"),
 			}
 			return cfg, nil
 		},
@@ -91,7 +92,7 @@ func TestListPackagesIncludesInstalledOnlyEntries(t *testing.T) {
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
 			cfg.Packages["fzf"] = cfgpkg.Section{
-				Repo: stringPtr("junegunn/fzf"),
+				Repo: util.StringPtr("junegunn/fzf"),
 			}
 			return cfg, nil
 		},
@@ -140,7 +141,7 @@ func TestListPackagesMergesInstalledStateIntoExplicitPackageName(t *testing.T) {
 		LoadConfig: func() (*cfgpkg.File, error) {
 			cfg := cfgpkg.NewFile()
 			cfg.Packages["chlog"] = cfgpkg.Section{
-				Repo: stringPtr("gookit/gitw"),
+				Repo: util.StringPtr("gookit/gitw"),
 			}
 			return cfg, nil
 		},

@@ -14,6 +14,7 @@ import (
 
 	"github.com/gookit/goutil/x/ccolor"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/util"
 	pb "github.com/schollz/progressbar/v3"
 )
 
@@ -233,7 +234,7 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string) (st
 		for _, candidate := range candidates {
 			if path.Base(candidate) == previous {
 				if r.Stderr != nil {
-					fmt.Fprintf(r.Stderr, "\033[33mUsing previous selection '%s' as fallback\033[0m\n", previous)
+					ccolor.Fprintf(r.Stderr, "<yellow>Warning: using previous selection '%s' as fallback</>\n", previous)
 				}
 				return candidate, nil
 			}
@@ -268,7 +269,7 @@ func (r *InstallRunner) resolveFallback(target string, opts Options, original er
 		}
 		fallback := replaceTagInURL(previousURL, currentTag)
 		if r.Stderr != nil {
-			fmt.Fprintf(r.Stderr, "\033[33mWarning: no assets matched current filters, using fallback asset '%s' from previous installation\033[0m\n", path.Base(fallback))
+			ccolor.Fprintf(r.Stderr, "<yellow>Warning: no assets matched current filters, using fallback asset '%s' from previous installation</>\n", path.Base(fallback))
 		}
 		return fallback, nil
 	}
@@ -278,7 +279,7 @@ func (r *InstallRunner) resolveFallback(target string, opts Options, original er
 func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile) (ExtractedFile, bool, error) {
 	if selected, ok := autoSelectExtractedFile(candidates, runtime.GOARCH); ok {
 		if r.Stderr != nil {
-			fmt.Fprintf(r.Stderr, "\033[33mAuto-selected extracted file '%s' for %s\033[0m\n", selected.ArchiveName, runtime.GOARCH)
+			ccolor.Fprintf(r.Stderr, "<yellow>Auto-selected extracted file '%s' for %s</>\n", selected.ArchiveName, runtime.GOARCH)
 		}
 		return selected, false, nil
 	}
@@ -315,7 +316,7 @@ func autoSelectExtractedFile(candidates []ExtractedFile, goarch string) (Extract
 
 	matches := make([]ExtractedFile, 0, len(candidates))
 	for _, candidate := range candidates {
-		name := strings.ToLower(strings.ReplaceAll(candidate.ArchiveName, "\\", "/"))
+		name := util.NormalizeSlashesLower(candidate.ArchiveName)
 		for _, pattern := range patterns {
 			if pattern.MatchString(name) {
 				matches = append(matches, candidate)
@@ -386,7 +387,7 @@ func outputPath(file ExtractedFile, output string, all bool, preferredName strin
 	if output == "-" {
 		return "-"
 	}
-	if output != "" && isDirectory(output) {
+	if output != "" && util.IsDirectory(output) {
 		return filepath.Join(output, out)
 	}
 	if output != "" && all {
@@ -450,12 +451,4 @@ func executableSuffix(name string) string {
 	default:
 		return ""
 	}
-}
-
-func isDirectory(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return info.IsDir()
 }
