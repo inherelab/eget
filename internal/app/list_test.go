@@ -63,6 +63,9 @@ func TestListPackagesMergesManagedPackagesWithInstalledState(t *testing.T) {
 	if items[0].Asset != "fzf.tar.gz" {
 		t.Fatalf("expected asset fzf.tar.gz, got %#v", items[0])
 	}
+	if items[0].Version != "" {
+		t.Fatalf("expected empty version without stored tag/version, got %#v", items[0])
+	}
 	if items[1].Installed {
 		t.Fatalf("expected rg to be marked not installed, got %#v", items[1])
 	}
@@ -273,5 +276,43 @@ func TestListOutdatedPackagesSkipsFailedChecks(t *testing.T) {
 	}
 	if len(failures) != 1 || failures[0].Repo != "junegunn/fzf" {
 		t.Fatalf("expected one failed check, got %#v", failures)
+	}
+}
+
+func TestFindPackageReturnsMergedItem(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["chlog"] = cfgpkg.Section{
+				Repo:   util.StringPtr("gookit/gitw"),
+				Target: util.StringPtr("~/.local/bin"),
+			}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{
+				Installed: map[string]storepkg.Entry{
+					"gookit/gitw": {
+						Repo:        "gookit/gitw",
+						InstalledAt: now,
+						Tag:         "v0.3.6",
+						Asset:       "chlog-windows-amd64.exe",
+						URL:         "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
+					},
+				},
+			}, nil
+		},
+	}
+
+	item, err := svc.FindPackage("chlog")
+	if err != nil {
+		t.Fatalf("find package: %v", err)
+	}
+	if item.Name != "chlog" || item.Repo != "gookit/gitw" {
+		t.Fatalf("unexpected item: %#v", item)
+	}
+	if item.Version != "v0.3.6" {
+		t.Fatalf("expected version v0.3.6, got %#v", item)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/goutil/cliutil"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -165,6 +166,17 @@ func (s *cliService) handleUninstall(opts *UninstallOptions) error {
 }
 
 func (s *cliService) handleList(opts *ListOptions) error {
+	if opts != nil && opts.Outdated && opts.Info != "" {
+		return fmt.Errorf("list --outdated and --info cannot be used together")
+	}
+	if opts != nil && opts.Info != "" {
+		item, err := s.listService.FindPackage(opts.Info)
+		if err != nil {
+			return err
+		}
+		printListItemDetails(item)
+		return nil
+	}
 	if opts != nil && opts.Outdated {
 		items, failures, err := s.listService.ListOutdatedPackages()
 		if err != nil {
@@ -174,59 +186,38 @@ func (s *cliService) handleList(opts *ListOptions) error {
 			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
 		}
 		if len(items) == 0 {
-			fmt.Println("no outdated packages found")
+			ccolor.Infoln("no outdated packages found")
 			return nil
 		}
-		for i, item := range items {
-			if i > 0 {
-				fmt.Println()
-			}
-			fmt.Printf("name: %s\n", item.Name)
-			fmt.Printf("repo: %s\n", item.Repo)
-			if item.Target != "" {
-				fmt.Printf("target: %s\n", item.Target)
-			}
-			fmt.Printf("installed_tag: %s\n", item.InstalledTag)
-			fmt.Printf("latest_tag: %s\n", item.LatestTag)
-			if !item.InstalledAt.IsZero() {
-				fmt.Printf("installed_at: %s\n", item.InstalledAt.Format(time.RFC3339))
-			}
+
+		cols := []string{"Name", "Repo", "Installed", "Version", "Latest version"}
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.Name, item.Repo, "yes", item.InstalledTag, item.LatestTag})
 		}
+		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 		return nil
 	}
+
 	items, err := s.listService.ListPackages()
 	if err != nil {
 		return err
 	}
 	if len(items) == 0 {
-		fmt.Println("no managed packages found")
+		ccolor.Infoln("no managed packages found")
 		return nil
 	}
-	for i, item := range items {
-		if i > 0 {
-			fmt.Println()
-		}
-		fmt.Printf("name: %s\n", item.Name)
-		fmt.Printf("repo: %s\n", item.Repo)
-		if item.Target != "" {
-			fmt.Printf("target: %s\n", item.Target)
-		}
-		if item.Tag != "" {
-			fmt.Printf("tag: %s\n", item.Tag)
-		}
+
+	cols := []string{"Name", "Repo", "Installed", "Version"}
+	rows := make([][]any, 0, len(items))
+	for _, item := range items {
+		installed := "no"
 		if item.Installed {
-			fmt.Println("installed: yes")
-			fmt.Printf("installed_at: %s\n", item.InstalledAt.Format(time.RFC3339))
-			if item.Asset != "" {
-				fmt.Printf("asset: %s\n", item.Asset)
-			}
-			if item.URL != "" {
-				fmt.Printf("url: %s\n", item.URL)
-			}
-		} else {
-			fmt.Println("installed: no")
+			installed = "yes"
 		}
+		rows = append(rows, []any{item.Name, item.Repo, installed, item.Version})
 	}
+	ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 	return nil
 }
 
@@ -531,4 +522,31 @@ func latestGitHubTag(repo string, opts install.Options) (string, error) {
 		return "", fmt.Errorf("latest tag is empty")
 	}
 	return payload.Tag, nil
+}
+
+func printListItemDetails(item *app.ListItem) {
+	fmt.Printf("name: %s\n", item.Name)
+	fmt.Printf("repo: %s\n", item.Repo)
+	if item.Target != "" {
+		fmt.Printf("target: %s\n", item.Target)
+	}
+	if item.Tag != "" {
+		fmt.Printf("tag: %s\n", item.Tag)
+	}
+	fmt.Printf("installed: %s\n", map[bool]string{true: "yes", false: "no"}[item.Installed])
+	if item.Version != "" {
+		fmt.Printf("version: %s\n", item.Version)
+	}
+	if item.InstalledTag != "" {
+		fmt.Printf("installed_tag: %s\n", item.InstalledTag)
+	}
+	if !item.InstalledAt.IsZero() {
+		fmt.Printf("installed_at: %s\n", item.InstalledAt.Format(time.RFC3339))
+	}
+	if item.Asset != "" {
+		fmt.Printf("asset: %s\n", item.Asset)
+	}
+	if item.URL != "" {
+		fmt.Printf("url: %s\n", item.URL)
+	}
 }

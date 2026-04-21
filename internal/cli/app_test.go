@@ -183,6 +183,32 @@ func TestMain_ListOutdatedBindsOption(t *testing.T) {
 	}
 }
 
+func TestMain_ListInfoBindsOption(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"list", "--info", "chlog"})
+	if err != nil {
+		t.Fatalf("expected list --info command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+
+	opts, ok := calls[0].options.(*ListOptions)
+	if !ok {
+		t.Fatalf("expected ListOptions, got %T", calls[0].options)
+	}
+	if opts.Info != "chlog" {
+		t.Fatalf("expected info option chlog, got %q", opts.Info)
+	}
+}
+
 func TestMain_UninstallRoutesToUninstallCommandAndAliases(t *testing.T) {
 	for _, name := range []string{"uninstall", "uni", "remove", "rm"} {
 		t.Run(name, func(t *testing.T) {

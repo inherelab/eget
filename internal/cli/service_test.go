@@ -239,14 +239,129 @@ func TestHandleListOutdatedPrintsOnlyOutdatedInstalledPackages(t *testing.T) {
 		t.Fatalf("copy stdout: %v", err)
 	}
 	got := out.String()
-	if !strings.Contains(got, "repo: BurntSushi/ripgrep") {
+	if !strings.Contains(got, "last_version") {
+		t.Fatalf("expected last_version column in output, got %q", got)
+	}
+	if !strings.Contains(got, "BurntSushi/ripgrep") {
 		t.Fatalf("expected outdated repo in output, got %q", got)
 	}
-	if !strings.Contains(got, "latest_tag: v14.0.0") {
+	if !strings.Contains(got, "v14.0.0") {
 		t.Fatalf("expected latest_tag in output, got %q", got)
 	}
-	if strings.Contains(got, "repo: junegunn/fzf") {
+	if strings.Contains(got, "junegunn/fzf") {
 		t.Fatalf("expected up-to-date repo to be omitted, got %q", got)
+	}
+}
+
+func TestHandleListPrintsTable(t *testing.T) {
+	svc := &cliService{
+		listService: app.ListService{
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["chlog"] = cfgpkg.Section{Repo: util.StringPtr("gookit/gitw")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{
+					Installed: map[string]storepkg.Entry{
+						"gookit/gitw": {Repo: "gookit/gitw", Tag: "v0.3.6"},
+					},
+				}, nil
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handleList(&ListOptions{})
+	if err != nil {
+		t.Fatalf("handle list: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "name") || !strings.Contains(got, "version") {
+		t.Fatalf("expected table headers in output, got %q", got)
+	}
+	if !strings.Contains(got, "chlog") || !strings.Contains(got, "v0.3.6") {
+		t.Fatalf("expected table row in output, got %q", got)
+	}
+}
+
+func TestHandleListInfoPrintsDetails(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := &cliService{
+		listService: app.ListService{
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["chlog"] = cfgpkg.Section{
+					Repo:   util.StringPtr("gookit/gitw"),
+					Target: util.StringPtr("~/.local/bin"),
+				}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{
+					Installed: map[string]storepkg.Entry{
+						"gookit/gitw": {
+							Repo:        "gookit/gitw",
+							InstalledAt: now,
+							Tag:         "v0.3.6",
+							Asset:       "chlog-windows-amd64.exe",
+							URL:         "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handleList(&ListOptions{Info: "chlog"})
+	if err != nil {
+		t.Fatalf("handle list info: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "name: chlog") || !strings.Contains(got, "version: v0.3.6") {
+		t.Fatalf("expected detail output, got %q", got)
+	}
+	if !strings.Contains(got, "url: https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe") {
+		t.Fatalf("expected detailed url output, got %q", got)
+	}
+}
+
+func TestHandleListRejectsOutdatedWithInfo(t *testing.T) {
+	svc := &cliService{}
+	err := svc.handleList(&ListOptions{Outdated: true, Info: "chlog"})
+	if err == nil {
+		t.Fatal("expected conflicting list options to fail")
 	}
 }
 

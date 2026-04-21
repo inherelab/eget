@@ -20,6 +20,7 @@ type ListItem struct {
 	Repo         string
 	Target       string
 	Tag          string
+	Version      string
 	InstalledTag string
 	Installed    bool
 	InstalledAt  time.Time
@@ -92,6 +93,10 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 				item.Repo = repo
 			}
 			item.Installed = true
+			item.Version = entry.Tag
+			if item.Version == "" {
+				item.Version = entry.Version
+			}
 			item.InstalledTag = entry.Tag
 			item.InstalledAt = entry.InstalledAt
 			item.Asset = entry.Asset
@@ -111,6 +116,20 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 		items = append(items, byName[name])
 	}
 	return items, nil
+}
+
+func (s ListService) FindPackage(name string) (*ListItem, error) {
+	items, err := s.ListPackages()
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if item.Name == name {
+			found := item
+			return &found, nil
+		}
+	}
+	return nil, fmt.Errorf("package %q not found", name)
 }
 
 func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFailure, error) {
