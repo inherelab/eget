@@ -384,6 +384,9 @@ func replaceTagInURL(url, newTag string) string {
 func outputPath(file ExtractedFile, output string, all bool, preferredName string) string {
 	mode := file.Mode()
 	out := resolvedOutputName(file.Name, mode, preferredName)
+	if all && output != "-" && file.Name != "" {
+		out = filepath.FromSlash(file.Name)
+	}
 	if output == "-" {
 		return "-"
 	}

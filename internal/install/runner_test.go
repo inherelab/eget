@@ -499,6 +499,15 @@ func TestOutputPathUsesPreferredNameWithExplicitExtension(t *testing.T) {
 	}
 }
 
+func TestOutputPathKeepsArchiveDirectoriesForExtractAll(t *testing.T) {
+	file := ExtractedFile{Name: "Far/7-ZipEng.hlf", mode: 0o644}
+	got := outputPath(file, "dist", true, "")
+	want := filepath.Join("dist", "Far", "7-ZipEng.hlf")
+	if got != want {
+		t.Fatalf("expected extract-all output path %q, got %q", want, got)
+	}
+}
+
 func TestAutoSelectExtractedFileByArch(t *testing.T) {
 	candidates := []ExtractedFile{
 		{ArchiveName: `arm64\WinDirStat.exe`, Name: `arm64\WinDirStat.exe`, mode: 0o666},
