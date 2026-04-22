@@ -76,6 +76,10 @@ eget download --all --to ./dist windirstat/windirstat
 eget uninstall fzf
 # list config and installed store
 eget list|ls
+# query repo info
+eget query owner/repo
+eget query --action releases --limit 5 owner/repo
+eget query --action assets --tag v1.2.3 owner/repo
 # update fzf
 eget update fzf
 eget update --all
@@ -126,6 +130,11 @@ eget config set global.target ~/.local/bin
 
 - 列出本地 managed packages 与 installed store 的并集，并尽可能关联最近一次安装状态。
 
+`query`(alias: `q`)
+
+- 查询 GitHub repo 的 release 与元数据，不涉及安装或本地状态写入。
+- 默认 action 为 `latest`，可通过 `--action` 切换为 `info`、`releases`、`assets`。
+
 `update`(alias: `up`)
 
 - 更新单个托管包，或通过 `--all` 更新全部托管包。
@@ -158,6 +167,14 @@ eget config set global.target ~/.local/bin
 - `--all`: 更新全部托管包，而不是只更新单个目标。
 - `--dry-run`: 仅预览更新计划，不执行实际安装。
 - `--interactive`: 交互式选择要更新的托管包。
+
+`query` 额外支持：
+
+- `--action`, `-a`: 查询动作，支持 `latest`、`releases`、`assets`、`info`。
+- `--tag`, `-t`: 为 `assets` 动作指定 release tag；不传时默认查询 latest。
+- `--limit`, `-l`: 限制 `releases` 动作返回数量，默认 `10`。
+- `--json`, `-j`: 使用 JSON 输出结果，方便脚本处理。
+- `--prerelease`, `-p`: 在 `latest` / `releases` 中包含预发布版本。
 
 全局选项：
 

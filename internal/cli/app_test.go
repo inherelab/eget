@@ -209,6 +209,56 @@ func TestMain_ListInfoBindsOption(t *testing.T) {
 	}
 }
 
+func TestMain_QueryRoutesAndBindsOptions(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"query", "--action", "releases", "--limit", "5", "--json", "owner/repo"})
+	if err != nil {
+		t.Fatalf("expected query command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if calls[0].name != "query" {
+		t.Fatalf("expected command query, got %q", calls[0].name)
+	}
+
+	opts, ok := calls[0].options.(*QueryOptions)
+	if !ok {
+		t.Fatalf("expected QueryOptions, got %T", calls[0].options)
+	}
+	if opts.Action != "releases" || opts.Limit != 5 || !opts.JSON || opts.Target != "owner/repo" {
+		t.Fatalf("unexpected query options: %#v", opts)
+	}
+}
+
+func TestMain_QueryAliasRoutes(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"q", "owner/repo"})
+	if err != nil {
+		t.Fatalf("expected query alias to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if calls[0].name != "query" {
+		t.Fatalf("expected command query, got %q", calls[0].name)
+	}
+}
+
 func TestMain_UninstallRoutesToUninstallCommandAndAliases(t *testing.T) {
 	for _, name := range []string{"uninstall", "uni", "remove", "rm"} {
 		t.Run(name, func(t *testing.T) {

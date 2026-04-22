@@ -495,6 +495,80 @@ func TestHandleConfigInitAllowsOverwriteWithConfirmation(t *testing.T) {
 	}
 }
 
+func TestHandleQueryPrintsLatestRelease(t *testing.T) {
+	svc := &cliService{
+		queryService: app.QueryService{
+			Client: &fakeQueryClientForCLI{
+				releases: []app.QueryRelease{{
+					Tag:         "v1.2.3",
+					Name:        "v1.2.3",
+					PublishedAt: time.Date(2026, 4, 22, 9, 0, 0, 0, time.UTC),
+					AssetsCount: 2,
+				}},
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handleQuery(&QueryOptions{Target: "owner/repo"})
+	if err != nil {
+		t.Fatalf("handle query: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "tag: v1.2.3") || !strings.Contains(got, "repo: owner/repo") {
+		t.Fatalf("expected latest query output, got %q", got)
+	}
+}
+
+func TestHandleQueryJSONOutput(t *testing.T) {
+	svc := &cliService{
+		queryService: app.QueryService{
+			Client: &fakeQueryClientForCLI{
+				releases: []app.QueryRelease{{Tag: "v1.2.3"}},
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handleQuery(&QueryOptions{Target: "owner/repo", JSON: true})
+	if err != nil {
+		t.Fatalf("handle query: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	if !strings.Contains(out.String(), `"action": "latest"`) {
+		t.Fatalf("expected json query output, got %q", out.String())
+	}
+}
+
 type fakeRunnerForCLI struct {
 	result app.RunResult
 }
@@ -513,4 +587,35 @@ type fakeConfigRecorderForCLI struct{}
 
 func (f *fakeConfigRecorderForCLI) AddPackage(repo, name string, opts install.Options) error {
 	return nil
+}
+
+type fakeQueryClientForCLI struct {
+	repoInfo QueryRepoInfoAlias
+	releases []app.QueryRelease
+	assets   []app.QueryAsset
+}
+
+type QueryRepoInfoAlias = app.QueryRepoInfo
+
+func (f *fakeQueryClientForCLI) RepoInfo(repo string) (app.QueryRepoInfo, error) {
+	info := app.QueryRepoInfo(f.repoInfo)
+	if info.Repo == "" {
+		info.Repo = repo
+	}
+	return info, nil
+}
+
+func (f *fakeQueryClientForCLI) LatestRelease(repo string, includePrerelease bool) (app.QueryRelease, error) {
+	if len(f.releases) == 0 {
+		return app.QueryRelease{}, nil
+	}
+	return f.releases[0], nil
+}
+
+func (f *fakeQueryClientForCLI) ListReleases(repo string, limit int, includePrerelease bool) ([]app.QueryRelease, error) {
+	return f.releases, nil
+}
+
+func (f *fakeQueryClientForCLI) ReleaseAssets(repo, tag string) ([]app.QueryAsset, error) {
+	return f.assets, nil
 }

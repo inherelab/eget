@@ -75,6 +75,10 @@ eget download --all --to ./dist windirstat/windirstat
 eget uninstall fzf
 # list config and installed store
 eget list|ls
+# query repo info
+eget query owner/repo
+eget query --action releases --limit 5 owner/repo
+eget query --action assets --tag v1.2.3 owner/repo
 # update fzf
 eget update fzf
 eget update --all
@@ -125,6 +129,11 @@ The target argument accepted by `install` and `download` can be:
 
 - Lists the union of local managed packages and installed-store entries, and attaches recent installed-state details when available.
 
+`query` (alias: `q`)
+
+- Queries GitHub repository release metadata without installing anything or touching local state.
+- Defaults to the `latest` action, and can switch to `info`, `releases`, or `assets` with `--action`.
+
 `update` (alias: `up`)
 
 - Updates a single managed package, or all managed packages with `--all`.
@@ -157,6 +166,14 @@ The target argument accepted by `install` and `download` can be:
 - `--all`: Update all managed packages instead of a single target.
 - `--dry-run`: Preview the update plan without performing installation changes.
 - `--interactive`: Interactively select which managed packages to update.
+
+`query` additionally supports:
+
+- `--action`, `-a`: Query action. Supported values: `latest`, `releases`, `assets`, `info`.
+- `--tag`, `-t`: Select the release tag for the `assets` action; defaults to latest when omitted.
+- `--limit`, `-l`: Limit the number of rows returned by the `releases` action. Default: `10`.
+- `--json`, `-j`: Output JSON for scripting or automation.
+- `--prerelease`, `-p`: Include prerelease entries for `latest` and `releases`.
 
 Global options:
 

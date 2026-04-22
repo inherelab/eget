@@ -24,6 +24,7 @@ type cliService struct {
 	appService       app.Service
 	cfgService       app.ConfigService
 	listService      app.ListService
+	queryService     app.QueryService
 	uninstallService app.UninstallService
 	updService       app.UpdateService
 }
@@ -72,6 +73,9 @@ func newCLIService() (*cliService, error) {
 			return latestGitHubTag(repo, defaultOpts)
 		},
 	}
+	queryService := app.QueryService{
+		Client: newGitHubQueryClient(defaultOpts),
+	}
 	uninstallService := app.UninstallService{
 		Store: store,
 	}
@@ -91,6 +95,7 @@ func newCLIService() (*cliService, error) {
 		appService:       appService,
 		cfgService:       cfgService,
 		listService:      listService,
+		queryService:     queryService,
 		uninstallService: uninstallService,
 		updService:       updService,
 	}, nil
@@ -140,6 +145,9 @@ func (s *cliService) handle(name string, options any) error {
 	case "config":
 		opts := options.(*ConfigOptions)
 		return s.handleConfig(opts)
+	case "query":
+		opts := options.(*QueryOptions)
+		return s.handleQuery(opts)
 	case "update":
 		opts := options.(*UpdateOptions)
 		return s.handleUpdate(opts)
@@ -288,6 +296,30 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 	}
 	_, err := s.updService.UpdatePackage(opts.Target, installOpts)
 	return err
+}
+
+func (s *cliService) handleQuery(opts *QueryOptions) error {
+	result, err := s.queryService.Query(app.QueryOptions{
+		Repo:       opts.Target,
+		Action:     opts.Action,
+		Tag:        opts.Tag,
+		Limit:      opts.Limit,
+		JSON:       opts.JSON,
+		Prerelease: opts.Prerelease,
+	})
+	if err != nil {
+		return err
+	}
+	if opts.JSON {
+		text, err := result.JSONString()
+		if err != nil {
+			return err
+		}
+		fmt.Println(text)
+		return nil
+	}
+	printQueryResult(result)
+	return nil
 }
 
 func installOptionsFromInstall(opts *InstallOptions) install.Options {
@@ -579,5 +611,78 @@ func printListItemDetails(item *app.ListItem) {
 	}
 	if item.URL != "" {
 		fmt.Printf("url: %s\n", item.URL)
+	}
+}
+
+func printQueryResult(result app.QueryResult) {
+	fmt.Printf("action: %s\n", result.Action)
+	fmt.Printf("repo: %s\n", result.Repo)
+	if result.Tag != "" {
+		fmt.Printf("tag: %s\n", result.Tag)
+	}
+	if result.Info != nil {
+		if result.Info.Description != "" {
+			fmt.Printf("description: %s\n", result.Info.Description)
+		}
+		if result.Info.Homepage != "" {
+			fmt.Printf("homepage: %s\n", result.Info.Homepage)
+		}
+		if result.Info.DefaultBranch != "" {
+			fmt.Printf("default_branch: %s\n", result.Info.DefaultBranch)
+		}
+		if result.Info.Stars > 0 {
+			fmt.Printf("stars: %d\n", result.Info.Stars)
+		}
+		if result.Info.Forks > 0 {
+			fmt.Printf("forks: %d\n", result.Info.Forks)
+		}
+		if result.Info.OpenIssues > 0 {
+			fmt.Printf("open_issues: %d\n", result.Info.OpenIssues)
+		}
+		if !result.Info.UpdatedAt.IsZero() {
+			fmt.Printf("updated_at: %s\n", result.Info.UpdatedAt.Format(time.RFC3339))
+		}
+		return
+	}
+	if result.Latest != nil {
+		fmt.Printf("tag: %s\n", result.Latest.Tag)
+		if result.Latest.Name != "" {
+			fmt.Printf("name: %s\n", result.Latest.Name)
+		}
+		if !result.Latest.PublishedAt.IsZero() {
+			fmt.Printf("published_at: %s\n", result.Latest.PublishedAt.Format(time.RFC3339))
+		}
+		fmt.Printf("prerelease: %t\n", result.Latest.Prerelease)
+		fmt.Printf("assets_count: %d\n", result.Latest.AssetsCount)
+		return
+	}
+	if len(result.Releases) > 0 {
+		cols := []string{"Tag", "Name", "Published at", "Prerelease", "Assets"}
+		rows := make([][]any, 0, len(result.Releases))
+		for _, item := range result.Releases {
+			rows = append(rows, []any{
+				item.Tag,
+				item.Name,
+				item.PublishedAt.Format(time.RFC3339),
+				item.Prerelease,
+				item.AssetsCount,
+			})
+		}
+		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
+		return
+	}
+	if len(result.Assets) > 0 {
+		cols := []string{"Name", "Size", "Downloads", "Updated at", "URL"}
+		rows := make([][]any, 0, len(result.Assets))
+		for _, item := range result.Assets {
+			rows = append(rows, []any{
+				item.Name,
+				item.Size,
+				item.DownloadCount,
+				item.UpdatedAt.Format(time.RFC3339),
+				item.URL,
+			})
+		}
+		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 	}
 }
