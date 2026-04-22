@@ -32,7 +32,7 @@ func newDownloadCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.To, "to", "", "Download destination")
 	cmd.StringVar(&opts.CacheDir, "cache-dir", "", "Download cache directory")
 	cmd.StringVar(&opts.File, "file", "", "File to extract")
-	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter, multi use comma split")
+	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter, multi use comma split;;a")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
 	cmd.BoolVar(&opts.All, "all", false, "Extract all files")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
