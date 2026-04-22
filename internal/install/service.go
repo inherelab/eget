@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ type Service struct {
 
 	AllDetectorFactory    func() Detector
 	SystemDetectorFactory func(goos, goarch string) (Detector, error)
-	AssetDetectorFactory  func(asset string, anti bool) Detector
+	AssetDetectorFactory  func(asset string, anti bool, re *regexp.Regexp) Detector
 	DetectorChainFactory  func(detectors []Detector, system Detector) Detector
 
 	Sha256VerifierFactory      func(expected string) (Verifier, error)
@@ -165,13 +166,39 @@ func (s *Service) SelectDetector(opts *Options) (Detector, error) {
 
 	detectors := make([]Detector, len(opts.Asset))
 	for i, asset := range opts.Asset {
-		anti := strings.HasPrefix(asset, "^") // exclude
-		if anti {
-			asset = asset[1:]
+		filter, err := parseAssetFilter(asset)
+		if err != nil {
+			return nil, err
 		}
-		detectors[i] = s.AssetDetectorFactory(asset, anti)
+		detectors[i] = s.AssetDetectorFactory(filter.Expr, filter.Anti, filter.Regex)
 	}
 	return s.DetectorChainFactory(detectors, system), nil
+}
+
+type assetFilter struct {
+	Expr  string
+	Anti  bool
+	Regex *regexp.Regexp
+}
+
+func parseAssetFilter(raw string) (assetFilter, error) {
+	filter := assetFilter{}
+	if strings.HasPrefix(raw, "^") {
+		filter.Anti = true
+		raw = raw[1:]
+	}
+	if strings.HasPrefix(raw, "REG:") {
+		expr := strings.TrimPrefix(raw, "REG:")
+		re, err := regexp.Compile(expr)
+		if err != nil {
+			return assetFilter{}, fmt.Errorf("invalid asset regex %q: %w", expr, err)
+		}
+		filter.Expr = expr
+		filter.Regex = re
+		return filter, nil
+	}
+	filter.Expr = raw
+	return filter, nil
 }
 
 func (s *Service) SelectVerifier(sumAsset string, opts *Options) (Verifier, error) {

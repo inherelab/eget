@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -213,8 +214,11 @@ func TestSelectDetector(t *testing.T) {
 	svc.SystemDetectorFactory = func(goos, goarch string) (Detector, error) {
 		return &fakeDetector{name: goos + "/" + goarch}, nil
 	}
-	svc.AssetDetectorFactory = func(asset string, anti bool) Detector {
+	svc.AssetDetectorFactory = func(asset string, anti bool, re *regexp.Regexp) Detector {
 		name := asset
+		if re != nil {
+			name = "REG:" + asset
+		}
 		if anti {
 			name = "^" + name
 		}
@@ -238,6 +242,48 @@ func TestSelectDetector(t *testing.T) {
 	}
 	if got := detector.(*fakeDetector).name; got != "chain" {
 		t.Fatalf("SelectDetector(custom) = %q, want %q", got, "chain")
+	}
+
+	detector, err = svc.SelectDetector(&Options{System: "linux/amd64", Asset: []string{`REG:\.deb$`, `^REG:\.sha256$`}})
+	if err != nil {
+		t.Fatalf("SelectDetector(regex): %v", err)
+	}
+	if got := detector.(*fakeDetector).name; got != "chain" {
+		t.Fatalf("SelectDetector(regex) = %q, want %q", got, "chain")
+	}
+}
+
+func TestParseAssetFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantExpr string
+		wantAnti bool
+		wantRe   bool
+	}{
+		{name: "plain include", input: "deb", wantExpr: "deb"},
+		{name: "plain exclude", input: "^deb", wantExpr: "deb", wantAnti: true},
+		{name: "regex include", input: `REG:\.deb$`, wantExpr: `\.deb$`, wantRe: true},
+		{name: "regex exclude", input: `^REG:\.deb$`, wantExpr: `\.deb$`, wantAnti: true, wantRe: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseAssetFilter(tt.input)
+			if err != nil {
+				t.Fatalf("parseAssetFilter(%q): %v", tt.input, err)
+			}
+			if got.Expr != tt.wantExpr || got.Anti != tt.wantAnti || (got.Regex != nil) != tt.wantRe {
+				t.Fatalf("parseAssetFilter(%q) = %#v", tt.input, got)
+			}
+		})
+	}
+}
+
+func TestParseAssetFilterRejectsBadRegex(t *testing.T) {
+	_, err := parseAssetFilter(`REG:[abc`)
+	if err == nil {
+		t.Fatal("expected invalid regex to fail")
 	}
 }
 

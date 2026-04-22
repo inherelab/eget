@@ -34,3 +34,47 @@ func TestExtractFileRequestsMultipleMatches(t *testing.T) {
 		t.Fatal("expected comma-separated file spec to enable multi extraction mode")
 	}
 }
+
+func TestAssetDetectorSupportsRegexInclude(t *testing.T) {
+	re, err := compileAssetRegex(`\.deb$`)
+	if err != nil {
+		t.Fatalf("compileAssetRegex: %v", err)
+	}
+	d := &assetDetector{Asset: `\.deb$`, Regex: re}
+
+	got, candidates, err := d.Detect([]string{
+		"https://example.com/pkg_1.0.0_amd64.deb",
+		"https://example.com/pkg_1.0.0_amd64.rpm",
+	})
+	if err != nil {
+		t.Fatalf("Detect(): %v", err)
+	}
+	if len(candidates) != 0 {
+		t.Fatalf("expected no candidates, got %#v", candidates)
+	}
+	if got != "https://example.com/pkg_1.0.0_amd64.deb" {
+		t.Fatalf("expected deb asset to match, got %q", got)
+	}
+}
+
+func TestAssetDetectorSupportsRegexExclude(t *testing.T) {
+	re, err := compileAssetRegex(`\.deb$`)
+	if err != nil {
+		t.Fatalf("compileAssetRegex: %v", err)
+	}
+	d := &assetDetector{Asset: `\.deb$`, Anti: true, Regex: re}
+
+	got, candidates, err := d.Detect([]string{
+		"https://example.com/pkg_1.0.0_amd64.deb",
+		"https://example.com/pkg_1.0.0_amd64.rpm",
+	})
+	if err != nil {
+		t.Fatalf("Detect(): %v", err)
+	}
+	if len(candidates) != 0 {
+		t.Fatalf("expected no candidates, got %#v", candidates)
+	}
+	if got != "https://example.com/pkg_1.0.0_amd64.rpm" {
+		t.Fatalf("expected rpm asset to remain after exclude, got %q", got)
+	}
+}

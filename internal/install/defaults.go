@@ -146,6 +146,7 @@ type detectorChain struct {
 type assetDetector struct {
 	Asset string
 	Anti  bool
+	Regex *regexp.Regexp
 }
 
 type allDetector struct{}
@@ -180,8 +181,8 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 		SystemDetectorFactory: func(goos, goarch string) (Detector, error) {
 			return newSystemDetector(goos, goarch)
 		},
-		AssetDetectorFactory: func(asset string, anti bool) Detector {
-			return &assetDetector{Asset: asset, Anti: anti}
+		AssetDetectorFactory: func(asset string, anti bool, re *regexp.Regexp) Detector {
+			return &assetDetector{Asset: asset, Anti: anti, Regex: re}
 		},
 		DetectorChainFactory: func(detectors []Detector, system Detector) Detector {
 			return &detectorChain{detectors: detectors, system: system}
@@ -248,13 +249,16 @@ func (a *allDetector) Detect(assets []string) (string, []string, error) {
 func (s *assetDetector) Detect(assets []string) (string, []string, error) {
 	var candidates []string
 	for _, a := range assets {
-		if !s.Anti && path.Base(a) == s.Asset {
+		base := path.Base(a)
+		if !s.Anti && base == s.Asset {
 			return a, nil, nil
 		}
-		if !s.Anti && strings.Contains(path.Base(a), s.Asset) {
-			candidates = append(candidates, a)
+		if !s.Anti {
+			if s.matches(base) {
+				candidates = append(candidates, a)
+			}
 		}
-		if s.Anti && !strings.Contains(path.Base(a), s.Asset) {
+		if s.Anti && !s.matches(base) {
 			candidates = append(candidates, a)
 		}
 	}
@@ -265,6 +269,17 @@ func (s *assetDetector) Detect(assets []string) (string, []string, error) {
 		return "", candidates, fmt.Errorf("%d candidates found for asset `%s`", len(candidates), s.Asset)
 	}
 	return "", nil, fmt.Errorf("asset `%s` not found", s.Asset)
+}
+
+func (s *assetDetector) matches(base string) bool {
+	if s.Regex != nil {
+		return s.Regex.MatchString(base)
+	}
+	return strings.Contains(base, s.Asset)
+}
+
+func compileAssetRegex(expr string) (*regexp.Regexp, error) {
+	return regexp.Compile(expr)
 }
 
 func (osv *systemOS) Match(s string) (bool, bool) {
