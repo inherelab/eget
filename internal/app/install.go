@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -98,13 +99,30 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 }
 
 func (s Service) DownloadTarget(target string, opts install.Options) (RunResult, error) {
-	opts.DownloadOnly = true
+	if hasMultipleExtractPatterns(opts.ExtractFile) {
+		opts.All = true
+	}
+	opts.DownloadOnly = opts.ExtractFile == "" && !opts.All
 	var err error
 	opts, err = s.resolveInstallOptions(target, opts, true)
 	if err != nil {
 		return RunResult{}, err
 	}
 	return s.Runner.Run(target, opts)
+}
+
+func hasMultipleExtractPatterns(value string) bool {
+	parts := strings.Split(value, ",")
+	count := 0
+	for _, part := range parts {
+		if strings.TrimSpace(part) != "" {
+			count++
+			if count > 1 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (s Service) now() time.Time {

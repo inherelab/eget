@@ -66,7 +66,10 @@ eget install --add --name rg BurntSushi/ripgrep
 
 ```bash
 # download
+eget download ip7z/7zip
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
+eget download --file README.md,LICENSE --to ./dist owner/repo
+eget download --all --to ./dist windirstat/windirstat
 # uninstall
 eget uninstall fzf
 # list config and installed store
@@ -106,7 +109,8 @@ eget config set global.target ~/.local/bin
 
 `download`(alias: `dl`)
 
-- 复用安装链路，但只做下载/提取，不记录 installed store。
+- 复用安装链路，但不记录 installed store。
+- 默认仅下载原始 asset；只有设置 `--file` 或 `--all` 时才会自动解压归档内容。
 
 `add`
 
@@ -136,7 +140,7 @@ eget config set global.target ~/.local/bin
 - `--system`: 指定目标系统与架构，例如 `windows/amd64`、`linux/arm64`。
 - `--to`: 指定安装或下载输出路径；可传目录，也可传完整文件路径。
 - `--cache-dir`: 指定远程下载缓存目录，命中缓存时会直接复用。
-- `--file`: 指定归档内要提取的文件，适用于压缩包内存在多个候选文件的场景。
+- `--file`: 指定归档内要提取的文件；支持逗号分隔多个文件或 glob 模式，例如 `README.md,LICENSE`。
 - `--asset`: 指定资源过滤关键词；可用逗号分隔多个过滤条件。
 - `--source`: 下载源码归档而不是预构建二进制。
 - `--all`: 提取归档中的全部文件，而不是只选择一个目标文件。
@@ -161,6 +165,8 @@ eget config set global.target ~/.local/bin
 
 - `install --name` 可用于指定单文件可执行资产的输出文件名，例如将 `chlog-windows-amd64.exe` 安装为 `chlog.exe`。
 - `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
+- `download` 默认保存原始下载文件；只有设置了 `--file` 或 `--all` 才会自动提取归档内容。
+- 归档提取当前支持 `zip`、`tar.*` 以及 `7z`。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。
 
 ## 配置

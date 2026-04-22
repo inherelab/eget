@@ -46,17 +46,15 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 		System:   "linux/amd64",
 		To:       "~/.cache/downloads",
 		CacheDir: "~/.cache/eget",
-		File:     "tool",
 		Asset:    "linux",
 		Source:   true,
-		All:      true,
 		Quiet:    true,
 	})
 	if downloadOpts.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected download cache dir to propagate, got %q", downloadOpts.CacheDir)
 	}
 	if !downloadOpts.DownloadOnly {
-		t.Fatal("expected download options to force DownloadOnly")
+		t.Fatal("expected plain download options to default to raw download mode")
 	}
 
 	addOpts := installOptionsFromAdd(&AddOptions{
@@ -86,6 +84,25 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 	})
 	if updateOpts.CacheDir != "~/.cache/eget" {
 		t.Fatalf("expected update cache dir to propagate, got %q", updateOpts.CacheDir)
+	}
+}
+
+func TestInstallOptionsFromDownloadEnablesArchiveExtractionWhenRequested(t *testing.T) {
+	opts := installOptionsFromDownload(&DownloadOptions{
+		File: "tool,LICENSE",
+	})
+	if opts.DownloadOnly {
+		t.Fatal("expected download with --file to disable DownloadOnly")
+	}
+	if opts.ExtractFile != "tool,LICENSE" {
+		t.Fatalf("expected extract file filters to propagate, got %q", opts.ExtractFile)
+	}
+
+	opts = installOptionsFromDownload(&DownloadOptions{
+		All: true,
+	})
+	if opts.DownloadOnly {
+		t.Fatal("expected download with --all to disable DownloadOnly")
 	}
 }
 

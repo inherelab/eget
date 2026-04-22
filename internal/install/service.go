@@ -201,7 +201,7 @@ func (s *Service) SelectVerifier(sumAsset string, opts *Options) (Verifier, erro
 
 func (s *Service) SelectExtractor(url, tool string, opts *Options) (any, error) {
 	filename := path.Base(url)
-	if opts.DownloadOnly {
+	if opts.DownloadOnly && opts.ExtractFile == "" && !opts.All {
 		if s.DownloadOnlyExtractorFactory == nil {
 			return nil, fmt.Errorf("download-only extractor factory is required")
 		}
@@ -213,6 +213,17 @@ func (s *Service) SelectExtractor(url, tool string, opts *Options) (any, error) 
 			return nil, fmt.Errorf("extractor factories are required")
 		}
 		chooser, err := s.GlobChooserFactory(opts.ExtractFile)
+		if err != nil {
+			return nil, err
+		}
+		return s.ExtractorFactory(filename, tool, chooser), nil
+	}
+
+	if opts.All {
+		if s.GlobChooserFactory == nil || s.ExtractorFactory == nil {
+			return nil, fmt.Errorf("extractor factories are required")
+		}
+		chooser, err := s.GlobChooserFactory("*")
 		if err != nil {
 			return nil, err
 		}

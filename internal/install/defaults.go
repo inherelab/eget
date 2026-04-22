@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bodgit/sevenzip"
 	"github.com/gobwas/glob"
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
@@ -114,6 +115,11 @@ type GlobChooser struct {
 	all  bool
 }
 
+type MultiChooser struct {
+	expr     string
+	choosers []Chooser
+}
+
 type noVerifier struct{}
 
 type sha256Error struct {
@@ -200,7 +206,7 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 			return NewDownloadOnlyExtractor(name)
 		},
 		GlobChooserFactory: func(pattern string) (any, error) {
-			return NewGlobChooser(pattern)
+			return NewFileChooser(pattern)
 		},
 		BinaryChooserFactory: func(tool string) any {
 			return NewBinaryChooser(tool)
@@ -411,6 +417,8 @@ func NewExtractor(filename string, tool string, chooser Chooser) Extractor {
 		return NewArchiveExtractor(chooser, NewTarArchive, nounzipper)
 	case strings.HasSuffix(filename, ".zip"):
 		return NewArchiveExtractor(chooser, NewZipArchive, nil)
+	case strings.HasSuffix(filename, ".7z"):
+		return NewArchiveExtractor(chooser, NewSevenZipArchive, nil)
 	case strings.HasSuffix(filename, ".gz"):
 		return &SingleFileExtractor{Rename: tool, Name: filename, Decompress: gunzipper}
 	case strings.HasSuffix(filename, ".bz2"):
@@ -445,6 +453,38 @@ func NewBinaryChooser(tool string) *BinaryChooser {
 func NewGlobChooser(gl string) (*GlobChooser, error) {
 	g, err := glob.Compile(gl, '/')
 	return &GlobChooser{g: g, expr: gl, all: gl == "*" || gl == "/"}, err
+}
+
+func NewFileChooser(expr string) (Chooser, error) {
+	parts := strings.Split(expr, ",")
+	if len(parts) == 1 {
+		return NewGlobChooser(strings.TrimSpace(expr))
+	}
+
+	choosers := make([]Chooser, 0, len(parts))
+	normalized := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		ch, err := NewGlobChooser(part)
+		if err != nil {
+			return nil, err
+		}
+		choosers = append(choosers, ch)
+		normalized = append(normalized, part)
+	}
+	if len(choosers) == 0 {
+		return nil, fmt.Errorf("empty file chooser expression")
+	}
+	if len(choosers) == 1 {
+		return choosers[0], nil
+	}
+	return &MultiChooser{
+		expr:     strings.Join(normalized, ","),
+		choosers: choosers,
+	}, nil
 }
 
 func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error) {
@@ -616,6 +656,20 @@ func (g *GlobChooser) String() string {
 	return fmt.Sprintf("`%s`", g.expr)
 }
 
+func (m *MultiChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bool) {
+	for _, chooser := range m.choosers {
+		direct, possible := chooser.Choose(name, dir, mode)
+		if direct || possible {
+			return direct, true
+		}
+	}
+	return false, false
+}
+
+func (m *MultiChooser) String() string {
+	return fmt.Sprintf("`%s`", m.expr)
+}
+
 func tarft(typ byte) FileType {
 	switch typ {
 	case tar.TypeReg:
@@ -663,6 +717,17 @@ func NewZipArchive(data []byte, d DecompFn) (Archive, error) {
 	return &ZipArchive{r: zr, idx: -1}, err
 }
 
+type SevenZipArchive struct {
+	r   *sevenzip.Reader
+	idx int
+}
+
+func NewSevenZipArchive(data []byte, d DecompFn) (Archive, error) {
+	r := bytes.NewReader(data)
+	szr, err := sevenzip.NewReader(r, int64(len(data)))
+	return &SevenZipArchive{r: szr, idx: -1}, err
+}
+
 func (z *ZipArchive) Next() (File, error) {
 	z.idx++
 	if z.idx < 0 || z.idx >= len(z.r.File) {
@@ -684,6 +749,33 @@ func (z *ZipArchive) ReadAll() ([]byte, error) {
 	rc, err := f.Open()
 	if err != nil {
 		return nil, fmt.Errorf("zip extract: %w", err)
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
+}
+
+func (z *SevenZipArchive) Next() (File, error) {
+	z.idx++
+	if z.idx < 0 || z.idx >= len(z.r.File) {
+		return File{}, io.EOF
+	}
+	f := z.r.File[z.idx]
+	mode := f.Mode()
+	typ := TypeNormal
+	if mode.IsDir() {
+		typ = TypeDir
+	}
+	return File{Name: f.Name, Mode: mode, Type: typ}, nil
+}
+
+func (z *SevenZipArchive) ReadAll() ([]byte, error) {
+	if z.idx < 0 || z.idx >= len(z.r.File) {
+		return nil, io.EOF
+	}
+	f := z.r.File[z.idx]
+	rc, err := f.Open()
+	if err != nil {
+		return nil, fmt.Errorf("7z extract: %w", err)
 	}
 	defer rc.Close()
 	return io.ReadAll(rc)

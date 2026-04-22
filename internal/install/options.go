@@ -80,3 +80,15 @@ func isRepoTarget(target string) bool {
 	parts := strings.Split(target, "/")
 	return len(parts) == 2 && parts[0] != "" && parts[1] != ""
 }
+
+func extractAllFromFileSpec(file string) bool {
+	for _, part := range strings.Split(file, ",") {
+		if strings.TrimSpace(part) != "" {
+			if strings.Contains(file, ",") {
+				return true
+			}
+			break
+		}
+	}
+	return false
+}

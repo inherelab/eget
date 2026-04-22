@@ -341,7 +341,10 @@ func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 		All:      opts.All,
 		Quiet:    opts.Quiet,
 	})
-	base.DownloadOnly = true
+	if hasMultipleFilePatterns(opts.File) {
+		base.All = true
+	}
+	base.DownloadOnly = opts.File == "" && !opts.All
 	return base
 }
 
@@ -376,6 +379,20 @@ func splitAssetFilters(value string) []string {
 		return nil
 	}
 	return strings.Split(value, ",")
+}
+
+func hasMultipleFilePatterns(value string) bool {
+	parts := strings.Split(value, ",")
+	count := 0
+	for _, part := range parts {
+		if strings.TrimSpace(part) != "" {
+			count++
+			if count > 1 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func promptIndex(choices []string) (int, error) {

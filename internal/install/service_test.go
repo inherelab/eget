@@ -33,6 +33,10 @@ type fakeChooser struct {
 	name string
 }
 
+type chooserRecorder struct {
+	value any
+}
+
 type fakeExtractor struct {
 	name string
 }
@@ -330,5 +334,83 @@ func TestSelectExtractor(t *testing.T) {
 	}
 	if got := extractor.(*fakeExtractor).name; got != "tool.tar.gz|tool|binary:tool" {
 		t.Fatalf("SelectExtractor(binary) = %q", got)
+	}
+}
+
+func TestSelectExtractorTreatsDownloadWithExtractFileAsArchiveExtraction(t *testing.T) {
+	svc := NewService()
+	rec := &chooserRecorder{}
+	svc.GlobChooserFactory = func(pattern string) (any, error) {
+		return &fakeChooser{name: "glob:" + pattern}, nil
+	}
+	svc.BinaryChooserFactory = func(tool string) any {
+		return &fakeChooser{name: "binary:" + tool}
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		rec.value = chooser
+		ch := chooser.(*fakeChooser)
+		return &fakeExtractor{name: filename + "|" + tool + "|" + ch.name}
+	}
+
+	extractor, err := svc.SelectExtractor("https://example.com/tool.tar.gz", "tool", &Options{
+		DownloadOnly: true,
+		ExtractFile:  "LICENSE",
+	})
+	if err != nil {
+		t.Fatalf("SelectExtractor(download with file): %v", err)
+	}
+	if got := extractor.(*fakeExtractor).name; got != "tool.tar.gz|tool|glob:LICENSE" {
+		t.Fatalf("SelectExtractor(download with file) = %q", got)
+	}
+}
+
+func TestSelectExtractorTreatsDownloadWithAllAsArchiveExtraction(t *testing.T) {
+	svc := NewService()
+	svc.GlobChooserFactory = func(pattern string) (any, error) {
+		return &fakeChooser{name: "glob:" + pattern}, nil
+	}
+	svc.BinaryChooserFactory = func(tool string) any {
+		return &fakeChooser{name: "binary:" + tool}
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		ch := chooser.(*fakeChooser)
+		return &fakeExtractor{name: filename + "|" + tool + "|" + ch.name}
+	}
+
+	extractor, err := svc.SelectExtractor("https://example.com/tool.tar.gz", "tool", &Options{
+		DownloadOnly: true,
+		All:          true,
+	})
+	if err != nil {
+		t.Fatalf("SelectExtractor(download with all): %v", err)
+	}
+	if got := extractor.(*fakeExtractor).name; got != "tool.tar.gz|tool|glob:*" {
+		t.Fatalf("SelectExtractor(download with all) = %q", got)
+	}
+}
+
+func TestSelectExtractorPrefersExplicitFilePatternsOverAll(t *testing.T) {
+	svc := NewService()
+	svc.GlobChooserFactory = func(pattern string) (any, error) {
+		return &fakeChooser{name: "glob:" + pattern}, nil
+	}
+	svc.BinaryChooserFactory = func(tool string) any {
+		return &fakeChooser{name: "binary:" + tool}
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		ch := chooser.(*fakeChooser)
+		return &fakeExtractor{name: filename + "|" + tool + "|" + ch.name}
+	}
+
+	extractor, err := svc.SelectExtractor("https://example.com/tool.tar.gz", "tool", &Options{
+		DownloadOnly: true,
+		ExtractFile:  "README,LICENSE",
+		All:          true,
+	})
+	if err != nil {
+		t.Fatalf("SelectExtractor(download with explicit file patterns): %v", err)
+	}
+	if got := extractor.(*fakeExtractor).name; got != "tool.tar.gz|tool|glob:README,LICENSE" {
+		t.Fatalf("SelectExtractor(download with explicit file patterns) = %q", got)
 	}
 }

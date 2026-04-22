@@ -65,7 +65,10 @@ eget install --add --name rg BurntSushi/ripgrep
 
 ```bash
 # download
+eget download ip7z/7zip
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
+eget download --file README.md,LICENSE --to ./dist owner/repo
+eget download --all --to ./dist windirstat/windirstat
 # uninstall
 eget uninstall fzf
 # list config and installed store
@@ -105,7 +108,8 @@ The target argument accepted by `install` and `download` can be:
 
 `download` (alias: `dl`)
 
-- Reuses the install pipeline, but only downloads/extracts and does not record installed state.
+- Reuses the install pipeline without recording installed state.
+- Downloads the raw asset by default; archive extraction only happens when `--file` or `--all` is set.
 
 `add`
 
@@ -135,7 +139,7 @@ The target argument accepted by `install` and `download` can be:
 - `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
 - `--to`: Set the install or download output path; accepts either a directory or a full file path.
 - `--cache-dir`: Set the remote download cache directory and reuse cached files on subsequent runs.
-- `--file`: Select a file to extract from an archive when multiple candidates exist.
+- `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`.
 - `--asset`: Filter release assets by keyword; multiple filters can be separated by commas.
 - `--source`: Download the source archive instead of a prebuilt binary release.
 - `--all`: Extract all files from the archive instead of selecting a single target file.
@@ -160,6 +164,8 @@ Notes:
 
 - `install --name` can rename a single executable asset, for example installing `chlog-windows-amd64.exe` as `chlog.exe`.
 - `install --add` only applies to repo targets and appends the managed package definition after a successful install.
+- `download` stores the raw downloaded asset by default; extraction only happens when `--file` or `--all` is provided.
+- Archive extraction currently supports `zip`, `tar.*`, and `7z`.
 - Argument order follows the `cflag/capp` parser constraint and must be `CMD --OPTIONS... ARGUMENTS...`.
 
 ## Configuration

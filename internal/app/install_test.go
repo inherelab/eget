@@ -160,6 +160,58 @@ func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {
 	}
 }
 
+func TestDownloadTargetWithExtractFileRunsExtractionFlow(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://example.com/tool.tar.gz",
+			ExtractedFiles: []string{"./tool"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{Runner: runner, Store: store}
+
+	_, err := svc.DownloadTarget("https://example.com/tool.tar.gz", install.Options{ExtractFile: "tool"})
+	if err != nil {
+		t.Fatalf("download target: %v", err)
+	}
+
+	if runner.calls != 1 {
+		t.Fatalf("expected runner to be called once, got %d", runner.calls)
+	}
+	if runner.opts.DownloadOnly {
+		t.Fatal("expected download target with --file to disable DownloadOnly")
+	}
+	if store.calls != 0 {
+		t.Fatalf("expected store to not be called, got %d", store.calls)
+	}
+}
+
+func TestDownloadTargetWithAllRunsExtractionFlow(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://example.com/tool.zip",
+			ExtractedFiles: []string{"./bin/tool.exe"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{Runner: runner, Store: store}
+
+	_, err := svc.DownloadTarget("https://example.com/tool.zip", install.Options{All: true})
+	if err != nil {
+		t.Fatalf("download target: %v", err)
+	}
+
+	if runner.calls != 1 {
+		t.Fatalf("expected runner to be called once, got %d", runner.calls)
+	}
+	if runner.opts.DownloadOnly {
+		t.Fatal("expected download target with --all to disable DownloadOnly")
+	}
+	if store.calls != 0 {
+		t.Fatalf("expected store to not be called, got %d", store.calls)
+	}
+}
+
 func TestInstallTargetUsesConfiguredDefaults(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [global]
