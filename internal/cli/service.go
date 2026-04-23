@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gookit/goutil/cliutil"
+	"github.com/gookit/goutil/mathutil"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -618,8 +619,9 @@ func printQueryResult(result app.QueryResult) {
 	fmt.Printf("action: %s\n", result.Action)
 	fmt.Printf("repo: %s\n", result.Repo)
 	if result.Tag != "" {
-		fmt.Printf("tag: %s\n", result.Tag)
+		fmt.Printf("version: %s\n", result.Tag)
 	}
+
 	if result.Info != nil {
 		if result.Info.Description != "" {
 			fmt.Printf("description: %s\n", result.Info.Description)
@@ -644,8 +646,9 @@ func printQueryResult(result app.QueryResult) {
 		}
 		return
 	}
+
 	if result.Latest != nil {
-		fmt.Printf("tag: %s\n", result.Latest.Tag)
+		fmt.Printf("version: %s\n", result.Latest.Tag)
 		if result.Latest.Name != "" {
 			fmt.Printf("name: %s\n", result.Latest.Name)
 		}
@@ -656,8 +659,9 @@ func printQueryResult(result app.QueryResult) {
 		fmt.Printf("assets_count: %d\n", result.Latest.AssetsCount)
 		return
 	}
+
 	if len(result.Releases) > 0 {
-		cols := []string{"Tag", "Name", "Published at", "Prerelease", "Assets"}
+		cols := []string{"Tag", "Name", "Published at", "Prerelease", "Assets Count"}
 		rows := make([][]any, 0, len(result.Releases))
 		for _, item := range result.Releases {
 			rows = append(rows, []any{
@@ -672,15 +676,13 @@ func printQueryResult(result app.QueryResult) {
 		return
 	}
 	if len(result.Assets) > 0 {
-		cols := []string{"Name", "Size", "Downloads", "Updated at", "URL"}
+		cols := []string{"Name", "Size", "Download Count"}
 		rows := make([][]any, 0, len(result.Assets))
 		for _, item := range result.Assets {
 			rows = append(rows, []any{
 				item.Name,
-				item.Size,
+				mathutil.DataSize(uint64(item.Size)),
 				item.DownloadCount,
-				item.UpdatedAt.Format(time.RFC3339),
-				item.URL,
 			})
 		}
 		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
