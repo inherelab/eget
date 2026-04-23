@@ -260,6 +260,87 @@ proxy_url = "http://127.0.0.1:7890"
 	}
 }
 
+func TestInstallTargetResolvesManagedPackageName(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[global]
+target = "~/.local/bin"
+
+["sipeed/picoclaw"]
+system = "windows/amd64"
+
+[packages.picoclaw]
+repo = "sipeed/picoclaw"
+target = "D:/Program/AITools/PicoClaw"
+tag = "v1.2.3"
+asset_filters = ["windows"]
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/sipeed/picoclaw/releases/download/v1.2.3/picoclaw.zip",
+			ExtractedFiles: []string{"./picoclaw.exe"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	_, err := svc.InstallTarget("picoclaw", install.Options{})
+	if err != nil {
+		t.Fatalf("install target: %v", err)
+	}
+
+	if runner.target != "sipeed/picoclaw" {
+		t.Fatalf("expected managed package to resolve repo, got %q", runner.target)
+	}
+	if runner.opts.Output != "D:/Program/AITools/PicoClaw" {
+		t.Fatalf("expected package target to be used, got %q", runner.opts.Output)
+	}
+	if runner.opts.System != "windows/amd64" {
+		t.Fatalf("expected repo system to be merged, got %q", runner.opts.System)
+	}
+	if runner.opts.Tag != "v1.2.3" {
+		t.Fatalf("expected package tag to be merged, got %q", runner.opts.Tag)
+	}
+	if len(runner.opts.Asset) != 1 || runner.opts.Asset[0] != "windows" {
+		t.Fatalf("expected package asset filter to be merged, got %#v", runner.opts.Asset)
+	}
+	if store.target != "sipeed/picoclaw" {
+		t.Fatalf("expected installed store to record real repo target, got %q", store.target)
+	}
+	if store.entry.Repo != "sipeed/picoclaw" {
+		t.Fatalf("expected installed repo sipeed/picoclaw, got %q", store.entry.Repo)
+	}
+	if store.entry.Target != "sipeed/picoclaw" {
+		t.Fatalf("expected installed target to be real repo, got %q", store.entry.Target)
+	}
+}
+
+func TestInstallTargetRejectsManagedPackageWithoutRepo(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[packages.picoclaw]
+target = "D:/Program/AITools/PicoClaw"
+`)
+	svc := Service{
+		Runner: &fakeRunner{},
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	_, err := svc.InstallTarget("picoclaw", install.Options{})
+	if err == nil {
+		t.Fatal("expected install target to fail when package repo is missing")
+	}
+	if err.Error() != `package "picoclaw" has no repo` {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestDownloadTargetUsesConfiguredCacheDirByDefault(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [global]

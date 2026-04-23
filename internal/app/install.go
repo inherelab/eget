@@ -45,17 +45,17 @@ type Service struct {
 }
 
 func (s Service) InstallTarget(target string, opts install.Options, extras ...InstallExtras) (RunResult, error) {
-	opts, err := s.resolveInstallOptions(target, opts, false)
+	runTarget, opts, err := s.resolveInstallRequest(target, opts, false)
 	if err != nil {
 		return RunResult{}, err
 	}
-	result, err := s.Runner.Run(target, opts)
+	result, err := s.Runner.Run(runTarget, opts)
 	if err != nil {
 		return RunResult{}, err
 	}
 
 	if s.Store != nil && len(result.ExtractedFiles) > 0 {
-		repo := storepkg.NormalizeRepoName(target)
+		repo := storepkg.NormalizeRepoName(runTarget)
 		tag, releaseDate := "", time.Time{}
 		if s.ReleaseInfo != nil {
 			if gotTag, gotDate, err := s.ReleaseInfo(repo, result.URL); err == nil {
@@ -66,7 +66,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 
 		entry := storepkg.Entry{
 			Repo:           repo,
-			Target:         target,
+			Target:         runTarget,
 			InstalledAt:    s.now(),
 			URL:            result.URL,
 			Asset:          chooseAsset(result),
@@ -76,7 +76,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 			Tag:            tag,
 			ReleaseDate:    releaseDate,
 		}
-		if err := s.Store.Record(target, entry); err != nil {
+		if err := s.Store.Record(runTarget, entry); err != nil {
 			return RunResult{}, err
 		}
 	}
@@ -85,7 +85,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 		if s.Config == nil {
 			return RunResult{}, fmt.Errorf("config service is required")
 		}
-		repo, err := install.NormalizeRepoTarget(target)
+		repo, err := install.NormalizeRepoTarget(runTarget)
 		if err != nil {
 			return RunResult{}, err
 		}
@@ -96,6 +96,31 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	}
 
 	return result, nil
+}
+
+func (s Service) resolveInstallRequest(target string, cli install.Options, preferCacheDir bool) (string, install.Options, error) {
+	cfg, err := s.loadConfig()
+	if err != nil {
+		return "", install.Options{}, err
+	}
+
+	if pkg, ok := cfg.Packages[target]; ok {
+		repo := util.DerefString(pkg.Repo)
+		if repo == "" {
+			return "", install.Options{}, fmt.Errorf("package %q has no repo", target)
+		}
+		opts, err := s.resolveInstallOptionsWithConfig(cfg, repo, pkg, cli, preferCacheDir)
+		if err != nil {
+			return "", install.Options{}, err
+		}
+		return repo, opts, nil
+	}
+
+	opts, err := s.resolveInstallOptionsWithConfig(cfg, target, cfgpkg.Section{}, cli, preferCacheDir)
+	if err != nil {
+		return "", install.Options{}, err
+	}
+	return target, opts, nil
 }
 
 func (s Service) DownloadTarget(target string, opts install.Options) (RunResult, error) {
@@ -151,13 +176,16 @@ func (s Service) resolveInstallOptions(target string, cli install.Options, prefe
 	if err != nil {
 		return install.Options{}, err
 	}
+	return s.resolveInstallOptionsWithConfig(cfg, target, cfgpkg.Section{}, cli, preferCacheDir)
+}
 
+func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string, pkg cfgpkg.Section, cli install.Options, preferCacheDir bool) (install.Options, error) {
 	repoKey := ""
 	if repo, err := install.NormalizeRepoTarget(target); err == nil {
 		repoKey = repo
 	}
 
-	merged := cfgpkg.MergeInstallOptions(cfg.Global, cfg.Repos[repoKey], cfgpkg.Section{}, cfgpkg.CLIOverrides{
+	merged := cfgpkg.MergeInstallOptions(cfg.Global, cfg.Repos[repoKey], pkg, cfgpkg.CLIOverrides{
 		All:          boolOpt(cli.All),
 		AssetFilters: stringsOpt(cli.Asset),
 		CacheDir:     stringOpt(cli.CacheDir),

@@ -193,6 +193,36 @@ func TestHandleInstallPrintsAddedPackageMessage(t *testing.T) {
 	}
 }
 
+func TestHandleInstallAcceptsManagedPackageName(t *testing.T) {
+	svc := &cliService{
+		appService: app.Service{
+			Runner: &fakeRunnerForCLI{
+				result: app.RunResult{
+					URL:            "https://github.com/sipeed/picoclaw/releases/download/v1.2.3/picoclaw.zip",
+					Tool:           "picoclaw",
+					ExtractedFiles: []string{"D:/Program/AITools/PicoClaw/picoclaw.exe"},
+				},
+			},
+			Store: &fakeInstalledStoreForCLI{},
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["picoclaw"] = cfgpkg.Section{
+					Repo:   util.StringPtr("sipeed/picoclaw"),
+					Target: util.StringPtr("D:/Program/AITools/PicoClaw"),
+				}
+				return cfg, nil
+			},
+		},
+	}
+
+	err := svc.handle("install", &InstallOptions{
+		Target: "picoclaw",
+	})
+	if err != nil {
+		t.Fatalf("handle install: %v", err)
+	}
+}
+
 func TestNewCLIServiceWiresReleaseInfo(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
@@ -526,7 +556,7 @@ func TestHandleQueryPrintsLatestRelease(t *testing.T) {
 		t.Fatalf("copy stdout: %v", err)
 	}
 	got := out.String()
-	if !strings.Contains(got, "version: v1.2.3") || !strings.Contains(got, "repo: owner/repo") {
+	if !strings.Contains(got, "action: latest") || !strings.Contains(got, "repo: owner/repo") {
 		t.Fatalf("expected latest query output, got %q", got)
 	}
 }
