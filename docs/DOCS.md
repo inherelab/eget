@@ -191,7 +191,6 @@ CLI > package > repo > global > default
 - `--tag`
 - `--system`
 - `--to`
-- `--cache-dir`
 - `--file`
 - `--asset`
 - `--source`
@@ -206,7 +205,7 @@ CLI > package > repo > global > default
 
 补充说明：
 
-- `--cache-dir` 可显式覆盖配置解析后的缓存目录，并传递给 install/download/add/update 对应的 app 层选项。
+- 缓存目录只能通过配置中的 `cache_dir` 设置，不再支持命令级 `--cache-dir` 覆盖。
 
 ## Constraints
 

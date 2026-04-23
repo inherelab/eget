@@ -63,14 +63,21 @@ eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 ```
 
-**Others Examples**
+**Download Examples**
 
 ```bash
 # download
 eget download ip7z/7zip
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 eget download --file README.md,LICENSE --to ./dist owner/repo
+eget download --file "*.txt" owner/repo
+eget download --file "bin/*" owner/repo
 eget download --all --to ./dist windirstat/windirstat
+```
+
+**Others Examples**
+
+```bash
 # uninstall
 eget uninstall fzf
 # list config and installed store
@@ -149,25 +156,26 @@ The target argument accepted by `install` and `download` can be:
 - `--tag`: Select a release tag; defaults to `latest` when omitted.
 - `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
 - `--to`: Set the install or download output path; accepts either a directory or a full file path.
-- `--cache-dir`: Set the remote download cache directory and reuse cached files on subsequent runs.
 - `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`.
 - `--asset`: Filter release assets by keyword; multiple filters can be separated by commas. Regex is also supported with the `REG:` prefix, for example `REG:\\.deb$`, and exclusions can use `^REG:...`.
 - `--source`: Download the source archive instead of a prebuilt binary release.
 - `--all`: Extract all files from the archive instead of selecting a single target file.
 - `--quiet`: Reduce normal command output for scripting or batch use.
 
+Cache behavior is configured via `config set global.cache_dir ...` or the `cache_dir` field in the config file; command-level `--cache-dir` overrides are not supported.
+
 `install` additionally supports:
 
 - `--add`: After a successful install, append the repo target to `[packages.<name>]` managed config.
 - `--name`: Override the managed package name; for single executable assets, it also acts as the default output-name hint.
 
-`update` additionally supports:
+`update` options supports:
 
 - `--all`: Update all managed packages instead of a single target.
 - `--dry-run`: Preview the update plan without performing installation changes.
 - `--interactive`: Interactively select which managed packages to update.
 
-`query` additionally supports:
+`query` options supports:
 
 - `--action`, `-a`: Query action. Supported values: `latest`, `releases`, `assets`, `info`.
 - `--tag`, `-t`: Select the release tag for the `assets` action; defaults to latest when omitted.

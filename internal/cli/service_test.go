@@ -20,12 +20,11 @@ import (
 	"github.com/inherelab/eget/internal/util"
 )
 
-func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
+func TestInstallOptionsFromCommandsDoNotSetCacheDir(t *testing.T) {
 	installOpts := installOptionsFromInstall(&InstallOptions{
 		Tag:      "nightly",
 		System:   "linux/amd64",
 		To:       "~/.local/bin",
-		CacheDir: "~/.cache/eget",
 		File:     "tool",
 		Asset:    "linux",
 		Source:   true,
@@ -34,8 +33,8 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 		Add:      true,
 		Name:     "tool",
 	})
-	if installOpts.CacheDir != "~/.cache/eget" {
-		t.Fatalf("expected install cache dir to propagate, got %q", installOpts.CacheDir)
+	if installOpts.CacheDir != "" {
+		t.Fatalf("expected install cache dir to stay empty, got %q", installOpts.CacheDir)
 	}
 	if installOpts.Name != "tool" {
 		t.Fatalf("expected install name to propagate, got %q", installOpts.Name)
@@ -45,13 +44,12 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 		Tag:      "nightly",
 		System:   "linux/amd64",
 		To:       "~/.cache/downloads",
-		CacheDir: "~/.cache/eget",
 		Asset:    "linux",
 		Source:   true,
 		Quiet:    true,
 	})
-	if downloadOpts.CacheDir != "~/.cache/eget" {
-		t.Fatalf("expected download cache dir to propagate, got %q", downloadOpts.CacheDir)
+	if downloadOpts.CacheDir != "" {
+		t.Fatalf("expected download cache dir to stay empty, got %q", downloadOpts.CacheDir)
 	}
 	if !downloadOpts.DownloadOnly {
 		t.Fatal("expected plain download options to default to raw download mode")
@@ -62,28 +60,26 @@ func TestInstallOptionsFromCommandsIncludeCacheDir(t *testing.T) {
 		Tag:      "nightly",
 		System:   "linux/amd64",
 		To:       "~/.local/bin",
-		CacheDir: "~/.cache/eget",
 		File:     "tool",
 		Asset:    "linux",
 		Source:   true,
 		All:      true,
 		Quiet:    true,
 	})
-	if addOpts.CacheDir != "~/.cache/eget" {
-		t.Fatalf("expected add cache dir to propagate, got %q", addOpts.CacheDir)
+	if addOpts.CacheDir != "" {
+		t.Fatalf("expected add cache dir to stay empty, got %q", addOpts.CacheDir)
 	}
 
 	updateOpts := installOptionsFromUpdate(&UpdateOptions{
 		Tag:      "nightly",
 		System:   "linux/amd64",
 		To:       "~/.local/bin",
-		CacheDir: "~/.cache/eget",
 		Asset:    "linux",
 		Source:   true,
 		Quiet:    true,
 	})
-	if updateOpts.CacheDir != "~/.cache/eget" {
-		t.Fatalf("expected update cache dir to propagate, got %q", updateOpts.CacheDir)
+	if updateOpts.CacheDir != "" {
+		t.Fatalf("expected update cache dir to stay empty, got %q", updateOpts.CacheDir)
 	}
 }
 
@@ -530,7 +526,7 @@ func TestHandleQueryPrintsLatestRelease(t *testing.T) {
 		t.Fatalf("copy stdout: %v", err)
 	}
 	got := out.String()
-	if !strings.Contains(got, "tag: v1.2.3") || !strings.Contains(got, "repo: owner/repo") {
+	if !strings.Contains(got, "version: v1.2.3") || !strings.Contains(got, "repo: owner/repo") {
 		t.Fatalf("expected latest query output, got %q", got)
 	}
 }

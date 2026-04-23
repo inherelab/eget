@@ -74,10 +74,6 @@ header: Eget Manual
 
 :    Set the output path or destination.
 
-  `--cache-dir=`
-
-:    Override the download cache directory used for remote assets.
-
   `--file=`
 
 :    Select a file to extract.
@@ -93,6 +89,8 @@ header: Eget Manual
   `--all`
 
 :    Extract all matching files. On `update`, this flag means update all managed packages.
+
+  Cache directory is configured through `global.cache_dir` in config; command-level `--cache-dir` overrides are not supported.
 
   `--quiet`
 

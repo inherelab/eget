@@ -46,7 +46,7 @@ eget install --tag nightly owner/repo
 
 ## 示例
 
-**安装示例**
+**安装命令示例**
 
 ```bash
 # install
@@ -64,14 +64,21 @@ eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 ```
 
-**其他命令示例**
+**下载命令示例**
 
 ```bash
 # download
 eget download ip7z/7zip
 eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.tar.gz
 eget download --file README.md,LICENSE --to ./dist owner/repo
+eget download --file "*.txt" owner/repo
+eget download --file "bin/*" owner/repo
 eget download --all --to ./dist windirstat/windirstat
+```
+
+**其他命令示例**
+
+```bash
 # uninstall
 eget uninstall fzf
 # list config and installed store
@@ -150,25 +157,26 @@ eget config set global.target ~/.local/bin
 - `--tag`: 指定发布版本标签；未提供时默认使用 `latest`。
 - `--system`: 指定目标系统与架构，例如 `windows/amd64`、`linux/arm64`。
 - `--to`: 指定安装或下载输出路径；可传目录，也可传完整文件路径。
-- `--cache-dir`: 指定远程下载缓存目录，命中缓存时会直接复用。
 - `--file`: 指定归档内要提取的文件；支持逗号分隔多个文件或 glob 模式，例如 `README.md,LICENSE`。
 - `--asset`: 指定资源过滤关键词；可用逗号分隔多个过滤条件，也支持 `REG:` 前缀正则，例如 `REG:\\.deb$`，排除可用 `^REG:...`。
 - `--source`: 下载源码归档而不是预构建二进制。
 - `--all`: 提取归档中的全部文件，而不是只选择一个目标文件。
 - `--quiet`: 精简常规输出，适用于脚本或批处理场景。
 
+缓存目录请通过 `config set global.cache_dir ...` 或配置文件中的 `cache_dir` 设置；命令级 `--cache-dir` 覆盖已不支持。
+
 `install` 额外支持：
 
 - `--add`: 安装成功后，将 repo 目标追加到 `[packages.<name>]` 托管配置中。
 - `--name`: 指定托管包名；对于单文件可执行资产，也会作为默认输出文件名提示。
 
-`update` 额外支持：
+`update` 支持选项：
 
 - `--all`: 更新全部托管包，而不是只更新单个目标。
 - `--dry-run`: 仅预览更新计划，不执行实际安装。
 - `--interactive`: 交互式选择要更新的托管包。
 
-`query` 额外支持：
+`query` 支持选项：
 
 - `--action`, `-a`: 查询动作，支持 `latest`、`releases`、`assets`、`info`。
 - `--tag`, `-t`: 为 `assets` 动作指定 release tag；不传时默认查询 latest。

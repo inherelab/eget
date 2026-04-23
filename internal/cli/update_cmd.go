@@ -9,7 +9,6 @@ type UpdateOptions struct {
 	Tag         string
 	System      string
 	To          string
-	CacheDir    string
 	File        string
 	Asset       string
 	Source      bool
@@ -39,7 +38,6 @@ func newUpdateCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")
 	cmd.StringVar(&opts.System, "system", "", "Target system")
 	cmd.StringVar(&opts.To, "to", "", "Install destination")
-	cmd.StringVar(&opts.CacheDir, "cache-dir", "", "Download cache directory")
 	cmd.StringVar(&opts.File, "file", "", "File to extract")
 	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
