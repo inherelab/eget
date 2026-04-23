@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/cliui/show"
 	"github.com/gookit/goutil/cliutil"
 	"github.com/gookit/goutil/mathutil"
 	"github.com/gookit/goutil/x/ccolor"
@@ -266,7 +267,15 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		if err != nil {
 			return err
 		}
-		printConfigList(os.Stdout, info.Path, info.Exists, cfg)
+		ccolor.Printf("# %s, exists: %v\n", info.Path, info.Exists)
+		show.MList(map[string]any{
+			"global": cfg.Global,
+			"apiCache": cfg.ApiCache,
+			"ghproxy": cfg.Ghproxy,
+		})
+		ccolor.Magentaln("📦 Configed Packages:")
+		show.MList(cfg.Packages)
+		// printConfigList(os.Stdout, info.Path, info.Exists, cfg)
 		return nil
 	case "get":
 		value, err := s.cfgService.ConfigGet(opts.Key)
@@ -619,40 +628,12 @@ func printQueryResult(result app.QueryResult) {
 	}
 
 	if result.Info != nil {
-		if result.Info.Description != "" {
-			fmt.Printf("description: %s\n", result.Info.Description)
-		}
-		if result.Info.Homepage != "" {
-			fmt.Printf("homepage: %s\n", result.Info.Homepage)
-		}
-		if result.Info.DefaultBranch != "" {
-			fmt.Printf("default_branch: %s\n", result.Info.DefaultBranch)
-		}
-		if result.Info.Stars > 0 {
-			fmt.Printf("stars: %d\n", result.Info.Stars)
-		}
-		if result.Info.Forks > 0 {
-			fmt.Printf("forks: %d\n", result.Info.Forks)
-		}
-		if result.Info.OpenIssues > 0 {
-			fmt.Printf("open_issues: %d\n", result.Info.OpenIssues)
-		}
-		if !result.Info.UpdatedAt.IsZero() {
-			fmt.Printf("updated_at: %s\n", result.Info.UpdatedAt.Format(time.RFC3339))
-		}
+		show.AList("Repo Info", result.Info)
 		return
 	}
 
 	if result.Latest != nil {
-		fmt.Printf("version: %s\n", result.Latest.Tag)
-		if result.Latest.Name != "" {
-			fmt.Printf("name: %s\n", result.Latest.Name)
-		}
-		if !result.Latest.PublishedAt.IsZero() {
-			fmt.Printf("published_at: %s\n", result.Latest.PublishedAt.Format(time.RFC3339))
-		}
-		fmt.Printf("prerelease: %t\n", result.Latest.Prerelease)
-		fmt.Printf("assets_count: %d\n", result.Latest.AssetsCount)
+		show.AList("Latest Release", result.Latest)
 		return
 	}
 
