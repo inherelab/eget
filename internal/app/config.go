@@ -121,6 +121,11 @@ func (s ConfigService) ConfigSet(key, value string) error {
 	if err != nil {
 		return err
 	}
+
+	// cast: packages.<name>.asset -> packages.<name>.asset_filters
+	if strings.HasPrefix(key, "packages.") && strings.HasSuffix(key, ".asset") {
+		key = key + "_filters"
+	}
 	if err := cfgpkg.SetByPath(cfg, key, value); err != nil {
 		return err
 	}
