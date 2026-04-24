@@ -91,6 +91,10 @@ func dumpConfigString(file *File) (string, error) {
 	return buf.String(), nil
 }
 
+func Save(path string, file *File) error {
+	return saveConfigFile(path, file)
+}
+
 func saveConfigFile(path string, file *File) error {
 	cfg := encodeConfigFile(file)
 	return configutil.SaveTOMLFile(path, cfg)

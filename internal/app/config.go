@@ -103,16 +103,17 @@ func (s ConfigService) ConfigList() (*cfgpkg.File, error) {
 	return s.load()
 }
 
-func (s ConfigService) ConfigGet(key string) (string, error) {
+func (s ConfigService) ConfigGet(key string) (any, error) {
 	cfg, err := s.load()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+
 	value, ok := cfgpkg.GetByPath(cfg, key)
 	if !ok {
-		return "", fmt.Errorf("unsupported config key %q", key)
+		return nil, fmt.Errorf("unsupported config key %q", key)
 	}
-	return fmt.Sprint(value), nil
+	return value, nil
 }
 
 func (s ConfigService) ConfigSet(key, value string) error {

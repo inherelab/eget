@@ -258,7 +258,7 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		}
 		ccolor.Successf("✓ Initialized config: %s\n", path)
 		return nil
-	case "list", "ls", "show":
+	case "list", "ls":
 		info, err := s.cfgService.ConfigInfo()
 		if err != nil {
 			return err
@@ -273,7 +273,7 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 			"apiCache": cfg.ApiCache,
 			"ghproxy": cfg.Ghproxy,
 		})
-		ccolor.Magentaln("📦 Configed Packages:")
+		ccolor.Yellowln("📦 Configed Packages:")
 		show.MList(cfg.Packages)
 		// printConfigList(os.Stdout, info.Path, info.Exists, cfg)
 		return nil
@@ -282,7 +282,13 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(value)
+		if value == nil {
+			ccolor.Infoln("nil")
+		} else if str, ok := value.(string); ok {
+			ccolor.Infoln(str)
+		} else {
+			show.JSON(value)
+		}
 		return nil
 	case "set":
 		err := s.cfgService.ConfigSet(opts.Key, opts.Value)

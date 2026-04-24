@@ -98,7 +98,7 @@ eget update --all
 # config
 eget add --name fzf --to ~/.local/bin junegunn/fzf
 eget config init
-eget config list|show
+eget config list|ls
 eget config get global.target
 eget config set global.target ~/.local/bin
 ```
@@ -107,6 +107,7 @@ eget config set global.target ~/.local/bin
 
 `install` 和 `download` 的目标参数可以是：
 
+- `name` in the config packages
 - `owner/repo`
 - GitHub 仓库 URL
 - 直接下载 URL
@@ -148,7 +149,7 @@ eget config set global.target ~/.local/bin
 
 `config`(alias: `cfg`)
 
-- 支持 `init`、`list` / `ls` / `show`、`get KEY`、`set KEY VALUE`。
+- 支持 `init`、`list` / `ls`、`get KEY`、`set KEY VALUE`。
 
 ## 主要选项
 
@@ -163,7 +164,7 @@ eget config set global.target ~/.local/bin
 - `--all`: 提取归档中的全部文件，而不是只选择一个目标文件。
 - `--quiet`: 精简常规输出，适用于脚本或批处理场景。
 
-缓存目录请通过 `config set global.cache_dir ...` 或配置文件中的 `cache_dir` 设置；命令级 `--cache-dir` 覆盖已不支持。
+> 缓存目录请通过 `config set global.cache_dir ...` 或配置文件中的 `cache_dir` 设置。
 
 `install` 额外支持：
 

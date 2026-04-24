@@ -203,10 +203,6 @@ CLI > package > repo > global > default
 - `--dry-run`
 - `--interactive`
 
-补充说明：
-
-- 缓存目录只能通过配置中的 `cache_dir` 设置，不再支持命令级 `--cache-dir` 覆盖。
-
 ## Constraints
 
 由于 `cflag/capp` 的解析模型，参数顺序必须遵循：

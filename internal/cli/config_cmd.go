@@ -25,7 +25,7 @@ func newConfigCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.Aliases = []string{"cfg"}
 	cmd.LongHelp = `<info>Config actions</>:
   init                Initialize the config file with default values
-  list | ls | show    Print current config values and file status
+  list | ls           Print current config values and file status
   get KEY             Print one config value
   set KEY VALUE       Update one config value
 
@@ -35,7 +35,7 @@ func newConfigCmd(handler CommandHandler) (*capp.Cmd, func()) {
   eget config get global.target
   eget config set global.target ~/.local/bin`
 
-    cmd.AddArg("action", "Config action: init, list, ls, show, get, set", false, nil)
+    cmd.AddArg("action", "Config action: init, list, ls, get, set", false, nil)
 	cmd.AddArg("key", "Config key", false, nil)
 	cmd.AddArg("value", "Config value for set", false, nil)
 	return cmd, func() {

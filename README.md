@@ -97,7 +97,7 @@ eget update --all
 # config
 eget add --name fzf --to ~/.local/bin junegunn/fzf
 eget config init
-eget config list|show
+eget config list|ls
 eget config get global.target
 eget config set global.target ~/.local/bin
 ```
@@ -106,6 +106,7 @@ eget config set global.target ~/.local/bin
 
 The target argument accepted by `install` and `download` can be:
 
+- `name` in the config packages
 - `owner/repo`
 - GitHub repository URL
 - Direct download URL
@@ -147,7 +148,7 @@ The target argument accepted by `install` and `download` can be:
 
 `config` (alias: `cfg`)
 
-- Supports `init`, `list` / `ls` / `show`, `get KEY`, and `set KEY VALUE`.
+- Supports `init`, `list` / `ls`, `get KEY`, and `set KEY VALUE`.
 
 ## Main Options
 
@@ -162,7 +163,7 @@ The target argument accepted by `install` and `download` can be:
 - `--all`: Extract all files from the archive instead of selecting a single target file.
 - `--quiet`: Reduce normal command output for scripting or batch use.
 
-Cache behavior is configured via `config set global.cache_dir ...` or the `cache_dir` field in the config file; command-level `--cache-dir` overrides are not supported.
+> Cache behavior is configured via `config set global.cache_dir ...` or the `cache_dir` field in the config file.
 
 `install` additionally supports:
 
