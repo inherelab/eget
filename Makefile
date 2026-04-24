@@ -1,10 +1,10 @@
 ## Eget — Makefile
 
 APP     := eget
-VERSION ?= 0.1.0
+MAIN_DIR := ./cmd/eget
 GOEXE = $(shell go env GOEXE)
 BINARY  := $(APP)$(GOEXE)
-MAIN_DIR := ./cmd/eget
+VERSION ?= $(shell echo "$$(git for-each-ref refs/tags/ --count=1 --sort=-version:refname --format='%(refname:short)' | echo 'dev' 2>/dev/null)-$(REV)" | sed 's/^v//')
 
 # Build metadata
 GIT_HASH  := $(shell git rev-parse --short=8 HEAD 2>/dev/null || echo "unknown")

@@ -11,7 +11,7 @@ import (
 const FormatTOML = "toml"
 
 func NewTOMLManager(name string) *gconfig.Config {
-	cfg := gconfig.NewEmpty(name)
+	cfg := gconfig.NewEmpty(name, gconfig.ParseEnv)
 	cfg.AddDriver(gtoml.Driver)
 	return cfg
 }

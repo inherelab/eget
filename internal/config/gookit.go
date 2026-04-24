@@ -11,13 +11,6 @@ import (
 	"github.com/inherelab/eget/internal/util/configutil"
 )
 
-type dumpModel struct {
-	Global   Section            `toml:"global"`
-	ApiCache APICacheSection    `toml:"api_cache"`
-	Ghproxy  GhproxySection     `toml:"ghproxy"`
-	Packages map[string]Section `toml:"packages"`
-}
-
 func newConfigManager() *gconfig.Config {
 	return configutil.NewTOMLManager("eget-config")
 }
@@ -32,25 +25,17 @@ func decodeConfigFile(cfg *gconfig.Config) (*File, error) {
 	}
 
 	conf := NewFile()
-	if cfg.Exists("global", true) {
-		if err := cfg.BindStruct("global", &conf.Global); err != nil {
-			return nil, err
-		}
+	if err := cfg.MapOnExists("global", &conf.Global); err != nil {
+		return nil, err
 	}
-	if cfg.Exists("api_cache", true) {
-		if err := cfg.BindStruct("api_cache", &conf.ApiCache); err != nil {
-			return nil, err
-		}
+	if err := cfg.MapOnExists("api_cache", &conf.ApiCache); err != nil {
+		return nil, err
 	}
-	if cfg.Exists("ghproxy", true) {
-		if err := cfg.BindStruct("ghproxy", &conf.Ghproxy); err != nil {
-			return nil, err
-		}
+	if err := cfg.MapOnExists("ghproxy", &conf.Ghproxy); err != nil {
+		return nil, err
 	}
-	if cfg.Exists("packages", true) {
-		if err := cfg.BindStruct("packages", &conf.Packages); err != nil {
-			return nil, err
-		}
+	if err := cfg.MapOnExists("packages", &conf.Packages); err != nil {
+		return nil, err
 	}
 
 	rootData := cfg.Data()

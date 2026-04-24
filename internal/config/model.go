@@ -44,13 +44,6 @@ type File struct {
 	Packages map[string]Section `toml:"packages" mapstructure:"packages"`
 }
 
-type mergedFile struct {
-	Global   Section            `toml:"global" mapstructure:"global"`
-	ApiCache APICacheSection    `toml:"api_cache" mapstructure:"api_cache"`
-	Ghproxy  GhproxySection     `toml:"ghproxy" mapstructure:"ghproxy"`
-	Packages map[string]Section `toml:"packages" mapstructure:"packages"`
-}
-
 type Merged struct {
 	All          bool
 	AssetFilters []string
