@@ -49,6 +49,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	if err != nil {
 		return RunResult{}, err
 	}
+	opts = normalizeExtractionOptions(opts)
 	result, err := s.Runner.Run(runTarget, opts)
 	if err != nil {
 		return RunResult{}, err
@@ -124,27 +125,38 @@ func (s Service) resolveInstallRequest(target string, cli install.Options, prefe
 }
 
 func (s Service) DownloadTarget(target string, opts install.Options) (RunResult, error) {
-	if hasMultipleExtractPatterns(opts.ExtractFile) {
-		opts.All = true
-	}
-	opts.DownloadOnly = opts.ExtractFile == "" && !opts.All
 	var err error
 	opts, err = s.resolveInstallOptions(target, opts, true)
 	if err != nil {
 		return RunResult{}, err
 	}
+	opts = normalizeExtractionOptions(opts)
+	opts.DownloadOnly = opts.ExtractFile == "" && !opts.All
 	return s.Runner.Run(target, opts)
+}
+
+func normalizeExtractionOptions(opts install.Options) install.Options {
+	if hasMultipleExtractPatterns(opts.ExtractFile) {
+		opts.All = true
+	}
+	if opts.ExtractFile != "" || opts.All {
+		opts.DownloadOnly = false
+	}
+	return opts
 }
 
 func hasMultipleExtractPatterns(value string) bool {
 	parts := strings.Split(value, ",")
-	count := 0
 	for _, part := range parts {
-		if strings.TrimSpace(part) != "" {
-			count++
-			if count > 1 {
-				return true
-			}
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if strings.Contains(value, ",") {
+			return true
+		}
+		if strings.ContainsAny(part, "*?[{") {
+			return true
 		}
 	}
 	return false

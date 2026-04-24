@@ -33,6 +33,9 @@ func TestExtractFileRequestsMultipleMatches(t *testing.T) {
 	if !extractAllFromFileSpec("README,LICENSE") {
 		t.Fatal("expected comma-separated file spec to enable multi extraction mode")
 	}
+	if !extractAllFromFileSpec("*.exe") {
+		t.Fatal("expected glob file spec to enable multi extraction mode")
+	}
 }
 
 func TestAssetDetectorSupportsRegexInclude(t *testing.T) {

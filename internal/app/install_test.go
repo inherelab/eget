@@ -186,6 +186,28 @@ func TestDownloadTargetWithExtractFileRunsExtractionFlow(t *testing.T) {
 	}
 }
 
+func TestDownloadTargetWithGlobExtractFileEnablesExtractAll(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://example.com/tool.zip",
+			ExtractedFiles: []string{"./picoclaw.exe", "./picoclaw-launcher.exe"},
+		},
+	}
+	svc := Service{Runner: runner}
+
+	_, err := svc.DownloadTarget("https://example.com/tool.zip", install.Options{ExtractFile: "*.exe"})
+	if err != nil {
+		t.Fatalf("download target: %v", err)
+	}
+
+	if !runner.opts.All {
+		t.Fatal("expected glob extract file to enable extract-all mode")
+	}
+	if runner.opts.DownloadOnly {
+		t.Fatal("expected glob extract file to disable DownloadOnly")
+	}
+}
+
 func TestDownloadTargetWithAllRunsExtractionFlow(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{
@@ -272,6 +294,7 @@ system = "windows/amd64"
 repo = "sipeed/picoclaw"
 target = "D:/Program/AITools/PicoClaw"
 tag = "v1.2.3"
+file = "*.exe"
 asset_filters = ["windows"]
 `)
 	runner := &fakeRunner{
@@ -305,6 +328,12 @@ asset_filters = ["windows"]
 	}
 	if runner.opts.Tag != "v1.2.3" {
 		t.Fatalf("expected package tag to be merged, got %q", runner.opts.Tag)
+	}
+	if runner.opts.ExtractFile != "*.exe" {
+		t.Fatalf("expected package file glob to be merged, got %q", runner.opts.ExtractFile)
+	}
+	if !runner.opts.All {
+		t.Fatal("expected file glob to enable extract-all mode")
 	}
 	if len(runner.opts.Asset) != 1 || runner.opts.Asset[0] != "windows" {
 		t.Fatalf("expected package asset filter to be merged, got %#v", runner.opts.Asset)
