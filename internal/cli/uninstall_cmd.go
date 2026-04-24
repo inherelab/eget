@@ -17,7 +17,7 @@ func newUninstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		return handler(cmd.Name, &snapshot)
 	})
 
-	cmd.Aliases = []string{"uni", "remove", "rm"}
+	cmd.Aliases = []string{"uni", "rm"}
 	cmd.AddArg("target", "Package name or repo to uninstall", true, nil)
 	return cmd, func() {
 		*opts = UninstallOptions{}
