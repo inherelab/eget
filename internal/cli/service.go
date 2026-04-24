@@ -27,6 +27,7 @@ type cliService struct {
 	cfgService       app.ConfigService
 	listService      app.ListService
 	queryService     app.QueryService
+	searchService    app.SearchService
 	uninstallService app.UninstallService
 	updService       app.UpdateService
 }
@@ -78,6 +79,9 @@ func newCLIService() (*cliService, error) {
 	queryService := app.QueryService{
 		Client: newGitHubQueryClient(defaultOpts),
 	}
+	searchService := app.SearchService{
+		Client: newGitHubSearchClient(defaultOpts),
+	}
 	uninstallService := app.UninstallService{
 		Store: store,
 	}
@@ -98,6 +102,7 @@ func newCLIService() (*cliService, error) {
 		cfgService:       cfgService,
 		listService:      listService,
 		queryService:     queryService,
+		searchService:    searchService,
 		uninstallService: uninstallService,
 		updService:       updService,
 	}, nil
@@ -150,6 +155,9 @@ func (s *cliService) handle(name string, options any) error {
 	case "query":
 		opts := options.(*QueryOptions)
 		return s.handleQuery(opts)
+	case "search":
+		opts := options.(*SearchOptions)
+		return s.handleSearch(opts)
 	case "update":
 		opts := options.(*UpdateOptions)
 		return s.handleUpdate(opts)
@@ -335,6 +343,31 @@ func (s *cliService) handleQuery(opts *QueryOptions) error {
 		return nil
 	}
 	printQueryResult(result)
+	return nil
+}
+
+func (s *cliService) handleSearch(opts *SearchOptions) error {
+	result, err := s.searchService.Search(app.SearchOptions{
+		Keyword: opts.Keyword,
+		Extras:  opts.Extras,
+		Limit:   opts.Limit,
+		Sort:    opts.Sort,
+		Order:   opts.Order,
+	})
+	if err != nil {
+		return err
+	}
+
+	if opts.JSON {
+		text, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(text))
+		return nil
+	}
+
+	printSearchResult(result)
 	return nil
 }
 
@@ -670,4 +703,24 @@ func printQueryResult(result app.QueryResult) {
 		}
 		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 	}
+}
+
+func printSearchResult(result app.SearchResult) {
+	if len(result.Items) == 0 {
+		ccolor.Infoln("no repositories found")
+		return
+	}
+
+	cols := []string{"Repo", "Language", "Stars", "Updated", "Description"}
+	rows := make([][]any, 0, len(result.Items))
+	for _, item := range result.Items {
+		rows = append(rows, []any{
+			item.FullName,
+			item.Language,
+			item.StargazersCount,
+			item.UpdatedAt.Format(time.RFC3339),
+			item.Description,
+		})
+	}
+	ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 }

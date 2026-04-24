@@ -595,6 +595,117 @@ func TestHandleQueryJSONOutput(t *testing.T) {
 	}
 }
 
+func TestHandleSearchPrintsTable(t *testing.T) {
+	svc := &cliService{
+		searchService: app.SearchService{
+			Client: &fakeSearchClientForCLI{
+				result: app.SearchResult{
+					TotalCount: 1,
+					Items: []app.SearchRepo{{
+						FullName:    "BurntSushi/ripgrep",
+						Description: "ripgrep recursively searches directories",
+						StargazersCount: 123,
+						Language:    "Rust",
+						HTMLURL:     "https://github.com/BurntSushi/ripgrep",
+					}},
+				},
+			},
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	err := svc.handle("search", &SearchOptions{Keyword: "ripgrep", Extras: []string{"language:rust"}})
+	if err != nil {
+		t.Fatalf("handle search: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(strings.ToLower(got), "repo") || !strings.Contains(strings.ToLower(got), "stars") {
+		t.Fatalf("expected search table headers, got %q", got)
+	}
+	if !strings.Contains(got, "BurntSushi/ripgrep") || !strings.Contains(got, "Rust") {
+		t.Fatalf("expected search row in output, got %q", got)
+	}
+}
+
+func TestHandleSearchJSONOutput(t *testing.T) {
+	svc := &cliService{
+		searchService: app.SearchService{
+			Client: &fakeSearchClientForCLI{
+				result: app.SearchResult{
+					TotalCount: 1,
+					Items: []app.SearchRepo{{
+						FullName:        "BurntSushi/ripgrep",
+						StargazersCount: 321,
+					}},
+				},
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handle("search", &SearchOptions{Keyword: "ripgrep", JSON: true})
+	if err != nil {
+		t.Fatalf("handle search json: %v", err)
+	}
+
+	_ = w.Close()
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
+	if !strings.Contains(out.String(), `"total_count": 1`) || !strings.Contains(out.String(), `"full_name": "BurntSushi/ripgrep"`) {
+		t.Fatalf("expected search json output, got %q", out.String())
+	}
+}
+
+func TestHandleSearchPassesOptionsToSearchService(t *testing.T) {
+	fakeClient := &fakeSearchClientForCLI{
+		result: app.SearchResult{},
+	}
+	svc := &cliService{
+		searchService: app.SearchService{
+			Client: fakeClient,
+		},
+	}
+
+	err := svc.handle("search", &SearchOptions{
+		Keyword: "ripgrep",
+		Limit:   20,
+		Sort:    "stars",
+		Order:   "desc",
+		Extras:  []string{"language:rust", "topic:cli"},
+	})
+	if err != nil {
+		t.Fatalf("handle search: %v", err)
+	}
+
+	if fakeClient.query != "ripgrep language:rust topic:cli" {
+		t.Fatalf("expected merged query to propagate, got %q", fakeClient.query)
+	}
+	if fakeClient.limit != 20 {
+		t.Fatalf("expected limit to propagate, got %d", fakeClient.limit)
+	}
+	if fakeClient.sort != "stars" {
+		t.Fatalf("expected sort to propagate, got %q", fakeClient.sort)
+	}
+	if fakeClient.order != "desc" {
+		t.Fatalf("expected order to propagate, got %q", fakeClient.order)
+	}
+}
+
 type fakeRunnerForCLI struct {
 	result app.RunResult
 }
@@ -644,4 +755,24 @@ func (f *fakeQueryClientForCLI) ListReleases(repo string, limit int, includePrer
 
 func (f *fakeQueryClientForCLI) ReleaseAssets(repo, tag string) ([]app.QueryAsset, error) {
 	return f.assets, nil
+}
+
+type fakeSearchClientForCLI struct {
+	result app.SearchResult
+	err    error
+	query  string
+	limit  int
+	sort   string
+	order  string
+}
+
+func (f *fakeSearchClientForCLI) SearchRepositories(query string, limit int, sort, order string) (app.SearchResult, error) {
+	f.query = query
+	f.limit = limit
+	f.sort = sort
+	f.order = order
+	if f.err != nil {
+		return app.SearchResult{}, f.err
+	}
+	return f.result, nil
 }
