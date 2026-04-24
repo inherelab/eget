@@ -108,12 +108,11 @@ func (s ConfigService) ConfigGet(key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	section, field, pkgName, err := resolveSection(cfg, key)
-	if err != nil {
-		return "", err
+	value, ok := cfgpkg.GetByPath(cfg, key)
+	if !ok {
+		return "", fmt.Errorf("unsupported config key %q", key)
 	}
-	_ = pkgName
-	return getSectionField(section, field)
+	return fmt.Sprint(value), nil
 }
 
 func (s ConfigService) ConfigSet(key, value string) error {
@@ -121,15 +120,8 @@ func (s ConfigService) ConfigSet(key, value string) error {
 	if err != nil {
 		return err
 	}
-	section, field, pkgName, err := resolveSection(cfg, key)
-	if err != nil {
+	if err := cfgpkg.SetByPath(cfg, key, value); err != nil {
 		return err
-	}
-	if err := setSectionField(section, field, value); err != nil {
-		return err
-	}
-	if pkgName != "" {
-		cfg.Packages[pkgName] = *section
 	}
 	return s.save(cfg)
 }
@@ -190,70 +182,4 @@ func sectionFromInstallOptions(repo, name string, opts install.Options) cfgpkg.S
 		section.All = util.BoolPtr(true)
 	}
 	return section
-}
-
-func resolveSection(cfg *cfgpkg.File, key string) (*cfgpkg.Section, string, string, error) {
-	parts := strings.Split(key, ".")
-	switch {
-	case len(parts) == 2 && parts[0] == "global":
-		return &cfg.Global, parts[1], "", nil
-	case len(parts) == 3 && parts[0] == "packages":
-		section, ok := cfg.Packages[parts[1]]
-		if !ok {
-			return nil, "", "", fmt.Errorf("unknown package %q", parts[1])
-		}
-		return &section, parts[2], parts[1], nil
-	default:
-		return nil, "", "", fmt.Errorf("unsupported config key %q", key)
-	}
-}
-
-func getSectionField(section *cfgpkg.Section, field string) (string, error) {
-	switch field {
-	case "target":
-		return util.DerefString(section.Target), nil
-	case "system":
-		return util.DerefString(section.System), nil
-	case "cache_dir":
-		return util.DerefString(section.CacheDir), nil
-	case "proxy_url":
-		return util.DerefString(section.ProxyURL), nil
-	case "repo":
-		return util.DerefString(section.Repo), nil
-	case "file":
-		return util.DerefString(section.File), nil
-	case "tag":
-		return util.DerefString(section.Tag), nil
-	case "verify_sha256":
-		return util.DerefString(section.Verify), nil
-	default:
-		return "", fmt.Errorf("unsupported config field %q", field)
-	}
-}
-
-func setSectionField(section *cfgpkg.Section, field, value string) error {
-	switch field {
-	case "target":
-		section.Target = util.StringPtr(value)
-	case "system":
-		section.System = util.StringPtr(value)
-	case "cache_dir":
-		section.CacheDir = util.StringPtr(value)
-	case "proxy_url":
-		if !strings.HasPrefix(value, "http") {
-			value = "http://" + value
-		}
-		section.ProxyURL = util.StringPtr(value)
-	case "repo":
-		section.Repo = util.StringPtr(value)
-	case "file":
-		section.File = util.StringPtr(value)
-	case "tag":
-		section.Tag = util.StringPtr(value)
-	case "verify_sha256":
-		section.Verify = util.StringPtr(value)
-	default:
-		return fmt.Errorf("unsupported config field %q", field)
-	}
-	return nil
 }

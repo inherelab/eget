@@ -2,8 +2,6 @@ package config
 
 import (
 	"os"
-
-	"github.com/BurntSushi/toml"
 )
 
 func Load() (*File, error) {
@@ -27,40 +25,11 @@ func Load() (*File, error) {
 }
 
 func LoadFile(path string) (*File, error) {
-	conf := NewFile()
-
-	var decoded mergedFile
-	meta, err := toml.DecodeFile(path, &decoded)
+	cfg, err := loadConfigManager(path)
 	if err != nil {
 		return nil, err
 	}
-
-	conf.Global = decoded.Global
-	conf.ApiCache = decoded.ApiCache
-	conf.Ghproxy = decoded.Ghproxy
-	if decoded.Packages != nil {
-		conf.Packages = decoded.Packages
-	}
-
-	repos := make(map[string]Section)
-	meta, err = toml.DecodeFile(path, &repos)
-	if err != nil {
-		return nil, err
-	}
-
-	delete(repos, "global")
-	delete(repos, "api_cache")
-	delete(repos, "ghproxy")
-	delete(repos, "packages")
-
-	conf.Repos = repos
-	conf.Meta.Keys = make([]string, len(meta.Keys()))
-	for i, key := range meta.Keys() {
-		conf.Meta.Keys[i] = key.String()
-	}
-	conf.Meta.MetaData = &meta
-
-	return conf, nil
+	return decodeConfigFile(cfg)
 }
 
 func NewFile() *File {
