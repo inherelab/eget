@@ -1,19 +1,18 @@
 package installed
 
 import (
-	gconfig "github.com/gookit/config/v2"
 	"github.com/inherelab/eget/internal/util/configutil"
 )
 
-func newStoreConfigManager() *gconfig.Config {
-	return configutil.NewTOMLManager("eget-installed-store")
+func newStoreConfigManager() *configutil.Manager {
+	return configutil.NewManager("eget-installed-store")
 }
 
-func loadStoreConfigManager(path string) (*gconfig.Config, error) {
-	return configutil.LoadTOMLFile("eget-installed-store", path)
+func loadStoreConfigManager(path string) (*configutil.Manager, error) {
+	return configutil.LoadManager("eget-installed-store", path)
 }
 
-func decodeStoreConfig(cfg *gconfig.Config) (*Config, error) {
+func decodeStoreConfig(cfg *configutil.Manager) (*Config, error) {
 	conf := &Config{Installed: map[string]Entry{}}
 	if cfg == nil || !cfg.Exists("installed", true) {
 		return conf, nil
@@ -27,7 +26,7 @@ func decodeStoreConfig(cfg *gconfig.Config) (*Config, error) {
 	return conf, nil
 }
 
-func encodeStoreConfig(conf *Config) *gconfig.Config {
+func encodeStoreConfig(conf *Config) *configutil.Manager {
 	cfg := newStoreConfigManager()
 	if conf == nil {
 		conf = &Config{}
@@ -43,7 +42,7 @@ func encodeStoreConfig(conf *Config) *gconfig.Config {
 }
 
 func saveStoreConfig(path string, conf *Config) error {
-	return configutil.SaveTOMLFile(path, encodeStoreConfig(conf))
+	return encodeStoreConfig(conf).SaveTo(path)
 }
 
 func entryToMap(entry Entry) map[string]any {

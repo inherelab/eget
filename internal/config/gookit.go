@@ -7,19 +7,18 @@ import (
 	"strconv"
 	"strings"
 
-	gconfig "github.com/gookit/config/v2"
 	"github.com/inherelab/eget/internal/util/configutil"
 )
 
-func newConfigManager() *gconfig.Config {
-	return configutil.NewTOMLManager("eget-config")
+func newConfigManager() *configutil.Manager {
+	return configutil.NewManager("eget-config")
 }
 
-func loadConfigManager(path string) (*gconfig.Config, error) {
-	return configutil.LoadTOMLFile("eget-config", path)
+func loadConfigManager(path string) (*configutil.Manager, error) {
+	return configutil.LoadManager("eget-config", path)
 }
 
-func decodeConfigFile(cfg *gconfig.Config) (*File, error) {
+func decodeConfigFile(cfg *configutil.Manager) (*File, error) {
 	if cfg == nil {
 		return NewFile(), nil
 	}
@@ -55,7 +54,7 @@ func decodeConfigFile(cfg *gconfig.Config) (*File, error) {
 	return conf, nil
 }
 
-func encodeConfigFile(file *File) *gconfig.Config {
+func encodeConfigFile(file *File) *configutil.Manager {
 	cfg := newConfigManager()
 	if file == nil {
 		file = NewFile()
@@ -79,7 +78,7 @@ func encodeConfigFile(file *File) *gconfig.Config {
 
 func dumpConfig(file *File, out io.Writer) error {
 	cfg := encodeConfigFile(file)
-	_, err := cfg.DumpTo(out, configutil.FormatTOML)
+	_, err := cfg.DumpTo(out)
 	return err
 }
 
@@ -96,8 +95,7 @@ func Save(path string, file *File) error {
 }
 
 func saveConfigFile(path string, file *File) error {
-	cfg := encodeConfigFile(file)
-	return configutil.SaveTOMLFile(path, cfg)
+	return encodeConfigFile(file).SaveTo(path)
 }
 
 func GetByPath(file *File, key string) (any, bool) {
