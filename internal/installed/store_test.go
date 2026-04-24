@@ -81,6 +81,60 @@ func TestStoreSaveAndRemoveEntry(t *testing.T) {
 	}
 }
 
+func TestStoreSaveRoundTripWithExtendedFields(t *testing.T) {
+	tmp := t.TempDir()
+	store := NewStore(Options{
+		HomeDir:   filepath.Join(tmp, "home"),
+		GOOS:      "linux",
+		LookupEnv: func(string) (string, bool) { return "", false },
+	})
+
+	releasedAt := time.Unix(1710003600, 0).UTC()
+	cfg := &Config{
+		Installed: map[string]Entry{
+			"gookit/gitw": {
+				Repo:           "gookit/gitw",
+				Target:         "gookit/gitw",
+				InstalledAt:    time.Unix(1710000000, 0).UTC(),
+				URL:            "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
+				Asset:          "chlog-windows-amd64.exe",
+				Tool:           "chlog",
+				ExtractedFiles: []string{"chlog.exe"},
+				Options: map[string]interface{}{
+					"tag":    "v0.3.6",
+					"system": "windows/amd64",
+				},
+				Version:     "v0.3.6",
+				Tag:         "v0.3.6",
+				ReleaseDate: releasedAt,
+			},
+		},
+	}
+
+	if err := store.Save(cfg); err != nil {
+		t.Fatalf("save config: %v", err)
+	}
+
+	reloaded, err := store.Load()
+	if err != nil {
+		t.Fatalf("reload config: %v", err)
+	}
+
+	entry, ok := reloaded.Installed["gookit/gitw"]
+	if !ok {
+		t.Fatal("expected saved entry to reload")
+	}
+	if entry.Tool != "chlog" || entry.Tag != "v0.3.6" || entry.Version != "v0.3.6" {
+		t.Fatalf("expected extended fields to round-trip, got %#v", entry)
+	}
+	if !entry.ReleaseDate.Equal(releasedAt) {
+		t.Fatalf("expected release date %v, got %v", releasedAt, entry.ReleaseDate)
+	}
+	if entry.Options["system"] != "windows/amd64" {
+		t.Fatalf("expected options to round-trip, got %#v", entry.Options)
+	}
+}
+
 func TestStoreRecordAndRemove(t *testing.T) {
 	tmp := t.TempDir()
 	store := NewStore(Options{

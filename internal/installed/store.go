@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -54,17 +53,23 @@ func (s *Store) Path() string {
 func (s *Store) Load() (*Config, error) {
 	configPath := s.Path()
 
-	var config Config
-	_, err := toml.DecodeFile(configPath, &config)
+	cfg, err := loadStoreConfigManager(configPath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to load installed config: %w", err)
+	}
+	if os.IsNotExist(err) {
+		return &Config{Installed: make(map[string]Entry)}, nil
+	}
+
+	config, err := decodeStoreConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode installed config: %w", err)
 	}
 
 	if config.Installed == nil {
 		config.Installed = make(map[string]Entry)
 	}
-
-	return &config, nil
+	return config, nil
 }
 
 func (s *Store) Save(config *Config) error {
@@ -74,19 +79,7 @@ func (s *Store) Save(config *Config) error {
 		config.Installed = make(map[string]Entry)
 	}
 
-	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	file, err := os.Create(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to create config file: %w", err)
-	}
-	defer file.Close()
-
-	encoder := toml.NewEncoder(file)
-	if err := encoder.Encode(config); err != nil {
+	if err := saveStoreConfig(configPath, config); err != nil {
 		return fmt.Errorf("failed to encode config: %w", err)
 	}
 
