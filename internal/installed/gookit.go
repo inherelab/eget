@@ -1,27 +1,16 @@
 package installed
 
 import (
-	"os"
-	"path/filepath"
-
 	gconfig "github.com/gookit/config/v2"
-	gtoml "github.com/gookit/config/v2/toml"
+	"github.com/inherelab/eget/internal/util/configutil"
 )
 
-const storeFormatTOML = "toml"
-
 func newStoreConfigManager() *gconfig.Config {
-	cfg := gconfig.NewEmpty("eget-installed-store")
-	cfg.AddDriver(gtoml.Driver)
-	return cfg
+	return configutil.NewTOMLManager("eget-installed-store")
 }
 
 func loadStoreConfigManager(path string) (*gconfig.Config, error) {
-	cfg := newStoreConfigManager()
-	if err := cfg.LoadFilesByFormat(storeFormatTOML, path); err != nil {
-		return nil, err
-	}
-	return cfg, nil
+	return configutil.LoadTOMLFile("eget-installed-store", path)
 }
 
 func decodeStoreConfig(cfg *gconfig.Config) (*Config, error) {
@@ -54,10 +43,7 @@ func encodeStoreConfig(conf *Config) *gconfig.Config {
 }
 
 func saveStoreConfig(path string, conf *Config) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return encodeStoreConfig(conf).DumpToFile(path, storeFormatTOML)
+	return configutil.SaveTOMLFile(path, encodeStoreConfig(conf))
 }
 
 func entryToMap(entry Entry) map[string]any {

@@ -2,19 +2,14 @@ package config
 
 import (
 	"bytes"
-	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	gconfig "github.com/gookit/config/v2"
-	gtoml "github.com/gookit/config/v2/toml"
+	"github.com/inherelab/eget/internal/util/configutil"
 )
-
-const configFormatTOML = "toml"
 
 type dumpModel struct {
 	Global   Section            `toml:"global"`
@@ -24,17 +19,11 @@ type dumpModel struct {
 }
 
 func newConfigManager() *gconfig.Config {
-	cfg := gconfig.NewEmpty("eget-config")
-	cfg.AddDriver(gtoml.Driver)
-	return cfg
+	return configutil.NewTOMLManager("eget-config")
 }
 
 func loadConfigManager(path string) (*gconfig.Config, error) {
-	cfg := newConfigManager()
-	if err := cfg.LoadFilesByFormat(configFormatTOML, path); err != nil {
-		return nil, err
-	}
-	return cfg, nil
+	return configutil.LoadTOMLFile("eget-config", path)
 }
 
 func decodeConfigFile(cfg *gconfig.Config) (*File, error) {
@@ -105,7 +94,7 @@ func encodeConfigFile(file *File) *gconfig.Config {
 
 func dumpConfig(file *File, out io.Writer) error {
 	cfg := encodeConfigFile(file)
-	_, err := cfg.DumpTo(out, configFormatTOML)
+	_, err := cfg.DumpTo(out, configutil.FormatTOML)
 	return err
 }
 
@@ -118,14 +107,8 @@ func dumpConfigString(file *File) (string, error) {
 }
 
 func saveConfigFile(path string, file *File) error {
-	if path == "" {
-		return fmt.Errorf("config path is required")
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
 	cfg := encodeConfigFile(file)
-	return cfg.DumpToFile(path, configFormatTOML)
+	return configutil.SaveTOMLFile(path, cfg)
 }
 
 func GetByPath(file *File, key string) (any, bool) {
