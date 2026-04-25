@@ -71,8 +71,8 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	inner := capp.NewApp()
 	inner.Name = "eget"
 	inner.Desc = fmt.Sprintf(
-		"Easy install and download tool (%s, Hash: %s, Build at: %s)",
-		version, gitHash, buildTime,
+		"Easy install and download tools from GitHub\n  (%s, %s)",
+		gitHash, buildTime,
 	)
 	inner.Version = version
 	inner.HelpWriter = stdout

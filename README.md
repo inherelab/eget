@@ -19,6 +19,7 @@
 - Unified download, verify, and extract flow: built-in asset discovery, system/asset selection, SHA-256 verification, and archive extraction reduce manual steps.
 - Cache and proxy support: supports `cache_dir` download reuse, `api_cache` for GitHub API response caching, and combined `proxy_url`/`ghproxy` remote request proxying.
 - Managed package lifecycle: supports `add`, `list`, `update`, and `uninstall` for package definitions, installed state, and cleanup workflows.
+- GitHub repository search: supports `search` with native GitHub search qualifiers, text output, and JSON output.
 - Traceable installed state: keeps a dedicated installed store with the latest asset, install time, and extracted files for each package.
 - Layered configuration merging: supports `global`, repo sections, and `packages.<name>` with predictable option precedence.
 - Unified default config directory: configuration and installed-state files default to `~/.config/eget/`, while legacy paths remain readable.
@@ -86,6 +87,11 @@ eget list|ls
 eget query owner/repo
 eget query --action releases --limit 5 owner/repo
 eget query --action assets --tag v1.2.3 owner/repo
+# search GitHub repositories
+eget search ripgrep
+eget search skillc language:rust user:inhere
+eget search --limit 5 --sort stars --order desc terminal ui
+eget search --json picoclaw user:sipeed
 # update fzf
 eget update fzf
 eget update --all
@@ -142,6 +148,11 @@ The target argument accepted by `install` and `download` can be:
 - Queries GitHub repository release metadata without installing anything or touching local state.
 - Defaults to the `latest` action, and can switch to `info`, `releases`, or `assets` with `--action`.
 
+`search`
+
+- Searches GitHub repositories without installing anything or touching local state.
+- Uses the first argument as the keyword and passes remaining arguments through as GitHub search qualifiers, for example `language:go`, `user:inhere`, or `topic:cli`.
+
 `update` (alias: `up`)
 
 - Updates a single managed package, or all managed packages with `--all`.
@@ -183,6 +194,13 @@ The target argument accepted by `install` and `download` can be:
 - `--limit`, `-l`: Limit the number of rows returned by the `releases` action. Default: `10`.
 - `--json`, `-j`: Output JSON for scripting or automation.
 - `--prerelease`, `-p`: Include prerelease entries for `latest` and `releases`.
+
+`search` options supports:
+
+- `--limit`, `-l`: Limit the number of repositories returned. Default: `10`.
+- `--sort`: Sort search results. Supported values: `stars`, `updated`.
+- `--order`: Sort order. Supported values: `desc`, `asc`.
+- `--json`, `-j`: Output JSON for scripting or automation.
 
 Global options:
 

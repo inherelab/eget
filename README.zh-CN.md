@@ -19,6 +19,7 @@
 - 下载、校验、提取一体化：内置资源发现、系统/资产筛选、SHA-256 自动校验与归档提取流程，减少手工步骤。
 - 缓存与代理支持：支持 `cache_dir` 下载缓存复用、`api_cache` GitHub API 响应缓存，以及 `proxy_url`/`ghproxy` 组合代理远程请求。
 - 托管包生命周期管理：通过 `add`、`list`、`update`、`uninstall` 管理本地 package 定义、安装状态和卸载流程。
+- GitHub 仓库搜索：支持 `search` 使用 GitHub 原生搜索限定语法，并提供文本输出和 JSON 输出。
 - 安装状态可追踪：独立记录 installed store，保存最近一次安装的资源、时间、输出文件等信息，便于查询与回收。
 - 配置分层合并：支持 `global`、repo section、`packages.<name>` 多层配置，并按约定优先级合并安装参数。
 - 默认配置目录统一：配置文件和 installed store 默认写入 `~/.config/eget/`，同时兼容旧路径读取。
@@ -87,6 +88,11 @@ eget list|ls
 eget query owner/repo
 eget query --action releases --limit 5 owner/repo
 eget query --action assets --tag v1.2.3 owner/repo
+# 搜索 GitHub 仓库
+eget search ripgrep
+eget search skillc language:rust user:inhere
+eget search --limit 5 --sort stars --order desc terminal ui
+eget search --json picoclaw user:sipeed
 # update fzf
 eget update fzf
 eget update --all
@@ -143,6 +149,11 @@ eget config set global.target ~/.local/bin
 - 查询 GitHub repo 的 release 与元数据，不涉及安装或本地状态写入。
 - 默认 action 为 `latest`，可通过 `--action` 切换为 `info`、`releases`、`assets`。
 
+`search`
+
+- 搜索 GitHub 仓库，不涉及安装或本地状态写入。
+- 第一个参数作为搜索关键词，后续参数会原样作为 GitHub 搜索限定条件传递，例如 `language:go`、`user:inhere` 或 `topic:cli`。
+
 `update`(alias: `up`)
 
 - 更新单个托管包，或通过 `--all` 更新全部托管包。
@@ -184,6 +195,13 @@ eget config set global.target ~/.local/bin
 - `--limit`, `-l`: 限制 `releases` 动作返回数量，默认 `10`。
 - `--json`, `-j`: 使用 JSON 输出结果，方便脚本处理。
 - `--prerelease`, `-p`: 在 `latest` / `releases` 中包含预发布版本。
+
+`search` 支持选项：
+
+- `--limit`, `-l`: 限制返回的仓库数量，默认 `10`。
+- `--sort`: 指定搜索结果排序字段，支持 `stars`、`updated`。
+- `--order`: 指定排序方向，支持 `desc`、`asc`。
+- `--json`, `-j`: 使用 JSON 输出结果，方便脚本处理。
 
 全局选项：
 
