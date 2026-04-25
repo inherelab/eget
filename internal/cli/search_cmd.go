@@ -14,14 +14,11 @@ type SearchOptions struct {
 func newSearchCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	opts := &SearchOptions{Limit: 10}
 	cmd := capp.NewCmd("search", "Search GitHub repositories", func(cmd *capp.Cmd) error {
-		args := cmd.RemainArgs()
-		if len(args) > 0 {
-			opts.Keyword = args[0]
-		}
-		if len(args) > 1 {
-			opts.Extras = append(opts.Extras[:0], args[1:]...)
-		} else {
-			opts.Extras = opts.Extras[:0]
+		opts.Keyword = cmd.Arg("keyword").String()
+		opts.Extras = cmd.Arg("extras").Strings()
+
+		if moreConditions := cmd.RemainArgs(); len(moreConditions) > 0 {
+			opts.Extras = append(opts.Extras, moreConditions...)
 		}
 
 		snapshot := *opts
@@ -33,11 +30,20 @@ func newSearchCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		}
 		return handler(cmd.Name, &snapshot)
 	})
+	cmd.LongHelp = `<info>Examples</>:
+  eget search markview
+  eget search markview language:rust user:inhere
+  eget search --limit 5 --sort stars --order desc terminal ui
+  eget search --json picoclaw user:sipeed`
 
 	cmd.StringVar(&opts.Sort, "sort", "", "Search sort field: stars, updated")
 	cmd.StringVar(&opts.Order, "order", "", "Search order: desc, asc")
 	cmd.IntVar(&opts.Limit, "limit", 10, "Limit result count;false;l")
 	cmd.BoolVar(&opts.JSON, "json", false, "Output as JSON;false;j")
+
+	cmd.AddArg("keyword", "keywords for search repositories", true, nil)
+	cmd.AddArg("extras", "extra search conditions, allow multiple", false, nil)
+
 	return cmd, func() {
 		*opts = SearchOptions{Limit: 10}
 	}

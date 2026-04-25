@@ -595,7 +595,7 @@ func TestHandleQueryJSONOutput(t *testing.T) {
 	}
 }
 
-func TestHandleSearchPrintsTable(t *testing.T) {
+func TestHandleSearchPrintsList(t *testing.T) {
 	svc := &cliService{
 		searchService: app.SearchService{
 			Client: &fakeSearchClientForCLI{
@@ -606,7 +606,7 @@ func TestHandleSearchPrintsTable(t *testing.T) {
 						Description: "ripgrep recursively searches directories",
 						StargazersCount: 123,
 						Language:    "Rust",
-						HTMLURL:     "https://github.com/BurntSushi/ripgrep",
+						UpdatedAt:   time.Date(2026, 4, 24, 8, 30, 0, 0, time.UTC),
 					}},
 				},
 			},
@@ -623,11 +623,14 @@ func TestHandleSearchPrintsTable(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(strings.ToLower(got), "repo") || !strings.Contains(strings.ToLower(got), "stars") {
-		t.Fatalf("expected search table headers, got %q", got)
+	if strings.Contains(strings.ToLower(got), "repo |") || strings.Contains(strings.ToLower(got), "language |") {
+		t.Fatalf("expected search to not render a table, got %q", got)
 	}
-	if !strings.Contains(got, "BurntSushi/ripgrep") || !strings.Contains(got, "Rust") {
-		t.Fatalf("expected search row in output, got %q", got)
+	if !strings.Contains(got, "BurntSushi/ripgrep") || !strings.Contains(got, "⭐123 language: Rust update: 2026-04-24T08:30:00Z") {
+		t.Fatalf("expected formatted search headline, got %q", got)
+	}
+	if !strings.Contains(got, "ripgrep recursively searches directories") {
+		t.Fatalf("expected description line, got %q", got)
 	}
 }
 

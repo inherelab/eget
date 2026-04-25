@@ -4,11 +4,11 @@ APP     := eget
 MAIN_DIR := ./cmd/eget
 GOEXE = $(shell go env GOEXE)
 BINARY  := $(APP)$(GOEXE)
-VERSION ?= $(shell echo "$$(git for-each-ref refs/tags/ --count=1 --sort=-version:refname --format='%(refname:short)' | echo 'dev' 2>/dev/null)-$(REV)" | sed 's/^v//')
 
 # Build metadata
+BUILD_TIME := $(shell date +%Y/%m/%d-%H:%M:%S)
 GIT_HASH  := $(shell git rev-parse --short=8 HEAD 2>/dev/null || echo "unknown")
-BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+VERSION ?= $(shell echo "$$(git for-each-ref refs/tags/ --count=1 --sort=-version:refname --format='%(refname:short)' | echo 'dev' 2>/dev/null)-$(GIT_HASH)" | sed 's/^v//')
 
 LDFLAGS := -s -w \
 	-X main.Version=$(VERSION) \

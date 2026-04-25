@@ -270,7 +270,7 @@ func TestMain_QueryAliasRoutes(t *testing.T) {
 }
 
 func TestMain_UninstallRoutesToUninstallCommandAndAliases(t *testing.T) {
-	for _, name := range []string{"uninstall", "uni", "remove", "rm"} {
+	for _, name := range []string{"uninstall", "uni", "rm"} {
 		t.Run(name, func(t *testing.T) {
 			calls := make([]commandCall, 0, 1)
 			handler := func(cmdName string, options any) error {

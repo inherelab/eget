@@ -7,3 +7,12 @@
   - [x] 新增命令 search 用于搜索 GitHub 上的 repository
 - [ ] 配置新增 global.restore_packages 用于指定 `eget install` 需要恢复的 package names
 - [ ] 新增命令 run 用于运行已安装的工具，即使它没有在 PATH 中
+
+## search 结果展示
+
+```txt
+<info>owner/repo</> ⭐{stars} language: {language} update: {update_time}
+{description}
+---
+```
+

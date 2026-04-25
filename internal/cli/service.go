@@ -201,10 +201,13 @@ func (s *cliService) handleList(opts *ListOptions) error {
 		return nil
 	}
 	if opts != nil && opts.Outdated {
+		ccolor.Infoln("🚀 Checking outdated packages ...")
 		items, failures, err := s.listService.ListOutdatedPackages()
 		if err != nil {
 			return err
 		}
+		ccolor.Successf("✓ Checked %d packages\n", len(items)+len(failures))
+
 		for _, failure := range failures {
 			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
 		}
@@ -711,16 +714,22 @@ func printSearchResult(result app.SearchResult) {
 		return
 	}
 
-	cols := []string{"Repo", "Language", "Stars", "Updated", "Description"}
-	rows := make([][]any, 0, len(result.Items))
 	for _, item := range result.Items {
-		rows = append(rows, []any{
-			item.FullName,
-			item.Language,
-			item.StargazersCount,
-			item.UpdatedAt.Format(time.RFC3339),
-			item.Description,
-		})
+		language := item.Language
+		if language == "" {
+			language = "-"
+		}
+		updatedAt := "-"
+		if !item.UpdatedAt.IsZero() {
+			updatedAt = item.UpdatedAt.Format(time.RFC3339)
+		}
+
+		ccolor.Printf("<info>%s</> ⭐%d language: %s update: %s\n", item.FullName, item.StargazersCount, language, updatedAt)
+		if item.Description != "" {
+			ccolor.Printf("%s\n", item.Description)
+		} else {
+			ccolor.Println("No description")
+		}
+		fmt.Println("---")
 	}
-	ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 }

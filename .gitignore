@@ -1,5 +1,5 @@
 eget
-eget.exe
+*.exe
 eget-*
 !cmd/
 !cmd/eget/
