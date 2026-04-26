@@ -33,7 +33,7 @@
 - Test: `internal/config/loader_test.go`
 - Test: `internal/config/merge_test.go`
 
-- [ ] **Step 1: Write failing config tests**
+- [x] **Step 1: Write failing config tests**
 
 In `internal/config/gookit_test.go`, extend `TestPathGetAndSet` to set and read `global.gui_target` plus `packages.fzf.is_gui`:
 
@@ -108,13 +108,13 @@ func TestMergeInstallOptionsUsesGUIFromCLIThenPackageThenRepo(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `go test ./internal/config -run 'TestPathGetAndSet|TestDumpConfigStringKeepsLegacyRepoSections|TestLoadFileSupportsLegacyRepoSections|TestMergeInstallOptions' -v`
 
 Expected: FAIL because `GuiTarget`, `IsGUI`, and `CLIOverrides.IsGUI` do not exist.
 
-- [ ] **Step 3: Implement config fields**
+- [x] **Step 3: Implement config fields**
 
 Update `internal/config/model.go`:
 
@@ -149,13 +149,13 @@ if section.IsGUI != nil {
 }
 ```
 
-- [ ] **Step 4: Run config tests**
+- [x] **Step 4: Run config tests**
 
 Run: `go test ./internal/config -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/config/model.go internal/config/merge.go internal/config/gookit.go internal/config/gookit_test.go internal/config/loader_test.go internal/config/merge_test.go
@@ -170,7 +170,7 @@ git commit -m "feat(config): add gui target and package flag"
 - Modify: `internal/cli/list_cmd.go`
 - Test: `internal/cli/app_test.go`
 
-- [ ] **Step 1: Write failing CLI binding tests**
+- [x] **Step 1: Write failing CLI binding tests**
 
 Add to `internal/cli/app_test.go`:
 
@@ -247,13 +247,13 @@ func TestMain_ListGUIBindsOption(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `go test ./internal/cli -run 'TestMain_GUIFlag|TestMain_DownloadRejectsGUIFlag|TestMain_ListGUIBindsOption' -v`
 
 Expected: FAIL because `GUI` fields and flags are missing.
 
-- [ ] **Step 3: Add CLI flags**
+- [x] **Step 3: Add CLI flags**
 
 Add `GUI bool` to `InstallOptions`, `AddOptions`, and `ListOptions`.
 
@@ -267,13 +267,13 @@ cmd.BoolVar(&opts.GUI, "gui", false, "List GUI applications")
 
 Do not add `GUI` to `DownloadOptions`.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/cli -run 'TestMain_GUIFlag|TestMain_DownloadRejectsGUIFlag|TestMain_ListGUIBindsOption' -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/cli/install_cmd.go internal/cli/add_cmd.go internal/cli/list_cmd.go internal/cli/app_test.go
@@ -288,7 +288,7 @@ git commit -m "feat(cli): add gui flags"
 - Modify: `internal/installed/gookit.go`
 - Test: `internal/installed/store_test.go`
 
-- [ ] **Step 1: Write failing installed-store test**
+- [x] **Step 1: Write failing installed-store test**
 
 Add to `internal/installed/store_test.go`:
 
@@ -323,13 +323,13 @@ func TestStoreRoundTripGUIFields(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run: `go test ./internal/installed -run TestStoreRoundTripGUIFields -v`
 
 Expected: FAIL because `Entry.IsGUI` and `Entry.InstallMode` do not exist.
 
-- [ ] **Step 3: Add runtime fields**
+- [x] **Step 3: Add runtime fields**
 
 Update `internal/install/options.go`:
 
@@ -349,7 +349,7 @@ IsGUI          bool
 InstallMode    string
 ```
 
-- [ ] **Step 4: Add installed metadata fields**
+- [x] **Step 4: Add installed metadata fields**
 
 Update `internal/installed/model.go`:
 
@@ -369,13 +369,13 @@ if entry.InstallMode != "" {
 }
 ```
 
-- [ ] **Step 5: Run installed tests**
+- [x] **Step 5: Run installed tests**
 
 Run: `go test ./internal/installed -v`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/install/options.go internal/installed/model.go internal/installed/gookit.go internal/installed/store_test.go
@@ -392,7 +392,7 @@ git commit -m "feat(installed): record gui install metadata"
 - Test: `internal/app/add_test.go`
 - Test: `internal/app/install_test.go`
 
-- [ ] **Step 1: Write failing app tests**
+- [x] **Step 1: Write failing app tests**
 
 In `internal/app/add_test.go`, include `IsGUI: true` in `TestAddPackageWritesManagedPackage` options and assert:
 
@@ -466,13 +466,13 @@ func TestInstallTargetRecordsGUIInstallerWithoutExtractedFiles(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `go test ./internal/app -run 'TestAddPackageWritesManagedPackage|TestInstallTargetUsesGuiTargetForPortableGUI|TestInstallTargetRecordsGUIInstallerWithoutExtractedFiles' -v`
 
 Expected: FAIL because GUI app plumbing is missing.
 
-- [ ] **Step 3: Implement app resolution**
+- [x] **Step 3: Implement app resolution**
 
 In `internal/app/config.go`, write package GUI metadata:
 
@@ -515,13 +515,13 @@ In `internal/app/update.go`, pass through `IsGUI`, `GuiTarget`, and `OutputExpli
 
 In `internal/cli/service.go`, map install/add `GUI` into `install.Options{IsGUI: opts.GUI}`.
 
-- [ ] **Step 4: Run app and CLI tests**
+- [x] **Step 4: Run app and CLI tests**
 
 Run: `go test ./internal/app ./internal/cli -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/app/config.go internal/app/install.go internal/app/update.go internal/cli/service.go internal/app/add_test.go internal/app/install_test.go
@@ -534,7 +534,7 @@ git commit -m "feat(app): resolve gui install options"
 - Create: `internal/install/gui.go`
 - Test: `internal/install/gui_test.go`
 
-- [ ] **Step 1: Write failing install GUI tests**
+- [x] **Step 1: Write failing install GUI tests**
 
 Create `internal/install/gui_test.go`:
 
@@ -599,13 +599,13 @@ func TestDefaultInstallerLauncherRejectsUnsupportedPlatform(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `go test ./internal/install -run 'TestDetectGUIInstallMode|TestDefaultInstallerLauncher' -v`
 
 Expected: FAIL because GUI detection and launcher do not exist.
 
-- [ ] **Step 3: Implement detection and launcher**
+- [x] **Step 3: Implement detection and launcher**
 
 Create `internal/install/gui.go` with:
 
@@ -685,13 +685,13 @@ func (l DefaultInstallerLauncher) command(path string, kind InstallerKind) (stri
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/install -run 'TestDetectGUIInstallMode|TestDefaultInstallerLauncher' -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/install/gui.go internal/install/gui_test.go
@@ -704,7 +704,7 @@ git commit -m "feat(install): detect gui installer mode"
 - Modify: `internal/install/runner.go`
 - Test: `internal/install/runner_test.go`
 
-- [ ] **Step 1: Write failing runner helper tests**
+- [x] **Step 1: Write failing runner helper tests**
 
 Add to `internal/install/runner_test.go`:
 
@@ -762,13 +762,13 @@ func TestLaunchGUIInstallerReturnsInstallerResult(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `go test ./internal/install -run 'TestEffectiveOutput|TestLaunchGUIInstallerReturnsInstallerResult' -v`
 
 Expected: FAIL because runner GUI helpers are missing.
 
-- [ ] **Step 3: Implement runner fields and helpers**
+- [x] **Step 3: Implement runner fields and helpers**
 
 Update `RunResult` in `internal/install/runner.go`:
 
@@ -812,7 +812,7 @@ func (r *InstallRunner) launchGUIInstaller(path string, file ExtractedFile, opts
 }
 ```
 
-- [ ] **Step 4: Integrate installer branch**
+- [x] **Step 4: Integrate installer branch**
 
 After archive file selection, compute:
 
@@ -850,13 +850,13 @@ if opts.InstallMode == InstallModeInstaller {
 
 Implement `materializeInstallerFile` so local files are returned directly, direct downloaded assets use `CacheFilePath(opts.CacheDir, url)` or a deterministic file under `cache_dir/installers`, and archive-contained installers extract only the selected file to that deterministic path.
 
-- [ ] **Step 5: Run install tests**
+- [x] **Step 5: Run install tests**
 
 Run: `go test ./internal/install -v`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/install/runner.go internal/install/runner_test.go
@@ -871,7 +871,7 @@ git commit -m "feat(install): launch gui installers"
 - Test: `internal/app/list_test.go`
 - Test: `internal/cli/service_test.go`
 
-- [ ] **Step 1: Write failing list tests**
+- [x] **Step 1: Write failing list tests**
 
 Add to `internal/app/list_test.go`:
 
@@ -938,13 +938,13 @@ func TestHandleListGUIPrintsOnlyGUIPackages(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `go test ./internal/app ./internal/cli -run 'TestListGUIPackages|TestHandleListGUI' -v`
 
 Expected: FAIL because GUI list metadata and filtering are missing.
 
-- [ ] **Step 3: Implement list metadata and filtering**
+- [x] **Step 3: Implement list metadata and filtering**
 
 Add to `ListItem`:
 
@@ -1000,13 +1000,13 @@ if item.InstallMode != "" {
 }
 ```
 
-- [ ] **Step 4: Run list tests**
+- [x] **Step 4: Run list tests**
 
 Run: `go test ./internal/app ./internal/cli -run 'TestListGUI|TestHandleListGUI|TestHandleListInfo' -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/app/list.go internal/app/list_test.go internal/cli/service.go internal/cli/service_test.go
@@ -1021,7 +1021,7 @@ git commit -m "feat(list): filter gui packages"
 - Modify: `docs/DOCS.md`
 - Modify: `docs/example.eget.toml`
 
-- [ ] **Step 1: Update docs**
+- [x] **Step 1: Update docs**
 
 Add English examples:
 
@@ -1065,19 +1065,19 @@ is_gui = true
 file = "*.exe"
 ```
 
-- [ ] **Step 2: Run full test suite**
+- [x] **Step 2: Run full test suite**
 
 Run: `go test ./...`
 
 Expected: PASS.
 
-- [ ] **Step 3: Check status and avoid unrelated files**
+- [x] **Step 3: Check status and avoid unrelated files**
 
 Run: `git status --short`
 
 Expected: only GUI implementation files and docs are modified. Do not stage `docs/TODO.md` unless explicitly requested.
 
-- [ ] **Step 4: Commit docs**
+- [x] **Step 4: Commit docs**
 
 ```bash
 git add README.md README.zh-CN.md docs/DOCS.md docs/example.eget.toml
@@ -1086,14 +1086,14 @@ git commit -m "docs: document gui install support"
 
 ## Final Verification Checklist
 
-- [ ] `go test ./...` passes.
-- [ ] `download --gui` fails parsing as an unknown flag.
-- [ ] `install --gui` passes `IsGUI=true` through CLI -> app -> runner.
-- [ ] `add --gui` writes `is_gui = true`.
-- [ ] GUI portable installs use `global.gui_target` only when `--to` is not set.
-- [ ] GUI installer installs launch via `InstallerLauncher` and write installed store even with no extracted files.
-- [ ] `list` still includes GUI installed packages by default.
-- [ ] `list --gui` filters to GUI packages.
-- [ ] `list --all --gui` includes managed GUI packages that are not installed.
-- [ ] `list --info` prints `is_gui` and non-empty `install_mode`.
-- [ ] `docs/TODO.md` is not staged unless explicitly requested.
+- [x] `go test ./...` passes.
+- [x] `download --gui` fails parsing as an unknown flag.
+- [x] `install --gui` passes `IsGUI=true` through CLI -> app -> runner.
+- [x] `add --gui` writes `is_gui = true`.
+- [x] GUI portable installs use `global.gui_target` only when `--to` is not set.
+- [x] GUI installer installs launch via `InstallerLauncher` and write installed store even with no extracted files.
+- [x] `list` still includes GUI installed packages by default.
+- [x] `list --gui` filters to GUI packages.
+- [x] `list --all --gui` includes managed GUI packages that are not installed.
+- [x] `list --info` prints `is_gui` and non-empty `install_mode`.
+- [x] `docs/TODO.md` is not staged unless explicitly requested.
