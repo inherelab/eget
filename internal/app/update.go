@@ -84,7 +84,7 @@ func (s UpdateService) loadConfig() (*cfgpkg.File, error) {
 
 func mergeInstallOptions(global, repo, pkg cfgpkg.Section, cli install.Options) install.Options {
 	merged := cfgpkg.MergeInstallOptions(global, repo, pkg, cfgpkg.CLIOverrides{
-		All:          boolOpt(cli.All),
+		ExtractAll:   boolOpt(cli.All),
 		AssetFilters: stringsOpt(cli.Asset),
 		CacheDir:     stringOpt(cli.CacheDir),
 		ProxyURL:     stringOpt(cli.ProxyURL),
@@ -110,7 +110,7 @@ func mergeInstallOptions(global, repo, pkg cfgpkg.Section, cli install.Options) 
 		ProxyURL:     merged.ProxyURL,
 		System:       merged.System,
 		ExtractFile:  merged.File,
-		All:          merged.All,
+		All:          merged.ExtractAll,
 		Quiet:        merged.Quiet,
 		DownloadOnly: merged.DownloadOnly,
 		UpgradeOnly:  merged.UpgradeOnly,

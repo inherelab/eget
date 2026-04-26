@@ -198,7 +198,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 	}
 
 	merged := cfgpkg.MergeInstallOptions(cfg.Global, cfg.Repos[repoKey], pkg, cfgpkg.CLIOverrides{
-		All:          boolOpt(cli.All),
+		ExtractAll:   boolOpt(cli.All),
 		AssetFilters: stringsOpt(cli.Asset),
 		CacheDir:     stringOpt(cli.CacheDir),
 		ProxyURL:     stringOpt(cli.ProxyURL),
@@ -267,7 +267,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		GhproxyFallbacks:  append([]string(nil), cfg.Ghproxy.Fallbacks...),
 		System:            merged.System,
 		ExtractFile:       merged.File,
-		All:               merged.All,
+		All:               merged.ExtractAll,
 		Quiet:             merged.Quiet,
 		DownloadOnly:      merged.DownloadOnly,
 		UpgradeOnly:       merged.UpgradeOnly,

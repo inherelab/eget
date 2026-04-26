@@ -25,6 +25,9 @@ func TestPathGetAndSet(t *testing.T) {
 	if err := SetByPath(cfg, "packages.fzf.asset_filters", "linux,amd64"); err != nil {
 		t.Fatalf("set packages.fzf.asset_filters: %v", err)
 	}
+	if err := SetByPath(cfg, "packages.fzf.extract_all", "true"); err != nil {
+		t.Fatalf("set packages.fzf.extract_all: %v", err)
+	}
 
 	target, ok := GetByPath(cfg, "global.target")
 	if !ok || target != "~/.local/bin" {
@@ -45,6 +48,9 @@ func TestPathGetAndSet(t *testing.T) {
 	}
 	if len(pkg.AssetFilters) != 2 || pkg.AssetFilters[0] != "linux" || pkg.AssetFilters[1] != "amd64" {
 		t.Fatalf("expected package asset filters to be parsed, got %#v", pkg.AssetFilters)
+	}
+	if pkg.ExtractAll == nil || !*pkg.ExtractAll {
+		t.Fatalf("expected package extract_all to be parsed, got %#v", pkg.ExtractAll)
 	}
 }
 
@@ -89,8 +95,9 @@ func TestDumpConfigStringKeepsLegacyRepoSections(t *testing.T) {
 	repo := "junegunn/fzf"
 	cfg.Global.Target = &target
 	cfg.Repos["owner/repo"] = Section{
-		Target: &repoTarget,
-		System: &repoSystem,
+		Target:     &repoTarget,
+		System:     &repoSystem,
+		ExtractAll: boolPtr(true),
 	}
 	cfg.Packages["fzf"] = Section{Repo: &repo}
 
@@ -103,6 +110,12 @@ func TestDumpConfigStringKeepsLegacyRepoSections(t *testing.T) {
 	}
 	if !strings.Contains(text, "[packages.fzf]") {
 		t.Fatalf("expected packages.fzf section, got %q", text)
+	}
+	if !strings.Contains(text, "extract_all = true") {
+		t.Fatalf("expected extract_all field, got %q", text)
+	}
+	if strings.Contains(text, "\n  all = true") || strings.Contains(text, "\n    all = true") {
+		t.Fatalf("expected old all field to be absent, got %q", text)
 	}
 
 	var buf bytes.Buffer

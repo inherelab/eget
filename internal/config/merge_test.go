@@ -5,7 +5,7 @@ import "testing"
 func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 	merged := MergeInstallOptions(
 		Section{
-			All:          boolPtr(true),
+			ExtractAll:   boolPtr(true),
 			DownloadOnly: boolPtr(true),
 			Source:       boolPtr(true),
 			Quiet:        boolPtr(true),
@@ -21,7 +21,7 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 		CLIOverrides{},
 	)
 
-	if !merged.All || !merged.DownloadOnly || !merged.Source || !merged.Quiet || !merged.ShowHash || !merged.UpgradeOnly {
+	if !merged.ExtractAll || !merged.DownloadOnly || !merged.Source || !merged.Quiet || !merged.ShowHash || !merged.UpgradeOnly {
 		t.Fatalf("expected global booleans to be applied, got %#v", merged)
 	}
 	if merged.System != "linux/amd64" || merged.Target != "~/bin" {

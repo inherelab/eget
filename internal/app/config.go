@@ -185,7 +185,7 @@ func sectionFromInstallOptions(repo, name string, opts install.Options) cfgpkg.S
 		section.DisableSSL = util.BoolPtr(true)
 	}
 	if opts.All {
-		section.All = util.BoolPtr(true)
+		section.ExtractAll = util.BoolPtr(true)
 	}
 	return section
 }

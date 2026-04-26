@@ -278,7 +278,7 @@ asset_filters = ["windows"]
 - `file`
 - `asset_filters`
 - `download_source`
-- `all`
+- `extract_all`
 - `quiet`
 - `upgrade_only`
 

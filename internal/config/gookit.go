@@ -159,7 +159,7 @@ func normalizePathValue(key string, value any) (any, bool) {
 			text = "http://" + text
 		}
 		return text, true
-	case "all", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "support_api":
+	case "extract_all", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "support_api":
 		parsed, err := strconv.ParseBool(text)
 		if err != nil {
 			return nil, false
@@ -199,8 +199,8 @@ func splitAndTrim(value string) []string {
 
 func sectionToMap(section Section) map[string]any {
 	data := map[string]any{}
-	if section.All != nil {
-		data["all"] = *section.All
+	if section.ExtractAll != nil {
+		data["extract_all"] = *section.ExtractAll
 	}
 	if len(section.AssetFilters) > 0 {
 		data["asset_filters"] = append([]string(nil), section.AssetFilters...)

@@ -72,7 +72,7 @@ eget <command> --options... arguments...
 默认规则：
 
 - `--name` 未提供时，默认使用 repo basename
-- 保存 repo、tag、system、target、file、asset_filters、download_source、all、quiet 等可复用字段
+- 保存 repo、tag、system、target、file、asset_filters、download_source、extract_all、quiet 等可复用字段
 
 ## Uninstall Flow
 

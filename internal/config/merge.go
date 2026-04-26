@@ -3,7 +3,7 @@ package config
 func MergeInstallOptions(global, repo, pkg Section, cli CLIOverrides) Merged {
 	merged := Merged{}
 
-	merged.All = firstBool(cli.All, pkg.All, repo.All, global.All)
+	merged.ExtractAll = firstBool(cli.ExtractAll, pkg.ExtractAll, repo.ExtractAll, global.ExtractAll)
 	merged.DownloadOnly = firstBool(cli.DownloadOnly, pkg.DownloadOnly, repo.DownloadOnly, global.DownloadOnly)
 	merged.Source = firstBool(cli.Source, pkg.Source, repo.Source, global.Source)
 	merged.Quiet = firstBool(cli.Quiet, pkg.Quiet, repo.Quiet, global.Quiet)

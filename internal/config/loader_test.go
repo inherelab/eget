@@ -195,6 +195,7 @@ github_token = "token"
 ["owner/repo"]
 asset_filters = ["linux", "!arm"]
 download_only = true
+extract_all = true
 `)
 
 	cfg, err := LoadFile(configPath)
@@ -218,6 +219,9 @@ download_only = true
 	}
 	if len(repo.AssetFilters) != 2 {
 		t.Fatalf("expected repo asset filters to load, got %#v", repo.AssetFilters)
+	}
+	if repo.ExtractAll == nil || !*repo.ExtractAll {
+		t.Fatalf("expected repo extract_all=true, got %#v", repo.ExtractAll)
 	}
 }
 

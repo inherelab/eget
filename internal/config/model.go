@@ -1,7 +1,7 @@
 package config
 
 type Section struct {
-	All          *bool    `toml:"all" mapstructure:"all"`
+	ExtractAll   *bool    `toml:"extract_all" mapstructure:"extract_all"`
 	AssetFilters []string `toml:"asset_filters" mapstructure:"asset_filters"`
 	CacheDir     *string  `toml:"cache_dir" mapstructure:"cache_dir"`
 	ProxyURL     *string  `toml:"proxy_url" mapstructure:"proxy_url"`
@@ -45,7 +45,7 @@ type File struct {
 }
 
 type Merged struct {
-	All          bool
+	ExtractAll   bool
 	AssetFilters []string
 	CacheDir     string
 	ProxyURL     string
@@ -65,7 +65,7 @@ type Merged struct {
 }
 
 type CLIOverrides struct {
-	All          *bool
+	ExtractAll   *bool
 	AssetFilters *[]string
 	CacheDir     *string
 	ProxyURL     *string
