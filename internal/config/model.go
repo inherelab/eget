@@ -8,6 +8,8 @@ type Section struct {
 	DownloadOnly *bool    `toml:"download_only" mapstructure:"download_only"`
 	File         *string  `toml:"file" mapstructure:"file"`
 	GithubToken  *string  `toml:"github_token" mapstructure:"github_token"`
+	GuiTarget    *string  `toml:"gui_target" mapstructure:"gui_target"`
+	IsGUI        *bool    `toml:"is_gui" mapstructure:"is_gui"`
 	Name         *string  `toml:"name" mapstructure:"name"`
 	Quiet        *bool    `toml:"quiet" mapstructure:"quiet"`
 	Repo         *string  `toml:"repo" mapstructure:"repo"`
@@ -52,6 +54,8 @@ type Merged struct {
 	DownloadOnly bool
 	File         string
 	GithubToken  string
+	GuiTarget    string
+	IsGUI        bool
 	Name         string
 	Quiet        bool
 	ShowHash     bool
@@ -72,6 +76,7 @@ type CLIOverrides struct {
 	DownloadOnly *bool
 	File         *string
 	GithubToken  *string
+	IsGUI        *bool
 	Name         *string
 	Quiet        *bool
 	ShowHash     *bool

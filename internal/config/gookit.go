@@ -159,7 +159,7 @@ func normalizePathValue(key string, value any) (any, bool) {
 			text = "http://" + text
 		}
 		return text, true
-	case "extract_all", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "support_api":
+	case "extract_all", "is_gui", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "support_api":
 		parsed, err := strconv.ParseBool(text)
 		if err != nil {
 			return nil, false
@@ -219,6 +219,12 @@ func sectionToMap(section Section) map[string]any {
 	}
 	if section.GithubToken != nil {
 		data["github_token"] = *section.GithubToken
+	}
+	if section.GuiTarget != nil {
+		data["gui_target"] = *section.GuiTarget
+	}
+	if section.IsGUI != nil {
+		data["is_gui"] = *section.IsGUI
 	}
 	if section.Name != nil {
 		data["name"] = *section.Name

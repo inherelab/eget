@@ -13,6 +13,9 @@ func TestPathGetAndSet(t *testing.T) {
 	if err := SetByPath(cfg, "global.target", "~/.local/bin"); err != nil {
 		t.Fatalf("set global.target: %v", err)
 	}
+	if err := SetByPath(cfg, "global.gui_target", "~/Applications"); err != nil {
+		t.Fatalf("set global.gui_target: %v", err)
+	}
 	if err := SetByPath(cfg, "api_cache.enable", "true"); err != nil {
 		t.Fatalf("set api_cache.enable: %v", err)
 	}
@@ -28,10 +31,17 @@ func TestPathGetAndSet(t *testing.T) {
 	if err := SetByPath(cfg, "packages.fzf.extract_all", "true"); err != nil {
 		t.Fatalf("set packages.fzf.extract_all: %v", err)
 	}
+	if err := SetByPath(cfg, "packages.fzf.is_gui", "true"); err != nil {
+		t.Fatalf("set packages.fzf.is_gui: %v", err)
+	}
 
 	target, ok := GetByPath(cfg, "global.target")
 	if !ok || target != "~/.local/bin" {
 		t.Fatalf("expected global.target to be set, got %#v ok=%t", target, ok)
+	}
+	guiTarget, ok := GetByPath(cfg, "global.gui_target")
+	if !ok || guiTarget != "~/Applications" {
+		t.Fatalf("expected global.gui_target to be set, got %#v ok=%t", guiTarget, ok)
 	}
 	cacheTime, ok := GetByPath(cfg, "api_cache.cache_time")
 	if !ok || cacheTime != 300 {
@@ -51,6 +61,9 @@ func TestPathGetAndSet(t *testing.T) {
 	}
 	if pkg.ExtractAll == nil || !*pkg.ExtractAll {
 		t.Fatalf("expected package extract_all to be parsed, got %#v", pkg.ExtractAll)
+	}
+	if pkg.IsGUI == nil || !*pkg.IsGUI {
+		t.Fatalf("expected package is_gui to be parsed, got %#v", pkg.IsGUI)
 	}
 }
 
@@ -98,6 +111,7 @@ func TestDumpConfigStringKeepsLegacyRepoSections(t *testing.T) {
 		Target:     &repoTarget,
 		System:     &repoSystem,
 		ExtractAll: boolPtr(true),
+		IsGUI:      boolPtr(true),
 	}
 	cfg.Packages["fzf"] = Section{Repo: &repo}
 
@@ -113,6 +127,9 @@ func TestDumpConfigStringKeepsLegacyRepoSections(t *testing.T) {
 	}
 	if !strings.Contains(text, "extract_all = true") {
 		t.Fatalf("expected extract_all field, got %q", text)
+	}
+	if !strings.Contains(text, "is_gui = true") {
+		t.Fatalf("expected is_gui field, got %q", text)
 	}
 	if strings.Contains(text, "\n  all = true") || strings.Contains(text, "\n    all = true") {
 		t.Fatalf("expected old all field to be absent, got %q", text)

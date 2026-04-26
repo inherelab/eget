@@ -12,6 +12,7 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 			ShowHash:     boolPtr(true),
 			CacheDir:     stringPtr("~/.cache/eget"),
 			ProxyURL:     stringPtr("http://127.0.0.1:7890"),
+			GuiTarget:    stringPtr("~/Applications"),
 			System:       stringPtr("linux/amd64"),
 			Target:       stringPtr("~/bin"),
 			UpgradeOnly:  boolPtr(true),
@@ -32,6 +33,41 @@ func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 	}
 	if merged.ProxyURL != "http://127.0.0.1:7890" {
 		t.Fatalf("expected global proxy url to be applied, got %#v", merged)
+	}
+	if merged.GuiTarget != "~/Applications" {
+		t.Fatalf("expected global gui_target to be applied, got %#v", merged)
+	}
+}
+
+func TestMergeInstallOptionsUsesGUIFromCLIThenPackageThenRepo(t *testing.T) {
+	merged := MergeInstallOptions(
+		Section{},
+		Section{IsGUI: boolPtr(true)},
+		Section{},
+		CLIOverrides{},
+	)
+	if !merged.IsGUI {
+		t.Fatalf("expected repo is_gui to apply, got %#v", merged)
+	}
+
+	merged = MergeInstallOptions(
+		Section{},
+		Section{IsGUI: boolPtr(false)},
+		Section{IsGUI: boolPtr(true)},
+		CLIOverrides{},
+	)
+	if !merged.IsGUI {
+		t.Fatalf("expected package is_gui to override repo, got %#v", merged)
+	}
+
+	merged = MergeInstallOptions(
+		Section{},
+		Section{IsGUI: boolPtr(true)},
+		Section{IsGUI: boolPtr(true)},
+		CLIOverrides{IsGUI: boolPtr(false)},
+	)
+	if merged.IsGUI {
+		t.Fatalf("expected cli is_gui=false to override config, got %#v", merged)
 	}
 }
 

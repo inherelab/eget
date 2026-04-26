@@ -189,6 +189,7 @@ func TestLoadFileSupportsLegacyRepoSections(t *testing.T) {
 	writeTestFile(t, configPath, `
 [global]
 target = "~/bin"
+gui_target = "~/Applications"
 quiet = true
 github_token = "token"
 
@@ -196,6 +197,7 @@ github_token = "token"
 asset_filters = ["linux", "!arm"]
 download_only = true
 extract_all = true
+is_gui = true
 `)
 
 	cfg, err := LoadFile(configPath)
@@ -205,6 +207,9 @@ extract_all = true
 
 	if cfg.Global.Target == nil || *cfg.Global.Target != "~/bin" {
 		t.Fatalf("expected global target to be loaded, got %#v", cfg.Global.Target)
+	}
+	if cfg.Global.GuiTarget == nil || *cfg.Global.GuiTarget != "~/Applications" {
+		t.Fatalf("expected global gui_target to be loaded, got %#v", cfg.Global.GuiTarget)
 	}
 	if cfg.Global.Quiet == nil || !*cfg.Global.Quiet {
 		t.Fatalf("expected global quiet=true, got %#v", cfg.Global.Quiet)
@@ -222,6 +227,9 @@ extract_all = true
 	}
 	if repo.ExtractAll == nil || !*repo.ExtractAll {
 		t.Fatalf("expected repo extract_all=true, got %#v", repo.ExtractAll)
+	}
+	if repo.IsGUI == nil || !*repo.IsGUI {
+		t.Fatalf("expected repo is_gui=true, got %#v", repo.IsGUI)
 	}
 }
 
