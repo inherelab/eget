@@ -349,12 +349,13 @@ func TestHandleListOutdatedPrintsCheckedInstalledCountWhenNothingOutdated(t *tes
 	}
 }
 
-func TestHandleListPrintsTable(t *testing.T) {
+func TestHandleListPrintsOnlyInstalledPackagesByDefault(t *testing.T) {
 	svc := &cliService{
 		listService: app.ListService{
 			LoadConfig: func() (*cfgpkg.File, error) {
 				cfg := cfgpkg.NewFile()
 				cfg.Packages["chlog"] = cfgpkg.Section{Repo: util.StringPtr("gookit/gitw")}
+				cfg.Packages["ripgrep"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
 				return cfg, nil
 			},
 			LoadInstalled: func() (*storepkg.Config, error) {
@@ -382,6 +383,43 @@ func TestHandleListPrintsTable(t *testing.T) {
 	}
 	if !strings.Contains(got, "chlog") || !strings.Contains(got, "v0.3.6") {
 		t.Fatalf("expected table row in output, got %q", got)
+	}
+	if strings.Contains(got, "ripgrep") {
+		t.Fatalf("expected default list to omit managed-only package, got %q", got)
+	}
+}
+
+func TestHandleListAllPrintsManagedAndInstalledPackages(t *testing.T) {
+	svc := &cliService{
+		listService: app.ListService{
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["chlog"] = cfgpkg.Section{Repo: util.StringPtr("gookit/gitw")}
+				cfg.Packages["ripgrep"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{
+					Installed: map[string]storepkg.Entry{
+						"gookit/gitw": {Repo: "gookit/gitw", Tag: "v0.3.6"},
+					},
+				}, nil
+			},
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	err := svc.handleList(&ListOptions{All: true})
+	if err != nil {
+		t.Fatalf("handle list all: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "chlog") || !strings.Contains(got, "ripgrep") {
+		t.Fatalf("expected all list to include installed and managed-only packages, got %q", got)
 	}
 }
 

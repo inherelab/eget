@@ -81,8 +81,10 @@ eget download --all --to ./dist windirstat/windirstat
 ```bash
 # uninstall
 eget uninstall fzf
-# list config and installed store
+# list installed packages
 eget list|ls
+# list all managed and installed packages
+eget list --all
 # query repo info
 eget query owner/repo
 eget query --action releases --limit 5 owner/repo
@@ -141,7 +143,8 @@ The target argument accepted by `install` and `download` can be:
 
 `list` (alias: `ls`)
 
-- Lists the union of local managed packages and installed-store entries, and attaches recent installed-state details when available.
+- Lists installed packages by default.
+- Use `--all` / `-a` to list the union of local managed packages and installed-store entries.
 
 `query` (alias: `q`)
 

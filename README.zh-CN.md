@@ -82,8 +82,10 @@ eget download --all --to ./dist windirstat/windirstat
 ```bash
 # uninstall
 eget uninstall fzf
-# list config and installed store
+# 列出已安装包
 eget list|ls
+# 列出全部托管包和已安装包
+eget list --all
 # query repo info
 eget query owner/repo
 eget query --action releases --limit 5 owner/repo
@@ -142,7 +144,8 @@ eget config set global.target ~/.local/bin
 
 `list`(alias: `ls`)
 
-- 列出本地 managed packages 与 installed store 的并集，并尽可能关联最近一次安装状态。
+- 默认列出已安装包。
+- 使用 `--all` / `-a` 列出本地 managed packages 与 installed store 的并集。
 
 `query`(alias: `q`)
 

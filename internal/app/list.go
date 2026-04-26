@@ -118,6 +118,20 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 	return items, nil
 }
 
+func (s ListService) ListInstalledPackages() ([]ListItem, error) {
+	items, err := s.ListPackages()
+	if err != nil {
+		return nil, err
+	}
+	installed := make([]ListItem, 0, len(items))
+	for _, item := range items {
+		if item.Installed {
+			installed = append(installed, item)
+		}
+	}
+	return installed, nil
+}
+
 func (s ListService) FindPackage(name string) (*ListItem, error) {
 	items, err := s.ListPackages()
 	if err != nil {

@@ -139,6 +139,40 @@ func TestListPackagesIncludesInstalledOnlyEntries(t *testing.T) {
 	}
 }
 
+func TestListInstalledPackagesFiltersManagedOnlyEntries(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{
+				Installed: map[string]storepkg.Entry{
+					"junegunn/fzf": {
+						Repo:        "junegunn/fzf",
+						InstalledAt: now,
+						Tag:         "v0.50.0",
+					},
+				},
+			}, nil
+		},
+	}
+
+	items, err := svc.ListInstalledPackages()
+	if err != nil {
+		t.Fatalf("list installed packages: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected only installed items, got %#v", items)
+	}
+	if items[0].Name != "fzf" || !items[0].Installed {
+		t.Fatalf("expected installed fzf item, got %#v", items[0])
+	}
+}
+
 func TestListPackagesMergesInstalledStateIntoExplicitPackageName(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	svc := ListService{

@@ -230,12 +230,22 @@ func (s *cliService) handleList(opts *ListOptions) error {
 		return nil
 	}
 
-	items, err := s.listService.ListPackages()
+	var items []app.ListItem
+	var err error
+	if opts != nil && opts.All {
+		items, err = s.listService.ListPackages()
+	} else {
+		items, err = s.listService.ListInstalledPackages()
+	}
 	if err != nil {
 		return err
 	}
 	if len(items) == 0 {
-		ccolor.Infoln("no managed packages found")
+		if opts != nil && opts.All {
+			ccolor.Infoln("no managed packages found")
+		} else {
+			ccolor.Infoln("no installed packages found")
+		}
 		return nil
 	}
 

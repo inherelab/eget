@@ -193,6 +193,58 @@ func TestMain_ListOutdatedBindsOption(t *testing.T) {
 	}
 }
 
+func TestMain_ListAllBindsOption(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"list", "--all"})
+	if err != nil {
+		t.Fatalf("expected list --all command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+
+	opts, ok := calls[0].options.(*ListOptions)
+	if !ok {
+		t.Fatalf("expected ListOptions, got %T", calls[0].options)
+	}
+	if !opts.All {
+		t.Fatalf("expected all flag to be true")
+	}
+}
+
+func TestMain_ListAllShortBindsOption(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"list", "-a"})
+	if err != nil {
+		t.Fatalf("expected list -a command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+
+	opts, ok := calls[0].options.(*ListOptions)
+	if !ok {
+		t.Fatalf("expected ListOptions, got %T", calls[0].options)
+	}
+	if !opts.All {
+		t.Fatalf("expected all flag to be true")
+	}
+}
+
 func TestMain_ListInfoBindsOption(t *testing.T) {
 	calls := make([]commandCall, 0, 1)
 	handler := func(name string, options any) error {

@@ -88,12 +88,12 @@ eget <command> --options... arguments...
 
 ## List Flow
 
-`list` 以配置中的 managed packages 为主表：
+`list` 默认只展示 installed store 中的已安装包；设置 `--all` / `-a` 时展示 managed packages 与 installed store 的并集：
 
 - 读取 `[packages.<name>]`
 - 按 package name 排序
 - 通过 repo 键关联 installed store
-- 输出 managed package 定义与最近安装状态
+- 输出已安装状态；`--all` 时同时输出未安装的 managed package 定义
 
 ## Update Flow
 

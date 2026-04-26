@@ -4,6 +4,7 @@ import "github.com/gookit/goutil/cflag/capp"
 
 type ListOptions struct {
 	Outdated bool
+	All      bool
 	Info     string
 }
 
@@ -18,6 +19,7 @@ func newListCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	})
 	cmd.Aliases = []string{"ls"}
 	cmd.BoolVar(&opts.Outdated, "outdated", false, "Check and list outdated installed packages")
+	cmd.BoolVar(&opts.All, "all", false, "List all managed and installed packages;false;a")
 	cmd.StringVar(&opts.Info, "info", "", "Show detailed info for a package;;i")
 	return cmd, func() {
 		*opts = ListOptions{}
