@@ -3,6 +3,7 @@ cache_dir = "~/.cache/eget"
 proxy_url = ""
 system = ""
 target = "~/.local/bin"
+gui_target = "~/Applications"
 
 # 配置 api 请求缓存策略
 [api_cache]
@@ -22,3 +23,9 @@ fallbacks = []
 [packages."chlog"]
 name = "chlog"
 repo = "gookit/gitw"
+
+[packages."picoclaw"]
+name = "picoclaw"
+repo = "sipeed/picoclaw"
+is_gui = true
+file = "*.exe"

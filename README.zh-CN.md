@@ -63,6 +63,9 @@ eget install --to ~/.local/bin/fzf junegunn/fzf
 # 安装 并 记录
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
+# 安装 GUI 应用；免安装 GUI 程序默认写入 global.gui_target
+eget install --gui sipeed/picoclaw
+eget add --gui --name picoclaw sipeed/picoclaw
 ```
 
 **下载命令示例**
@@ -86,6 +89,8 @@ eget uninstall fzf
 eget list|ls
 # 列出全部托管包和已安装包
 eget list --all
+# 只列出 GUI 包
+eget list --gui
 # query repo info
 eget query owner/repo
 eget query --action releases --limit 5 owner/repo
@@ -127,6 +132,7 @@ eget config set global.target ~/.local/bin
 
 - 查找、下载、校验、提取目标，并记录安装状态。
 - 可通过 `--name` 指定安装后的可执行文件名；未指定 `--to` 时，也会作为单文件资产的重命名提示。
+- `--gui` 会将目标标记为 GUI 应用。免安装 GUI 应用默认使用 `global.gui_target`，`.msi` 或 `setup.exe` 等 GUI 安装器会被启动，但不会记录最终安装目录。
 - 传入 `--add` 时，安装成功后会自动将 repo 目标写入 `[packages.<name>]`；可配合 `--name` 指定包名。
 
 `download`(alias: `dl`)
@@ -146,6 +152,7 @@ eget config set global.target ~/.local/bin
 
 - 默认列出已安装包。
 - 使用 `--all` / `-a` 列出本地 managed packages 与 installed store 的并集。
+- 使用 `--gui` 只显示当前列表视图中的 GUI 应用。
 
 `query`(alias: `q`)
 
@@ -183,6 +190,7 @@ eget config set global.target ~/.local/bin
 `install` 额外支持：
 
 - `--add`: 安装成功后，将 repo 目标追加到 `[packages.<name>]` 托管配置中。
+- `--gui`: 按 GUI 应用安装；配合 `--add` 时会持久化 `is_gui = true`。
 - `--name`: 指定托管包名；对于单文件可执行资产，也会作为默认输出文件名提示。
 
 `update` 支持选项：
@@ -214,6 +222,7 @@ eget config set global.target ~/.local/bin
 
 - `install --name` 可用于指定单文件可执行资产的输出文件名，例如将 `chlog-windows-amd64.exe` 安装为 `chlog.exe`。
 - `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
+- `global.gui_target` 只用于免安装 GUI 应用。`.msi`、`setup.exe` 等 GUI 安装器会被启动，但不会记录最终安装目录。
 - `download` 默认保存原始下载文件；只有设置了 `--file` 或 `--extract-all` 才会自动提取归档内容。
 - 归档提取当前支持 `zip`、`tar.*` 以及 `7z`。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。
@@ -265,6 +274,7 @@ asset_filters = ["windows"]
 常见字段：
 
 - `target`
+- `gui_target`
 - `cache_dir`
 - `proxy_url`
 - `api_cache.enable`
@@ -279,6 +289,7 @@ asset_filters = ["windows"]
 - `asset_filters`
 - `download_source`
 - `extract_all`
+- `is_gui`
 - `quiet`
 - `upgrade_only`
 

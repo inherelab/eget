@@ -62,6 +62,9 @@ eget install --to ~/.local/bin/fzf junegunn/fzf
 # Install and record the package definition
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
+# Install a GUI app; portable GUI apps use global.gui_target by default
+eget install --gui sipeed/picoclaw
+eget add --gui --name picoclaw sipeed/picoclaw
 ```
 
 **Download Examples**
@@ -85,6 +88,8 @@ eget uninstall fzf
 eget list|ls
 # list all managed and installed packages
 eget list --all
+# list GUI packages
+eget list --gui
 # query repo info
 eget query owner/repo
 eget query --action releases --limit 5 owner/repo
@@ -126,6 +131,7 @@ The target argument accepted by `install` and `download` can be:
 
 - Resolve, download, verify, and extract a target, then record installation state.
 - `--name` can be used to override the installed executable name; without `--to`, it also acts as the rename hint for single-file assets.
+- `--gui` marks the target as a GUI application. Portable GUI apps use `global.gui_target` by default, while GUI installers such as `.msi` or `setup.exe` are launched and do not record a final install directory.
 - With `--add`, a successful install also writes the repo target to `[packages.<name>]`; use `--name` to override the package name.
 
 `download` (alias: `dl`)
@@ -145,6 +151,7 @@ The target argument accepted by `install` and `download` can be:
 
 - Lists installed packages by default.
 - Use `--all` / `-a` to list the union of local managed packages and installed-store entries.
+- Use `--gui` to filter the current list view to GUI applications.
 
 `query` (alias: `q`)
 
@@ -182,6 +189,7 @@ The target argument accepted by `install` and `download` can be:
 `install` additionally supports:
 
 - `--add`: After a successful install, append the repo target to `[packages.<name>]` managed config.
+- `--gui`: Install as a GUI application; with `--add`, persist `is_gui = true`.
 - `--name`: Override the managed package name; for single executable assets, it also acts as the default output-name hint.
 
 `update` options supports:
@@ -213,6 +221,7 @@ Notes:
 
 - `install --name` can rename a single executable asset, for example installing `chlog-windows-amd64.exe` as `chlog.exe`.
 - `install --add` only applies to repo targets and appends the managed package definition after a successful install.
+- `global.gui_target` is used only for portable GUI applications. GUI installers such as `.msi` or `setup.exe` are launched and do not record a final install directory.
 - `download` stores the raw downloaded asset by default; extraction only happens when `--file` or `--extract-all` is provided.
 - Archive extraction currently supports `zip`, `tar.*`, and `7z`.
 - Argument order follows the `cflag/capp` parser constraint and must be `CMD --OPTIONS... ARGUMENTS...`.
@@ -264,6 +273,7 @@ asset_filters = ["windows"]
 Common fields:
 
 - `target`
+- `gui_target`
 - `cache_dir`
 - `proxy_url`
 - `api_cache.enable`
@@ -278,6 +288,7 @@ Common fields:
 - `asset_filters`
 - `download_source`
 - `extract_all`
+- `is_gui`
 - `quiet`
 - `upgrade_only`
 
