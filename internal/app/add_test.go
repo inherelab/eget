@@ -31,6 +31,7 @@ func TestAddPackage(t *testing.T) {
 		Source:      true,
 		DisableSSL:  true,
 		All:         true,
+		IsGUI:       true,
 	}
 
 	if err := svc.AddPackage("junegunn/fzf", "", opts); err != nil {
@@ -63,6 +64,9 @@ func TestAddPackage(t *testing.T) {
 	}
 	if len(pkg.AssetFilters) != 1 || pkg.AssetFilters[0] != "linux_amd64" {
 		t.Fatalf("expected asset filters to be persisted, got %#v", pkg.AssetFilters)
+	}
+	if pkg.IsGUI == nil || !*pkg.IsGUI {
+		t.Fatalf("expected is_gui to be persisted, got %#v", pkg.IsGUI)
 	}
 }
 

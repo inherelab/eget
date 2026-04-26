@@ -395,9 +395,11 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 		Name:        opts.Name,
 		Source:      opts.Source,
 		Output:      opts.To,
+		OutputExplicit: opts.To != "",
 		System:      opts.System,
 		ExtractFile: opts.File,
 		All:         opts.All,
+		IsGUI:       opts.GUI,
 		Quiet:       opts.Quiet,
 		Asset:       splitAssetFilters(opts.Asset),
 	}
@@ -450,9 +452,11 @@ func installOptionsFromAdd(opts *AddOptions) install.Options {
 		Tag:         opts.Tag,
 		Source:      opts.Source,
 		Output:      opts.To,
+		OutputExplicit: opts.To != "",
 		System:      opts.System,
 		ExtractFile: opts.File,
 		All:         opts.All,
+		IsGUI:       opts.GUI,
 		Quiet:       opts.Quiet,
 		Asset:       splitAssetFilters(opts.Asset),
 	}

@@ -23,6 +23,9 @@ type RunResult struct {
 	Tool           string
 	Asset          string
 	ExtractedFiles []string
+	IsGUI          bool
+	InstallMode    string
+	InstallerFile  string
 }
 
 type Runner interface {

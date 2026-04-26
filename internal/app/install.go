@@ -55,7 +55,12 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 		return RunResult{}, err
 	}
 
-	if s.Store != nil && len(result.ExtractedFiles) > 0 {
+	installMode := result.InstallMode
+	if installMode == "" && opts.IsGUI && len(result.ExtractedFiles) > 0 {
+		installMode = install.InstallModePortable
+	}
+	shouldRecord := len(result.ExtractedFiles) > 0 || installMode == install.InstallModeInstaller
+	if s.Store != nil && shouldRecord {
 		repo := storepkg.NormalizeRepoName(runTarget)
 		tag, releaseDate := "", time.Time{}
 		if s.ReleaseInfo != nil {
@@ -76,6 +81,8 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 			Options:        extractOptionsMap(opts),
 			Tag:            tag,
 			ReleaseDate:    releaseDate,
+			IsGUI:          result.IsGUI || opts.IsGUI,
+			InstallMode:    installMode,
 		}
 		if err := s.Store.Record(runTarget, entry); err != nil {
 			return RunResult{}, err
@@ -204,6 +211,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		ProxyURL:     stringOpt(cli.ProxyURL),
 		DownloadOnly: boolOpt(cli.DownloadOnly),
 		File:         stringOpt(cli.ExtractFile),
+		IsGUI:        boolOpt(cli.IsGUI),
 		Quiet:        boolOpt(cli.Quiet),
 		ShowHash:     boolOpt(cli.Hash),
 		Source:       boolOpt(cli.Source),
@@ -220,6 +228,10 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		return install.Options{}, err
 	}
 	cacheDir, err := expandPath(merged.CacheDir)
+	if err != nil {
+		return install.Options{}, err
+	}
+	guiTarget, err := expandPath(merged.GuiTarget)
 	if err != nil {
 		return install.Options{}, err
 	}
@@ -256,6 +268,9 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		Name:              cli.Name,
 		Source:            merged.Source,
 		Output:            output,
+		OutputExplicit:    cli.Output != "",
+		GuiTarget:         guiTarget,
+		IsGUI:             merged.IsGUI,
 		CacheDir:          cacheDir,
 		ProxyURL:          merged.ProxyURL,
 		APICacheEnabled:   apiCacheEnabled,
@@ -295,6 +310,12 @@ func extractOptionsMap(opts install.Options) map[string]interface{} {
 	}
 	if opts.Output != "" {
 		recorded["output"] = opts.Output
+	}
+	if opts.GuiTarget != "" {
+		recorded["gui_target"] = opts.GuiTarget
+	}
+	if opts.IsGUI {
+		recorded["is_gui"] = true
 	}
 	if opts.ExtractFile != "" {
 		recorded["extract_file"] = opts.ExtractFile
