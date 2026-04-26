@@ -3,37 +3,14 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
+	"github.com/inherelab/eget/internal/client"
 	"github.com/inherelab/eget/internal/install"
 )
 
-type QueryRepoInfo struct {
-	Repo          string    `json:"repo"`
-	Description   string    `json:"description,omitempty"`
-	Homepage      string    `json:"homepage,omitempty"`
-	DefaultBranch string    `json:"default_branch,omitempty"`
-	Stars         int       `json:"stars,omitempty"`
-	Forks         int       `json:"forks,omitempty"`
-	OpenIssues    int       `json:"open_issues,omitempty"`
-	UpdatedAt     time.Time `json:"updated_at,omitempty"`
-}
-
-type QueryRelease struct {
-	Tag         string    `json:"tag"`
-	Name        string    `json:"name,omitempty"`
-	PublishedAt time.Time `json:"published_at,omitempty"`
-	Prerelease  bool      `json:"prerelease,omitempty"`
-	AssetsCount int       `json:"assets_count,omitempty"`
-}
-
-type QueryAsset struct {
-	Name          string    `json:"name"`
-	Size          int64     `json:"size,omitempty"`
-	DownloadCount int       `json:"download_count,omitempty"`
-	UpdatedAt     time.Time `json:"updated_at,omitempty"`
-	URL           string    `json:"url,omitempty"`
-}
+type QueryRepoInfo = client.RepoInfo
+type QueryRelease = client.Release
+type QueryAsset = client.Asset
 
 type QueryOptions struct {
 	Repo       string

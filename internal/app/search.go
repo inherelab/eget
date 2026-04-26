@@ -3,22 +3,12 @@ package app
 import (
 	"fmt"
 	"strings"
-	"time"
+
+	"github.com/inherelab/eget/internal/client"
 )
 
-type SearchRepo struct {
-	FullName        string    `json:"full_name,omitempty"`
-	Description     string    `json:"description,omitempty"`
-	HTMLURL         string    `json:"html_url,omitempty"`
-	Homepage        string    `json:"homepage,omitempty"`
-	Language        string    `json:"language,omitempty"`
-	StargazersCount int       `json:"stargazers_count,omitempty"`
-	ForksCount      int       `json:"forks_count,omitempty"`
-	OpenIssuesCount int       `json:"open_issues_count,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at,omitempty"`
-	Archived        bool      `json:"archived,omitempty"`
-	Private         bool      `json:"private,omitempty"`
-}
+type SearchRepo = client.SearchRepo
+type SearchResult = client.SearchResult
 
 type SearchOptions struct {
 	Keyword string
@@ -26,12 +16,6 @@ type SearchOptions struct {
 	Limit   int
 	Sort    string
 	Order   string
-}
-
-type SearchResult struct {
-	Query      string       `json:"query"`
-	TotalCount int          `json:"total_count"`
-	Items      []SearchRepo `json:"items,omitempty"`
 }
 
 type SearchClient interface {

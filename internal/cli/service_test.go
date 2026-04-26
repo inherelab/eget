@@ -2,9 +2,7 @@ package cli
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,16 +20,16 @@ import (
 
 func TestInstallOptionsFromCommandsDoNotSetCacheDir(t *testing.T) {
 	installOpts := installOptionsFromInstall(&InstallOptions{
-		Tag:      "nightly",
-		System:   "linux/amd64",
-		To:       "~/.local/bin",
-		File:     "tool",
-		Asset:    "linux",
-		Source:   true,
-		All:      true,
-		Quiet:    true,
-		Add:      true,
-		Name:     "tool",
+		Tag:    "nightly",
+		System: "linux/amd64",
+		To:     "~/.local/bin",
+		File:   "tool",
+		Asset:  "linux",
+		Source: true,
+		All:    true,
+		Quiet:  true,
+		Add:    true,
+		Name:   "tool",
 	})
 	if installOpts.CacheDir != "" {
 		t.Fatalf("expected install cache dir to stay empty, got %q", installOpts.CacheDir)
@@ -41,12 +39,12 @@ func TestInstallOptionsFromCommandsDoNotSetCacheDir(t *testing.T) {
 	}
 
 	downloadOpts := installOptionsFromDownload(&DownloadOptions{
-		Tag:      "nightly",
-		System:   "linux/amd64",
-		To:       "~/.cache/downloads",
-		Asset:    "linux",
-		Source:   true,
-		Quiet:    true,
+		Tag:    "nightly",
+		System: "linux/amd64",
+		To:     "~/.cache/downloads",
+		Asset:  "linux",
+		Source: true,
+		Quiet:  true,
 	})
 	if downloadOpts.CacheDir != "" {
 		t.Fatalf("expected download cache dir to stay empty, got %q", downloadOpts.CacheDir)
@@ -56,27 +54,27 @@ func TestInstallOptionsFromCommandsDoNotSetCacheDir(t *testing.T) {
 	}
 
 	addOpts := installOptionsFromAdd(&AddOptions{
-		Name:     "tool",
-		Tag:      "nightly",
-		System:   "linux/amd64",
-		To:       "~/.local/bin",
-		File:     "tool",
-		Asset:    "linux",
-		Source:   true,
-		All:      true,
-		Quiet:    true,
+		Name:   "tool",
+		Tag:    "nightly",
+		System: "linux/amd64",
+		To:     "~/.local/bin",
+		File:   "tool",
+		Asset:  "linux",
+		Source: true,
+		All:    true,
+		Quiet:  true,
 	})
 	if addOpts.CacheDir != "" {
 		t.Fatalf("expected add cache dir to stay empty, got %q", addOpts.CacheDir)
 	}
 
 	updateOpts := installOptionsFromUpdate(&UpdateOptions{
-		Tag:      "nightly",
-		System:   "linux/amd64",
-		To:       "~/.local/bin",
-		Asset:    "linux",
-		Source:   true,
-		Quiet:    true,
+		Tag:    "nightly",
+		System: "linux/amd64",
+		To:     "~/.local/bin",
+		Asset:  "linux",
+		Source: true,
+		Quiet:  true,
 	})
 	if updateOpts.CacheDir != "" {
 		t.Fatalf("expected update cache dir to stay empty, got %q", updateOpts.CacheDir)
@@ -235,44 +233,6 @@ func TestNewCLIServiceWiresReleaseInfo(t *testing.T) {
 	}
 	if svc.appService.ReleaseInfo == nil {
 		t.Fatal("expected ReleaseInfo to be configured")
-	}
-}
-
-func TestLatestGitHubReleaseInfo(t *testing.T) {
-	origGetWithOptions := githubAPIGetWithOptions
-	defer func() { githubAPIGetWithOptions = origGetWithOptions }()
-
-	var requestedURL string
-	githubAPIGetWithOptions = func(rawURL string, opts install.Options) (*http.Response, error) {
-		requestedURL = rawURL
-		payload, err := json.Marshal(map[string]any{
-			"tag_name":   "v0.3.6",
-			"created_at": "2026-04-20T14:10:17Z",
-		})
-		if err != nil {
-			t.Fatalf("marshal payload: %v", err)
-		}
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Status:     "200 OK",
-			Body:       io.NopCloser(bytes.NewReader(payload)),
-			Header:     make(http.Header),
-		}, nil
-	}
-
-	tag, createdAt, err := latestGitHubReleaseInfo("gookit/gitw", install.Options{})
-	if err != nil {
-		t.Fatalf("latestGitHubReleaseInfo: %v", err)
-	}
-	if requestedURL != "https://api.github.com/repos/gookit/gitw/releases/latest" {
-		t.Fatalf("unexpected request url: %s", requestedURL)
-	}
-	if tag != "v0.3.6" {
-		t.Fatalf("expected tag v0.3.6, got %q", tag)
-	}
-	wantTime := time.Date(2026, 4, 20, 14, 10, 17, 0, time.UTC)
-	if !createdAt.Equal(wantTime) {
-		t.Fatalf("expected created_at %s, got %s", wantTime, createdAt)
 	}
 }
 
@@ -595,6 +555,27 @@ func TestHandleQueryJSONOutput(t *testing.T) {
 	}
 }
 
+func TestPrintQueryResultAssets(t *testing.T) {
+	result := app.QueryResult{
+		Action: "assets",
+		Repo:   "owner/repo",
+		Tag:    "v1.2.3",
+		Assets: []app.QueryAsset{{
+			Name: "tool-linux-amd64.tar.gz",
+			URL:  "https://example.com/tool",
+		}},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	printQueryResult(result)
+	if !strings.Contains(out.String(), "tool-linux-amd64.tar.gz") {
+		t.Fatalf("expected asset table output, got %q", out.String())
+	}
+}
+
 func TestHandleSearchPrintsList(t *testing.T) {
 	svc := &cliService{
 		searchService: app.SearchService{
@@ -602,11 +583,11 @@ func TestHandleSearchPrintsList(t *testing.T) {
 				result: app.SearchResult{
 					TotalCount: 1,
 					Items: []app.SearchRepo{{
-						FullName:    "BurntSushi/ripgrep",
-						Description: "ripgrep recursively searches directories",
+						FullName:        "BurntSushi/ripgrep",
+						Description:     "ripgrep recursively searches directories",
 						StargazersCount: 123,
-						Language:    "Rust",
-						UpdatedAt:   time.Date(2026, 4, 24, 8, 30, 0, 0, time.UTC),
+						Language:        "Rust",
+						UpdatedAt:       time.Date(2026, 4, 24, 8, 30, 0, 0, time.UTC),
 					}},
 				},
 			},

@@ -15,6 +15,7 @@ import (
 	"github.com/gookit/goutil/mathutil"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
+	"github.com/inherelab/eget/internal/client"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
@@ -32,8 +33,6 @@ type cliService struct {
 	updService       app.UpdateService
 }
 
-var githubAPIGetWithOptions = install.GetWithOptions
-
 func newCLIService() (*cliService, error) {
 	cfg, err := cfgpkg.Load()
 	if err != nil {
@@ -41,7 +40,12 @@ func newCLIService() (*cliService, error) {
 	}
 	defaultOpts := install.Options{}
 	applyGlobalNetworkConfig(&defaultOpts, cfg)
-	runner := install.NewRunner(install.NewDefaultService(install.NewHTTPGetter(defaultOpts), binaryModTime))
+	githubClient := client.NewGitHubClient(install.ClientOptions(defaultOpts))
+	installService := install.NewDefaultService(githubClient, binaryModTime)
+	installService.GitHubGetterFactory = func(opts install.Options) sourcegithub.HTTPGetter {
+		return client.NewGitHubClient(install.ClientOptions(opts))
+	}
+	runner := install.NewRunner(installService)
 	runner.InstalledLoad = func() (map[string]string, map[string]string, error) {
 		store, err := storepkg.DefaultStore()
 		if err != nil {
@@ -73,14 +77,15 @@ func newCLIService() (*cliService, error) {
 	cfgService := app.ConfigService{ConfigPath: cfgPath}
 	listService := app.ListService{
 		LatestTag: func(repo string) (string, error) {
-			return latestGitHubTag(repo, defaultOpts)
+			tag, _, err := githubClient.LatestReleaseInfo(repo)
+			return tag, err
 		},
 	}
 	queryService := app.QueryService{
-		Client: newGitHubQueryClient(defaultOpts),
+		Client: githubClient,
 	}
 	searchService := app.SearchService{
-		Client: newGitHubSearchClient(defaultOpts),
+		Client: githubClient,
 	}
 	uninstallService := app.UninstallService{
 		Store: store,
@@ -91,7 +96,7 @@ func newCLIService() (*cliService, error) {
 		Config: &cfgService,
 		Now:    time.Now,
 		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
-			return latestGitHubReleaseInfo(repo, defaultOpts)
+			return githubClient.LatestReleaseInfo(repo)
 		},
 	}
 	updService := app.UpdateService{
@@ -280,9 +285,9 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		}
 		ccolor.Printf("# %s, exists: %v\n", info.Path, info.Exists)
 		show.MList(map[string]any{
-			"global": cfg.Global,
+			"global":   cfg.Global,
 			"apiCache": cfg.ApiCache,
-			"ghproxy": cfg.Ghproxy,
+			"ghproxy":  cfg.Ghproxy,
 		})
 		ccolor.Yellowln("📦 Configed Packages:")
 		show.MList(cfg.Packages)
@@ -414,14 +419,14 @@ func applyGlobalNetworkConfig(opts *install.Options, cfg *cfgpkg.File) {
 
 func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 	base := installOptionsFromInstall(&InstallOptions{
-		Tag:      opts.Tag,
-		System:   opts.System,
-		To:       opts.To,
-		File:     opts.File,
-		Asset:    opts.Asset,
-		Source:   opts.Source,
-		All:      opts.All,
-		Quiet:    opts.Quiet,
+		Tag:    opts.Tag,
+		System: opts.System,
+		To:     opts.To,
+		File:   opts.File,
+		Asset:  opts.Asset,
+		Source: opts.Source,
+		All:    opts.All,
+		Quiet:  opts.Quiet,
 	})
 	if hasMultipleFilePatterns(opts.File) {
 		base.All = true
@@ -445,12 +450,12 @@ func installOptionsFromAdd(opts *AddOptions) install.Options {
 
 func installOptionsFromUpdate(opts *UpdateOptions) install.Options {
 	return install.Options{
-		Tag:      opts.Tag,
-		Source:   opts.Source,
-		Output:   opts.To,
-		System:   opts.System,
-		Quiet:    opts.Quiet,
-		Asset:    splitAssetFilters(opts.Asset),
+		Tag:    opts.Tag,
+		Source: opts.Source,
+		Output: opts.To,
+		System: opts.System,
+		Quiet:  opts.Quiet,
+		Asset:  splitAssetFilters(opts.Asset),
 	}
 }
 
@@ -600,39 +605,6 @@ func binaryModTime(bin, output string) time.Time {
 		return time.Time{}
 	}
 	return info.ModTime()
-}
-
-func latestGitHubTag(repo string, opts install.Options) (string, error) {
-	tag, _, err := latestGitHubReleaseInfo(repo, opts)
-	if err != nil {
-		return "", err
-	}
-	return tag, nil
-}
-
-func latestGitHubReleaseInfo(repo string, opts install.Options) (string, time.Time, error) {
-	resp, err := githubAPIGetWithOptions(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), opts)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		return "", time.Time{}, fmt.Errorf("latest tag check failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
-	}
-
-	var payload struct {
-		Tag       string    `json:"tag_name"`
-		CreatedAt time.Time `json:"created_at"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", time.Time{}, err
-	}
-	if payload.Tag == "" {
-		return "", time.Time{}, fmt.Errorf("latest tag is empty")
-	}
-	return payload.Tag, payload.CreatedAt, nil
 }
 
 func printListItemDetails(item *app.ListItem) {
