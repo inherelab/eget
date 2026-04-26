@@ -423,6 +423,37 @@ func TestHandleListAllPrintsManagedAndInstalledPackages(t *testing.T) {
 	}
 }
 
+func TestHandleListGUIPrintsOnlyGUIPackages(t *testing.T) {
+	isGUI := true
+	svc := &cliService{
+		listService: app.ListService{
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["picoclaw"] = cfgpkg.Section{Repo: util.StringPtr("sipeed/picoclaw"), IsGUI: &isGUI}
+				cfg.Packages["chlog"] = cfgpkg.Section{Repo: util.StringPtr("gookit/gitw")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"sipeed/picoclaw": {Repo: "sipeed/picoclaw", Tag: "v0.2.7", IsGUI: true, InstallMode: "portable"},
+					"gookit/gitw":     {Repo: "gookit/gitw", Tag: "v0.3.6"},
+				}}, nil
+			},
+		},
+	}
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+	err := svc.handleList(&ListOptions{GUI: true})
+	if err != nil {
+		t.Fatalf("handle list gui: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "picoclaw") || strings.Contains(got, "chlog") {
+		t.Fatalf("expected only gui package output, got %q", got)
+	}
+}
+
 func TestHandleListInfoPrintsDetails(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	svc := &cliService{

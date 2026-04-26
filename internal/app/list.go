@@ -26,6 +26,8 @@ type ListItem struct {
 	InstalledAt  time.Time
 	Asset        string
 	URL          string
+	IsGUI        bool
+	InstallMode  string
 }
 
 type OutdatedItem struct {
@@ -62,12 +64,16 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 	byName := make(map[string]ListItem, len(cfg.Packages))
 	for name, pkg := range cfg.Packages {
 		repo := util.DerefString(pkg.Repo)
-		byName[name] = ListItem{
+		item := ListItem{
 			Name:   name,
 			Repo:   repo,
 			Target: util.DerefString(pkg.Target),
 			Tag:    util.DerefString(pkg.Tag),
 		}
+		if pkg.IsGUI != nil && *pkg.IsGUI {
+			item.IsGUI = true
+		}
+		byName[name] = item
 	}
 
 	if installed != nil && installed.Installed != nil {
@@ -101,6 +107,12 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 			item.InstalledAt = entry.InstalledAt
 			item.Asset = entry.Asset
 			item.URL = entry.URL
+			if entry.IsGUI {
+				item.IsGUI = true
+			}
+			if entry.InstallMode != "" {
+				item.InstallMode = entry.InstallMode
+			}
 			byName[name] = item
 		}
 	}
@@ -130,6 +142,26 @@ func (s ListService) ListInstalledPackages() ([]ListItem, error) {
 		}
 	}
 	return installed, nil
+}
+
+func (s ListService) ListGUIPackages(all bool) ([]ListItem, error) {
+	var items []ListItem
+	var err error
+	if all {
+		items, err = s.ListPackages()
+	} else {
+		items, err = s.ListInstalledPackages()
+	}
+	if err != nil {
+		return nil, err
+	}
+	gui := make([]ListItem, 0, len(items))
+	for _, item := range items {
+		if item.IsGUI {
+			gui = append(gui, item)
+		}
+	}
+	return gui, nil
 }
 
 func (s ListService) FindPackage(name string) (*ListItem, error) {

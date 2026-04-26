@@ -173,6 +173,51 @@ func TestListInstalledPackagesFiltersManagedOnlyEntries(t *testing.T) {
 	}
 }
 
+func TestListGUIPackagesFiltersConfigAndInstalledMetadata(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	isGUI := true
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["picoclaw"] = cfgpkg.Section{Repo: util.StringPtr("sipeed/picoclaw"), IsGUI: &isGUI}
+			cfg.Packages["chlog"] = cfgpkg.Section{Repo: util.StringPtr("gookit/gitw")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"sipeed/picoclaw": {Repo: "sipeed/picoclaw", InstalledAt: now, Tag: "v0.2.7", IsGUI: true, InstallMode: "portable"},
+				"gookit/gitw":     {Repo: "gookit/gitw", InstalledAt: now, Tag: "v0.3.6"},
+			}}, nil
+		},
+	}
+	items, err := svc.ListGUIPackages(false)
+	if err != nil {
+		t.Fatalf("list gui packages: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "picoclaw" || !items[0].IsGUI || items[0].InstallMode != "portable" {
+		t.Fatalf("expected only picoclaw with gui metadata, got %#v", items)
+	}
+}
+
+func TestListGUIPackagesIncludesInstalledOnlyGUI(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil },
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"sipeed/picoclaw": {Repo: "sipeed/picoclaw", InstalledAt: now, Tag: "v0.2.7", IsGUI: true, InstallMode: "installer"},
+			}}, nil
+		},
+	}
+	items, err := svc.ListGUIPackages(false)
+	if err != nil {
+		t.Fatalf("list installed-only gui packages: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "picoclaw" || items[0].InstallMode != "installer" {
+		t.Fatalf("expected installed-only gui package, got %#v", items)
+	}
+}
+
 func TestListPackagesMergesInstalledStateIntoExplicitPackageName(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	svc := ListService{

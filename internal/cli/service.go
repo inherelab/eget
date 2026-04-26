@@ -232,7 +232,9 @@ func (s *cliService) handleList(opts *ListOptions) error {
 
 	var items []app.ListItem
 	var err error
-	if opts != nil && opts.All {
+	if opts != nil && opts.GUI {
+		items, err = s.listService.ListGUIPackages(opts.All)
+	} else if opts != nil && opts.All {
 		items, err = s.listService.ListPackages()
 	} else {
 		items, err = s.listService.ListInstalledPackages()
@@ -241,7 +243,9 @@ func (s *cliService) handleList(opts *ListOptions) error {
 		return err
 	}
 	if len(items) == 0 {
-		if opts != nil && opts.All {
+		if opts != nil && opts.GUI {
+			ccolor.Infoln("no GUI packages found")
+		} else if opts != nil && opts.All {
 			ccolor.Infoln("no managed packages found")
 		} else {
 			ccolor.Infoln("no installed packages found")
@@ -631,6 +635,10 @@ func printListItemDetails(item *app.ListItem) {
 		fmt.Printf("tag: %s\n", item.Tag)
 	}
 	fmt.Printf("installed: %s\n", map[bool]string{true: "yes", false: "no"}[item.Installed])
+	fmt.Printf("is_gui: %s\n", map[bool]string{true: "yes", false: "no"}[item.IsGUI])
+	if item.InstallMode != "" {
+		fmt.Printf("install_mode: %s\n", item.InstallMode)
+	}
 	if item.Version != "" {
 		fmt.Printf("version: %s\n", item.Version)
 	}
