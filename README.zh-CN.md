@@ -74,7 +74,7 @@ eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.t
 eget download --file README.md,LICENSE --to ./dist owner/repo
 eget download --file "*.txt" owner/repo
 eget download --file "bin/*" owner/repo
-eget download --all --to ./dist windirstat/windirstat
+eget download --extract-all --to ./dist windirstat/windirstat
 ```
 
 **其他命令示例**
@@ -132,7 +132,7 @@ eget config set global.target ~/.local/bin
 `download`(alias: `dl`)
 
 - 复用安装链路，但不记录 installed store。
-- 默认仅下载原始 asset；只有设置 `--file` 或 `--all` 时才会自动解压归档内容。
+- 默认仅下载原始 asset；只有设置 `--file` 或 `--extract-all` 时才会自动解压归档内容。
 
 `add`
 
@@ -175,7 +175,7 @@ eget config set global.target ~/.local/bin
 - `--file`: 指定归档内要提取的文件；支持逗号分隔多个文件或 glob 模式，例如 `README.md,LICENSE`。
 - `--asset`: 指定资源过滤关键词；可用逗号分隔多个过滤条件，也支持 `REG:` 前缀正则，例如 `REG:\\.deb$`，排除可用 `^REG:...`。
 - `--source`: 下载源码归档而不是预构建二进制。
-- `--all`: 提取归档中的全部文件，而不是只选择一个目标文件。
+- `--extract-all`, `--ea`: 提取归档中的全部文件，而不是只选择一个目标文件。
 - `--quiet`: 精简常规输出，适用于脚本或批处理场景。
 
 > 缓存目录请通过 `config set global.cache_dir ...` 或配置文件中的 `cache_dir` 设置。
@@ -214,7 +214,7 @@ eget config set global.target ~/.local/bin
 
 - `install --name` 可用于指定单文件可执行资产的输出文件名，例如将 `chlog-windows-amd64.exe` 安装为 `chlog.exe`。
 - `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
-- `download` 默认保存原始下载文件；只有设置了 `--file` 或 `--all` 才会自动提取归档内容。
+- `download` 默认保存原始下载文件；只有设置了 `--file` 或 `--extract-all` 才会自动提取归档内容。
 - 归档提取当前支持 `zip`、`tar.*` 以及 `7z`。
 - 参数顺序遵循 `cflag/capp` 约束，必须是 `CMD --OPTIONS... ARGUMENTS...`。
 

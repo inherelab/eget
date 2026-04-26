@@ -33,7 +33,7 @@ func newAddCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.File, "file", "", "File to extract")
 	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
-	cmd.BoolVar(&opts.All, "all", false, "Extract all files")
+	cmd.BoolVar(&opts.All, "extract-all", false, "Extract all files;;ea")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
 	cmd.AddArg("target", "Package target", true, nil)
 	return cmd, func() {

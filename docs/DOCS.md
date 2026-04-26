@@ -194,7 +194,7 @@ CLI > package > repo > global > default
 - `--file`
 - `--asset`
 - `--source`
-- `--all`
+- `--extract-all` / `--ea`
 - `--quiet`
 
 `update` 额外支持：

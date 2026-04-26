@@ -73,7 +73,7 @@ eget download --file go --to ~/go1.17.5 https://go.dev/dl/go1.17.5.linux-amd64.t
 eget download --file README.md,LICENSE --to ./dist owner/repo
 eget download --file "*.txt" owner/repo
 eget download --file "bin/*" owner/repo
-eget download --all --to ./dist windirstat/windirstat
+eget download --extract-all --to ./dist windirstat/windirstat
 ```
 
 **Others Examples**
@@ -131,7 +131,7 @@ The target argument accepted by `install` and `download` can be:
 `download` (alias: `dl`)
 
 - Reuses the install pipeline without recording installed state.
-- Downloads the raw asset by default; archive extraction only happens when `--file` or `--all` is set.
+- Downloads the raw asset by default; archive extraction only happens when `--file` or `--extract-all` is set.
 
 `add`
 
@@ -174,7 +174,7 @@ The target argument accepted by `install` and `download` can be:
 - `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`.
 - `--asset`: Filter release assets by keyword; multiple filters can be separated by commas. Regex is also supported with the `REG:` prefix, for example `REG:\\.deb$`, and exclusions can use `^REG:...`.
 - `--source`: Download the source archive instead of a prebuilt binary release.
-- `--all`: Extract all files from the archive instead of selecting a single target file.
+- `--extract-all`, `--ea`: Extract all files from the archive instead of selecting a single target file.
 - `--quiet`: Reduce normal command output for scripting or batch use.
 
 > Cache behavior is configured via `config set global.cache_dir ...` or the `cache_dir` field in the config file.
@@ -213,7 +213,7 @@ Notes:
 
 - `install --name` can rename a single executable asset, for example installing `chlog-windows-amd64.exe` as `chlog.exe`.
 - `install --add` only applies to repo targets and appends the managed package definition after a successful install.
-- `download` stores the raw downloaded asset by default; extraction only happens when `--file` or `--all` is provided.
+- `download` stores the raw downloaded asset by default; extraction only happens when `--file` or `--extract-all` is provided.
 - Archive extraction currently supports `zip`, `tar.*`, and `7z`.
 - Argument order follows the `cflag/capp` parser constraint and must be `CMD --OPTIONS... ARGUMENTS...`.
 

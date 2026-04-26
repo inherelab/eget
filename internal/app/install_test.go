@@ -227,7 +227,7 @@ func TestDownloadTargetWithAllRunsExtractionFlow(t *testing.T) {
 		t.Fatalf("expected runner to be called once, got %d", runner.calls)
 	}
 	if runner.opts.DownloadOnly {
-		t.Fatal("expected download target with --all to disable DownloadOnly")
+		t.Fatal("expected download target with extract-all to disable DownloadOnly")
 	}
 	if store.calls != 0 {
 		t.Fatalf("expected store to not be called, got %d", store.calls)

@@ -96,7 +96,7 @@ func TestInstallOptionsFromDownloadEnablesArchiveExtractionWhenRequested(t *test
 		All: true,
 	})
 	if opts.DownloadOnly {
-		t.Fatal("expected download with --all to disable DownloadOnly")
+		t.Fatal("expected download with extract-all to disable DownloadOnly")
 	}
 }
 

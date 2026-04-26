@@ -62,6 +62,82 @@ func TestMain_InstallStandardOrderRoutesAndBindsOptions(t *testing.T) {
 	}
 }
 
+func TestMain_ExtractAllFlagBindsInstallDownloadAndAdd(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"install long", []string{"install", "--extract-all", "inhere/markview"}, "install"},
+		{"install short", []string{"install", "--ea", "inhere/markview"}, "install"},
+		{"download long", []string{"download", "--extract-all", "inhere/markview"}, "download"},
+		{"download short", []string{"download", "--ea", "inhere/markview"}, "download"},
+		{"add long", []string{"add", "--extract-all", "inhere/markview"}, "add"},
+		{"add short", []string{"add", "--ea", "inhere/markview"}, "add"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := make([]commandCall, 0, 1)
+			handler := func(name string, options any) error {
+				calls = append(calls, commandCall{name: name, options: options})
+				return nil
+			}
+
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs(tt.args)
+			if err != nil {
+				t.Fatalf("expected %s command to parse, got %v", tt.name, err)
+			}
+			if len(calls) != 1 || calls[0].name != tt.want {
+				t.Fatalf("unexpected routed call: %#v", calls)
+			}
+			switch opts := calls[0].options.(type) {
+			case *InstallOptions:
+				if !opts.All {
+					t.Fatalf("expected install extract-all flag to be true")
+				}
+			case *DownloadOptions:
+				if !opts.All {
+					t.Fatalf("expected download extract-all flag to be true")
+				}
+			case *AddOptions:
+				if !opts.All {
+					t.Fatalf("expected add extract-all flag to be true")
+				}
+			default:
+				t.Fatalf("unexpected options type %T", calls[0].options)
+			}
+		})
+	}
+}
+
+func TestMain_InstallDownloadAndAddRejectRemovedAllFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"install", []string{"install", "--all", "inhere/markview"}},
+		{"download", []string{"download", "--all", "inhere/markview"}},
+		{"add", []string{"add", "--all", "inhere/markview"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := newApp(func(string, any) error { return nil }, &stdout, &stderr).RunWithArgs(tt.args)
+			if err == nil {
+				t.Fatalf("expected %s --all to be rejected", tt.name)
+			}
+			if !strings.Contains(err.Error(), "all") {
+				t.Fatalf("expected error to mention all, got %v", err)
+			}
+		})
+	}
+}
+
 func TestMain_InstallRejectsRemovedCacheDirFlag(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
