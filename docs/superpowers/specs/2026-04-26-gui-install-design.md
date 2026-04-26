@@ -38,10 +38,10 @@ A target is treated as GUI when one of these is true:
 GUI status participates in the same layered precedence model as install options:
 
 ```text
-CLI > package > repo > global > default
+CLI > package > repo > default
 ```
 
-`global` does not need an `is_gui` default in the MVP. It is listed in the precedence model only because the config merge utility already supports global fields as a general pattern.
+`global` does not define `is_gui` in the MVP. `global.gui_target` is a global directory setting, not a default GUI marker.
 
 ### Install Mode
 
@@ -69,6 +69,8 @@ Directory resolution rules:
 1. If `--to` is provided, use `--to`.
 2. If the final install is GUI + portable and `global.gui_target` is set, use `global.gui_target`.
 3. Otherwise use `global.target`.
+
+The app layer should pass both `target` and `gui_target` into runtime install options. The runner confirms `install_mode` only after it has selected the final asset or extracted file, so final output-path selection for GUI portable installs belongs at the runner boundary, not only in app option resolution.
 
 Installer mode never uses `global.gui_target` because the external installer owns its final destination.
 
@@ -112,6 +114,8 @@ eget add --gui --name picoclaw sipeed/picoclaw
 
 `download --gui` is intentionally not supported. `download` keeps its current raw-fetch semantics. Users can still choose a GUI-related output directory explicitly with `--to`.
 
+Implementation should not register a `--gui` flag on `download`; the parser should reject it as an unknown flag.
+
 ### List
 
 ```bash
@@ -147,10 +151,48 @@ Examples:
 - `foo-installer-x64.exe` -> `installer`
 - `app.msi` -> `installer`
 - `tool.zip` containing `tool.exe` -> `portable`
+- `tool.zip` containing `setup.exe` -> `installer`
+
+Installer detection must run after archive file selection. A zip asset is not installer-mode by itself; the selected file inside the archive decides the mode.
+
+## Runtime Model
+
+The runtime model should separate GUI intent, directory defaults, confirmed install mode, and installer launch side effects.
+
+`install.Options` should gain fields equivalent to:
+
+- `IsGUI bool`: the final GUI intent after CLI/config resolution.
+- `GuiTarget string`: expanded portable GUI default directory.
+- `InstallMode string`: optional internal field for the runner-confirmed mode. CLI/config install-mode override is not part of the MVP.
+
+`install.RunResult` should gain fields equivalent to:
+
+- `IsGUI bool`: confirmed GUI status used for this run.
+- `InstallMode string`: empty for non-GUI, `portable` or `installer` for GUI installs.
+- `InstallerFile string`: path to the installer file that was started, when mode is `installer`.
+
+The app layer resolves config and CLI intent. The runner owns these decisions because it sees the selected asset and extracted file:
+
+- Confirm `install_mode`.
+- Choose `global.gui_target` for GUI portable installs when `--to` is empty.
+- Materialize installer files.
+- Launch installers.
+
+Installer launch should use a narrow interface so tests do not start real installers:
+
+```go
+type InstallerLauncher interface {
+    LaunchInstaller(path string, kind InstallerKind) error
+}
+```
+
+The default implementation uses `os/exec`. Tests should inject a fake launcher that records the command and returns success or failure.
 
 ## Installer Launch Behavior
 
 Installer mode downloads or extracts the installer file, starts it, and returns success when the installer process starts successfully.
+
+Success means process start succeeds. The implementation should call `cmd.Start()` and should not call `cmd.Wait()` for GUI installers.
 
 Windows behavior:
 
@@ -164,6 +206,14 @@ Non-Windows behavior:
 - Native installer formats are out of scope for this MVP unless they are already handled as portable artifacts.
 
 If process start fails, `install` returns an error and does not write installed-store metadata.
+
+Installer file materialization rules:
+
+- Direct `.msi` or installer `.exe` asset: reuse the cached/downloaded asset path when available. If the current download path only exists in memory, write it to a deterministic file under `cache_dir` before launch.
+- Archive containing an installer file: extract only the selected installer file to a deterministic file under `cache_dir` before launch.
+- Local file target: launch the local file path directly when it matches installer rules.
+
+If `cache_dir` is empty and an installer file needs to be materialized, use the same fallback output/cache directory that direct downloads currently use. The implementation plan should pin the exact helper to avoid ad-hoc temp paths.
 
 ## Installed Store
 
@@ -187,28 +237,35 @@ Recording rules:
 - GUI portable installs record `is_gui = true`, `install_mode = "portable"`, and the usual extracted files.
 - GUI installer installs record `is_gui = true`, `install_mode = "installer"`, and the selected/downloaded installer asset information.
 - GUI installer installs do not record a final application install directory.
+- GUI installer installs write installed-store metadata when installer launch succeeds, even if `ExtractedFiles` is empty.
 - Non-GUI installs may omit `install_mode` to avoid changing existing CLI-tool records unnecessarily.
 
 `list --gui` should use both config and installed-store metadata. A package is GUI if either source says it is GUI.
+
+This is intentionally an OR merge for the MVP. A config value of `is_gui = false` does not hide an installed-store entry that was recorded as GUI.
 
 ## Data Flow
 
 ### Portable GUI Install
 
 1. CLI parses `install --gui` or app resolves `is_gui = true` from config.
-2. App resolves install options.
-3. If `--to` is empty and install mode is portable, app uses `global.gui_target` when set.
-4. Runner downloads/selects/extracts the asset using the current install flow.
-5. App records installed metadata with `is_gui = true` and `install_mode = "portable"`.
+2. App resolves install options and passes `IsGUI=true` plus expanded `GuiTarget` to the runner.
+3. Runner downloads/selects the asset and selects the archive file when needed.
+4. Runner confirms `install_mode = "portable"`.
+5. If `--to` is empty, runner uses `GuiTarget` when set, otherwise the resolved normal output target.
+6. Runner extracts the selected file using the current install flow.
+7. App records installed metadata with `is_gui = true` and `install_mode = "portable"`.
 
 ### Installer GUI Install
 
 1. CLI parses `install --gui` or app resolves `is_gui = true` from config.
-2. Runner selects/downloads the asset.
-3. Installer detection marks the selected file as `installer`.
-4. Runner launches the installer.
-5. If process start succeeds, app records installed metadata with `is_gui = true` and `install_mode = "installer"`.
-6. App does not record a final install directory.
+2. App resolves install options and passes `IsGUI=true` plus expanded `GuiTarget` to the runner.
+3. Runner selects/downloads the asset and selects the archive file when needed.
+4. Installer detection marks the selected asset or extracted file as `installer`.
+5. Runner materializes the installer file to disk when necessary.
+6. Runner launches the installer via `InstallerLauncher`.
+7. If process start succeeds, app records installed metadata with `is_gui = true` and `install_mode = "installer"`, even when there are no extracted files.
+8. App does not record a final install directory.
 
 ## Error Handling
 
@@ -231,7 +288,7 @@ CLI tests:
 
 - `install --gui` binds to install options.
 - `add --gui` binds to add options.
-- `download --gui` is rejected or absent.
+- `download --gui` is not registered and is rejected by the parser as an unknown flag.
 - `list --gui` binds to list options.
 
 App tests:
@@ -263,7 +320,7 @@ List tests:
 - `list --gui` filters to GUI packages.
 - `list --all --gui` includes managed GUI packages that are not installed.
 - Installed-only GUI entries are included by `list --gui` using installed-store metadata.
-- `list --info` displays `is_gui` and `install_mode` when available.
+- `list --info` always displays `is_gui: yes|no`; it displays `install_mode` only when non-empty.
 
 ## Open Implementation Notes
 
