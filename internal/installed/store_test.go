@@ -135,6 +135,40 @@ func TestStoreSaveRoundTripWithExtendedFields(t *testing.T) {
 	}
 }
 
+func TestStoreRoundTripGUIFields(t *testing.T) {
+	tmp := t.TempDir()
+	store := NewStore(Options{
+		HomeDir:   filepath.Join(tmp, "home"),
+		GOOS:      "linux",
+		LookupEnv: func(string) (string, bool) { return "", false },
+	})
+
+	err := store.Record("sipeed/picoclaw", Entry{
+		Repo:        "sipeed/picoclaw",
+		Target:      "sipeed/picoclaw",
+		InstalledAt: time.Unix(1710000000, 0).UTC(),
+		URL:         "https://github.com/sipeed/picoclaw/releases/download/v0.2.7/picoclaw-setup.exe",
+		Asset:       "picoclaw-setup.exe",
+		IsGUI:       true,
+		InstallMode: "installer",
+	})
+	if err != nil {
+		t.Fatalf("record gui install: %v", err)
+	}
+
+	loaded, err := store.Load()
+	if err != nil {
+		t.Fatalf("load gui install: %v", err)
+	}
+	entry := loaded.Installed["sipeed/picoclaw"]
+	if !entry.IsGUI {
+		t.Fatalf("expected is_gui to round-trip, got %#v", entry)
+	}
+	if entry.InstallMode != "installer" {
+		t.Fatalf("expected install_mode installer, got %#v", entry.InstallMode)
+	}
+}
+
 func TestStoreRecordAndRemove(t *testing.T) {
 	tmp := t.TempDir()
 	store := NewStore(Options{

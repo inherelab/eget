@@ -65,5 +65,11 @@ func entryToMap(entry Entry) map[string]any {
 	if entry.Tag != "" {
 		data["tag"] = entry.Tag
 	}
+	if entry.IsGUI {
+		data["is_gui"] = true
+	}
+	if entry.InstallMode != "" {
+		data["install_mode"] = entry.InstallMode
+	}
 	return data
 }

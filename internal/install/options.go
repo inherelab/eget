@@ -14,6 +14,10 @@ type Options struct {
 	Verbose           bool
 	Source            bool
 	Output            string
+	OutputExplicit    bool
+	GuiTarget         string
+	IsGUI             bool
+	InstallMode       string
 	CacheDir          string
 	ProxyURL          string
 	APICacheEnabled   bool
@@ -34,6 +38,11 @@ type Options struct {
 	Verify            string
 	DisableSSL        bool
 }
+
+const (
+	InstallModePortable  = "portable"
+	InstallModeInstaller = "installer"
+)
 
 type TargetKind string
 

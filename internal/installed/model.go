@@ -14,6 +14,8 @@ type Entry struct {
 	Version        string                 `toml:"version,omitempty" mapstructure:"version"`
 	Tag            string                 `toml:"tag,omitempty" mapstructure:"tag"`
 	ReleaseDate    time.Time              `toml:"release_date,omitempty" mapstructure:"release_date"`
+	IsGUI          bool                   `toml:"is_gui,omitempty" mapstructure:"is_gui"`
+	InstallMode    string                 `toml:"install_mode,omitempty" mapstructure:"install_mode"`
 }
 
 type Config struct {
