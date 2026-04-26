@@ -207,11 +207,11 @@ func (s *cliService) handleList(opts *ListOptions) error {
 	}
 	if opts != nil && opts.Outdated {
 		ccolor.Infoln("🚀 Checking outdated packages ...")
-		items, failures, err := s.listService.ListOutdatedPackages()
+		items, failures, checked, err := s.listService.ListOutdatedPackages()
 		if err != nil {
 			return err
 		}
-		ccolor.Successf("✓ Checked %d packages\n", len(items)+len(failures))
+		ccolor.Successf("✓ Checked %d packages\n", checked)
 
 		for _, failure := range failures {
 			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)

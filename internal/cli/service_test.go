@@ -301,6 +301,54 @@ func TestHandleListOutdatedPrintsOnlyOutdatedInstalledPackages(t *testing.T) {
 	}
 }
 
+func TestHandleListOutdatedPrintsCheckedInstalledCountWhenNothingOutdated(t *testing.T) {
+	svc := &cliService{
+		listService: app.ListService{
+			LatestTag: func(repo string) (string, error) {
+				switch repo {
+				case "gookit/gitw":
+					return "v0.3.6", nil
+				case "sipeed/picoclaw":
+					return "v0.2.7", nil
+				case "windirstat/windirstat":
+					return "release/v2.5.0", nil
+				default:
+					return "", nil
+				}
+			},
+			LoadConfig: func() (*cfgpkg.File, error) {
+				return cfgpkg.NewFile(), nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{
+					Installed: map[string]storepkg.Entry{
+						"gookit/gitw":           {Repo: "gookit/gitw", Tag: "v0.3.6"},
+						"sipeed/picoclaw":       {Repo: "sipeed/picoclaw", Tag: "v0.2.7"},
+						"windirstat/windirstat": {Repo: "windirstat/windirstat", Tag: "release/v2.5.0"},
+					},
+				}, nil
+			},
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	err := svc.handleList(&ListOptions{Outdated: true})
+	if err != nil {
+		t.Fatalf("handle list outdated: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "Checked 3 packages") {
+		t.Fatalf("expected checked count for all installed packages, got %q", got)
+	}
+	if !strings.Contains(got, "no outdated packages found") {
+		t.Fatalf("expected no outdated message, got %q", got)
+	}
+}
+
 func TestHandleListPrintsTable(t *testing.T) {
 	svc := &cliService{
 		listService: app.ListService{

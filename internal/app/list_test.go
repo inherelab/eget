@@ -219,9 +219,12 @@ func TestListOutdatedPackagesIncludesInstalledOnlyEntries(t *testing.T) {
 		},
 	}
 
-	items, failures, err := svc.ListOutdatedPackages()
+	items, failures, checked, err := svc.ListOutdatedPackages()
 	if err != nil {
 		t.Fatalf("list outdated packages: %v", err)
+	}
+	if checked != 2 {
+		t.Fatalf("expected 2 checked packages, got %d", checked)
 	}
 	if len(failures) != 0 {
 		t.Fatalf("expected no failures, got %#v", failures)
@@ -267,9 +270,12 @@ func TestListOutdatedPackagesSkipsFailedChecks(t *testing.T) {
 		},
 	}
 
-	items, failures, err := svc.ListOutdatedPackages()
+	items, failures, checked, err := svc.ListOutdatedPackages()
 	if err != nil {
 		t.Fatalf("list outdated packages: %v", err)
+	}
+	if checked != 2 {
+		t.Fatalf("expected 2 checked packages, got %d", checked)
 	}
 	if len(items) != 1 || items[0].Repo != "BurntSushi/ripgrep" {
 		t.Fatalf("expected only successful outdated item, got %#v", items)

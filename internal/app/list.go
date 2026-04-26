@@ -132,22 +132,24 @@ func (s ListService) FindPackage(name string) (*ListItem, error) {
 	return nil, fmt.Errorf("package %q not found", name)
 }
 
-func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFailure, error) {
+func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFailure, int, error) {
 	if s.LatestTag == nil {
-		return nil, nil, fmt.Errorf("latest tag checker is required")
+		return nil, nil, 0, fmt.Errorf("latest tag checker is required")
 	}
 
 	items, err := s.ListPackages()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	outdated := make([]OutdatedItem, 0, len(items))
 	failures := make([]OutdatedCheckFailure, 0)
+	checked := 0
 	for _, item := range items {
 		if !item.Installed || item.Repo == "" {
 			continue
 		}
+		checked++
 		if item.InstalledTag == "" {
 			failures = append(failures, OutdatedCheckFailure{
 				Name:  item.Name,
@@ -179,7 +181,7 @@ func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFail
 			InstalledAt:  item.InstalledAt,
 		})
 	}
-	return outdated, failures, nil
+	return outdated, failures, checked, nil
 }
 
 func repoName(repo string) string {
