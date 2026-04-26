@@ -11,6 +11,7 @@ type AddOptions struct {
 	Asset    string
 	Source   bool
 	All      bool
+	GUI      bool
 	Quiet    bool
 	Target   string
 }
@@ -34,6 +35,7 @@ func newAddCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
 	cmd.BoolVar(&opts.All, "extract-all", false, "Extract all files;;ea")
+	cmd.BoolVar(&opts.GUI, "gui", false, "Add as GUI application")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
 	cmd.AddArg("target", "Package target", true, nil)
 	return cmd, func() {

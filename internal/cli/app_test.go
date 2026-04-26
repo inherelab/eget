@@ -113,6 +113,59 @@ func TestMain_ExtractAllFlagBindsInstallDownloadAndAdd(t *testing.T) {
 	}
 }
 
+func TestMain_GUIFlagBindsInstallAndAdd(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"install gui", []string{"install", "--gui", "inhere/markview"}, "install"},
+		{"add gui", []string{"add", "--gui", "inhere/markview"}, "add"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := make([]commandCall, 0, 1)
+			handler := func(name string, options any) error {
+				calls = append(calls, commandCall{name: name, options: options})
+				return nil
+			}
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs(tt.args)
+			if err != nil {
+				t.Fatalf("expected %s command to parse, got %v", tt.name, err)
+			}
+			if len(calls) != 1 || calls[0].name != tt.want {
+				t.Fatalf("unexpected routed call: %#v", calls)
+			}
+			switch opts := calls[0].options.(type) {
+			case *InstallOptions:
+				if !opts.GUI {
+					t.Fatalf("expected install gui flag to be true")
+				}
+			case *AddOptions:
+				if !opts.GUI {
+					t.Fatalf("expected add gui flag to be true")
+				}
+			default:
+				t.Fatalf("unexpected options type %T", calls[0].options)
+			}
+		})
+	}
+}
+
+func TestMain_DownloadRejectsGUIFlag(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(func(string, any) error { return nil }, &stdout, &stderr).RunWithArgs([]string{"download", "--gui", "inhere/markview"})
+	if err == nil {
+		t.Fatal("expected download --gui to be rejected")
+	}
+	if !strings.Contains(err.Error(), "gui") {
+		t.Fatalf("expected error to mention gui, got %v", err)
+	}
+}
+
 func TestMain_InstallDownloadAndAddRejectRemovedAllFlag(t *testing.T) {
 	tests := []struct {
 		name string
@@ -318,6 +371,32 @@ func TestMain_ListAllShortBindsOption(t *testing.T) {
 	}
 	if !opts.All {
 		t.Fatalf("expected all flag to be true")
+	}
+}
+
+func TestMain_ListGUIBindsOption(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"list", "--gui"})
+	if err != nil {
+		t.Fatalf("expected list --gui command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+
+	opts, ok := calls[0].options.(*ListOptions)
+	if !ok {
+		t.Fatalf("expected ListOptions, got %T", calls[0].options)
+	}
+	if !opts.GUI {
+		t.Fatalf("expected gui flag to be true")
 	}
 }
 
