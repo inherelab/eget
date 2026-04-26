@@ -127,6 +127,54 @@ func TestDownloadPrintsProxyNoticeForRemoteRequest(t *testing.T) {
 	}
 }
 
+func TestEffectiveOutputUsesGuiTargetForPortableGUI(t *testing.T) {
+	opts := Options{Output: "C:/Tools", GuiTarget: "C:/Program/AITools", IsGUI: true, InstallMode: InstallModePortable}
+	got := effectiveOutput(opts)
+	if got != "C:/Program/AITools" {
+		t.Fatalf("expected gui target, got %q", got)
+	}
+}
+
+func TestEffectiveOutputKeepsExplicitOutputForPortableGUI(t *testing.T) {
+	opts := Options{Output: "D:/Custom/PicoClaw", GuiTarget: "C:/Program/AITools", IsGUI: true, InstallMode: InstallModePortable, OutputExplicit: true}
+	got := effectiveOutput(opts)
+	if got != "D:/Custom/PicoClaw" {
+		t.Fatalf("expected explicit output, got %q", got)
+	}
+}
+
+type fakeInstallerLauncher struct {
+	path string
+	kind InstallerKind
+	err  error
+}
+
+func (f *fakeInstallerLauncher) LaunchInstaller(path string, kind InstallerKind) error {
+	f.path = path
+	f.kind = kind
+	return f.err
+}
+
+func TestLaunchGUIInstallerReturnsInstallerResult(t *testing.T) {
+	launcher := &fakeInstallerLauncher{}
+	runner := &InstallRunner{InstallerLauncher: launcher}
+	file := ExtractedFile{Name: "PicoClaw-Setup.exe", ArchiveName: "PicoClaw-Setup.exe"}
+	path := filepath.Join(t.TempDir(), "PicoClaw-Setup.exe")
+	if err := os.WriteFile(path, []byte("installer"), 0o755); err != nil {
+		t.Fatalf("write installer: %v", err)
+	}
+	result, err := runner.launchGUIInstaller(path, file, Options{IsGUI: true})
+	if err != nil {
+		t.Fatalf("launch gui installer: %v", err)
+	}
+	if result.InstallMode != InstallModeInstaller || !result.IsGUI || result.InstallerFile != path {
+		t.Fatalf("expected installer gui result, got %#v", result)
+	}
+	if launcher.path != path || launcher.kind != InstallerKindEXE {
+		t.Fatalf("unexpected launcher call path=%q kind=%q", launcher.path, launcher.kind)
+	}
+}
+
 func TestDownloadSkipsProxyNoticeForLocalFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	localFile := filepath.Join(tmpDir, "tool.tar.gz")

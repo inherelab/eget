@@ -35,16 +35,18 @@ type Runner interface {
 type PromptFunc func(choices []string) (int, error)
 
 type InstallRunner struct {
-	Service       *Service
-	InstalledLoad func() (map[string]string, map[string]string, error)
-	Prompt        PromptFunc
-	Stdout        io.Writer
-	Stderr        io.Writer
+	Service           *Service
+	InstalledLoad     func() (map[string]string, map[string]string, error)
+	Prompt            PromptFunc
+	InstallerLauncher InstallerLauncher
+	Stdout            io.Writer
+	Stderr            io.Writer
 }
 
 func NewRunner(service *Service) *InstallRunner {
 	return &InstallRunner{
 		Service: service,
+		InstallerLauncher: DefaultInstallerLauncher{},
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
 	}
@@ -140,14 +142,43 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if len(bins) == 0 {
 		bins = []ExtractedFile{bin}
 	}
+	if opts.IsGUI {
+		selectedName := bin.ArchiveName
+		if selectedName == "" {
+			selectedName = bin.Name
+		}
+		if selectedName == "" {
+			selectedName = path.Base(url)
+		}
+		opts.InstallMode = DetectGUIInstallMode(true, selectedName)
+	}
 
 	result := RunResult{
-		URL:   url,
-		Tool:  tool,
-		Asset: path.Base(url),
+		URL:         url,
+		Tool:        tool,
+		Asset:       path.Base(url),
+		IsGUI:       opts.IsGUI,
+		InstallMode: opts.InstallMode,
 	}
+	if opts.InstallMode == InstallModeInstaller {
+		installerPath, err := r.materializeInstallerFile(body, url, bin, opts)
+		if err != nil {
+			return RunResult{}, err
+		}
+		result, err := r.launchGUIInstaller(installerPath, bin, opts)
+		if err != nil {
+			return RunResult{}, err
+		}
+		result.URL = url
+		result.Tool = tool
+		if result.Asset == "" {
+			result.Asset = path.Base(url)
+		}
+		return result, nil
+	}
+
 	extract := func(file ExtractedFile) (string, error) {
-		out := outputPath(file, opts.Output, opts.All, opts.Name)
+		out := outputPath(file, effectiveOutput(opts), opts.All, opts.Name)
 		if err := file.Extract(out); err != nil {
 			return "", err
 		}
@@ -177,6 +208,82 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	return result, nil
+}
+
+func effectiveOutput(opts Options) string {
+	if opts.IsGUI && opts.InstallMode == InstallModePortable && !opts.OutputExplicit && opts.GuiTarget != "" {
+		return opts.GuiTarget
+	}
+	return opts.Output
+}
+
+func (r *InstallRunner) launchGUIInstaller(path string, file ExtractedFile, opts Options) (RunResult, error) {
+	kind := DetectInstallerKind(file.ArchiveName)
+	if kind == InstallerKindUnknown {
+		kind = DetectInstallerKind(file.Name)
+	}
+	launcher := r.InstallerLauncher
+	if launcher == nil {
+		launcher = DefaultInstallerLauncher{}
+	}
+	if err := launcher.LaunchInstaller(path, kind); err != nil {
+		return RunResult{}, err
+	}
+	return RunResult{
+		Asset:         filepath.Base(path),
+		IsGUI:         true,
+		InstallMode:   InstallModeInstaller,
+		InstallerFile: path,
+	}, nil
+}
+
+func (r *InstallRunner) materializeInstallerFile(body []byte, url string, file ExtractedFile, opts Options) (string, error) {
+	if IsLocalFile(url) {
+		return url, nil
+	}
+	cachePath := CacheFilePath(opts.CacheDir, url)
+	if cachePath != "" && filepath.Base(cachePath) == filepath.Base(url) {
+		if _, err := os.Stat(cachePath); err == nil {
+			return cachePath, nil
+		}
+		if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(cachePath, body, 0o644); err != nil {
+			return "", err
+		}
+		return cachePath, nil
+	}
+
+	target := installerMaterializePath(opts, file)
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return "", err
+	}
+	if file.Extract != nil {
+		if err := file.Extract(target); err != nil {
+			return "", err
+		}
+		return target, nil
+	}
+	if err := os.WriteFile(target, body, 0o755); err != nil {
+		return "", err
+	}
+	return target, nil
+}
+
+func installerMaterializePath(opts Options, file ExtractedFile) string {
+	dir := opts.CacheDir
+	if dir == "" {
+		dir = os.TempDir()
+	}
+	name := file.Name
+	if name == "" {
+		name = file.ArchiveName
+	}
+	if name == "" {
+		name = "installer"
+	}
+	return filepath.Join(dir, "installers", filepath.Base(name))
 }
 
 func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
