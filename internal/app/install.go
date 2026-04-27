@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
@@ -62,10 +63,12 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	shouldRecord := len(result.ExtractedFiles) > 0 || installMode == install.InstallModeInstaller
 	if s.Store != nil && shouldRecord {
 		repo := storepkg.NormalizeRepoName(runTarget)
-		tag, releaseDate := "", time.Time{}
+		tag, releaseDate := tagFromReleaseURL(result.URL), time.Time{}
 		if s.ReleaseInfo != nil {
 			if gotTag, gotDate, err := s.ReleaseInfo(repo, result.URL); err == nil {
-				tag = gotTag
+				if tag == "" {
+					tag = gotTag
+				}
 				releaseDate = gotDate
 			}
 		}
@@ -184,6 +187,24 @@ func chooseAsset(result RunResult) string {
 		return result.Asset
 	}
 	return path.Base(result.URL)
+}
+
+func tagFromReleaseURL(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	for i := 0; i+2 < len(parts); i++ {
+		if parts[i] == "releases" && parts[i+1] == "download" {
+			tag, err := url.PathUnescape(parts[i+2])
+			if err != nil {
+				return parts[i+2]
+			}
+			return tag
+		}
+	}
+	return ""
 }
 
 func (s Service) loadConfig() (*cfgpkg.File, error) {

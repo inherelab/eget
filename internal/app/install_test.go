@@ -131,6 +131,33 @@ func TestInstallTargetRunsInstallFlowAndRecordsInstalledState(t *testing.T) {
 	}
 }
 
+func TestInstallTargetRecordsTagFromReleaseURLBeforeLatestFallback(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/junegunn/fzf/releases/download/v1.0.0/fzf.tar.gz",
+			Tool:           "fzf",
+			ExtractedFiles: []string{"./fzf"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+			return "v9.9.9", time.Unix(1710000000, 0).UTC(), nil
+		},
+	}
+
+	_, err := svc.InstallTarget("junegunn/fzf", install.Options{})
+	if err != nil {
+		t.Fatalf("install target: %v", err)
+	}
+
+	if store.entry.Tag != "v1.0.0" {
+		t.Fatalf("expected tag from release URL, got %q", store.entry.Tag)
+	}
+}
+
 func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

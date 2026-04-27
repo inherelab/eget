@@ -66,6 +66,6 @@ go vet ./...
 
 - [x] 修复归档路径逃逸，新增恶意路径回归测试。
 - [x] 修复 `update --dry-run` / `--interactive` 误导性真实执行。
-- [ ] 修复 installed store tag 记录，优先从实际 release URL 解析。
+- [x] 修复 installed store tag 记录，优先从实际 release URL 解析。
 - [ ] 修复 `config init` prompt 空回车处理。
 - [ ] 验证 `go test ./...` 和 `go vet ./...`。
