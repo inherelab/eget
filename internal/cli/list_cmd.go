@@ -19,7 +19,7 @@ func newListCmd(handler CommandHandler) (*capp.Cmd, func()) {
 		return handler(cmd.Name, &snapshot)
 	})
 	cmd.Aliases = []string{"ls"}
-	cmd.BoolVar(&opts.Outdated, "outdated", false, "Check and list outdated installed packages")
+	cmd.BoolVar(&opts.Outdated, "outdated", false, "Check and list outdated installed packages;;old")
 	cmd.BoolVar(&opts.All, "all", false, "List all managed and installed packages;false;a")
 	cmd.BoolVar(&opts.GUI, "gui", false, "List GUI applications")
 	cmd.StringVar(&opts.Info, "info", "", "Show detailed info for a package;;i")

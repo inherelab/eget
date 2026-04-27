@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/cliui/progress"
 	"github.com/gookit/cliui/show"
 	"github.com/gookit/goutil/cliutil"
 	"github.com/gookit/goutil/mathutil"
@@ -205,19 +206,23 @@ func (s *cliService) handleList(opts *ListOptions) error {
 		printListItemDetails(item)
 		return nil
 	}
+
 	if opts != nil && opts.Outdated {
-		ccolor.Infoln("🚀 Checking outdated packages ...")
+		ccolor.Infoln("🚀 Checking outdated packages")
+		sp := progress.RoundTripSpinner(progress.RandomCharTheme(), 100*time.Millisecond)
+		sp.Start("%s checking")
 		items, failures, checked, err := s.listService.ListOutdatedPackages()
 		if err != nil {
 			return err
 		}
-		ccolor.Successf("✓ Checked %d packages\n", checked)
+		sp.Stop()
+		ccolor.Successf("✅ Checked %d packages\n", checked)
 
 		for _, failure := range failures {
 			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
 		}
 		if len(items) == 0 {
-			ccolor.Infoln("no outdated packages found")
+			ccolor.Cyanln("🎉 No outdated packages found")
 			return nil
 		}
 
