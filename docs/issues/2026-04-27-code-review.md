@@ -70,4 +70,4 @@ go vet ./...
 - [x] 修复 `update` 重复配置合并，收敛到 `InstallTarget`。
 - [x] 修复 `config init` prompt 空回车处理。
 - [x] 修复 `--quiet` 绕过全局输出的问题。
-- [ ] 验证 `go test ./...` 和 `go vet ./...`。
+- [x] 验证 `go test ./...` 和 `go vet ./...`。
