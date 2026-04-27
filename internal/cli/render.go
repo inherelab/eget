@@ -2,9 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/gookit/cliui/show"
@@ -12,83 +9,7 @@ import (
 	"github.com/gookit/goutil/mathutil"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
-	cfgpkg "github.com/inherelab/eget/internal/config"
 )
-
-func printConfigList(out io.Writer, path string, exists bool, cfg *cfgpkg.File) {
-	fmt.Fprintf(out, "# %s, exists: %t\n", path, exists)
-	if cfg.Global.Target != nil || cfg.Global.System != nil || cfg.Global.CacheDir != nil || cfg.Global.ProxyURL != nil {
-		fmt.Fprintln(out, "[global]")
-		if cfg.Global.Target != nil {
-			fmt.Fprintf(out, "target = %s\n", *cfg.Global.Target)
-		}
-		if cfg.Global.System != nil {
-			fmt.Fprintf(out, "system = %s\n", *cfg.Global.System)
-		}
-		if cfg.Global.CacheDir != nil {
-			fmt.Fprintf(out, "cache_dir = %s\n", *cfg.Global.CacheDir)
-		}
-		if cfg.Global.ProxyURL != nil {
-			fmt.Fprintf(out, "proxy_url = %s\n", *cfg.Global.ProxyURL)
-		}
-	}
-	if cfg.ApiCache.Enable != nil || cfg.ApiCache.CacheTime != nil {
-		fmt.Fprintln(out, "\n[api_cache]")
-		if cfg.ApiCache.Enable != nil {
-			fmt.Fprintf(out, "enable = %t\n", *cfg.ApiCache.Enable)
-		}
-		if cfg.ApiCache.CacheTime != nil {
-			fmt.Fprintf(out, "cache_time = %d\n", *cfg.ApiCache.CacheTime)
-		}
-	}
-	if cfg.Ghproxy.Enable != nil || cfg.Ghproxy.HostURL != nil || cfg.Ghproxy.SupportAPI != nil || len(cfg.Ghproxy.Fallbacks) > 0 {
-		fmt.Fprintln(out, "\n[ghproxy]")
-		if cfg.Ghproxy.Enable != nil {
-			fmt.Fprintf(out, "enable = %t\n", *cfg.Ghproxy.Enable)
-		}
-		if cfg.Ghproxy.HostURL != nil {
-			fmt.Fprintf(out, "host_url = %s\n", *cfg.Ghproxy.HostURL)
-		}
-		if cfg.Ghproxy.SupportAPI != nil {
-			fmt.Fprintf(out, "support_api = %t\n", *cfg.Ghproxy.SupportAPI)
-		}
-		if len(cfg.Ghproxy.Fallbacks) > 0 {
-			fmt.Fprintf(out, "fallbacks = %s\n", strings.Join(cfg.Ghproxy.Fallbacks, ", "))
-		}
-	}
-
-	if len(cfg.Repos) > 0 {
-		names := make([]string, 0, len(cfg.Repos))
-		for name := range cfg.Repos {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-		for _, name := range names {
-			fmt.Fprintf(out, "[repo.%s]\n", name)
-		}
-	}
-
-	if len(cfg.Packages) > 0 {
-		names := make([]string, 0, len(cfg.Packages))
-		for name := range cfg.Packages {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-		for _, name := range names {
-			section := cfg.Packages[name]
-			fmt.Fprintf(out, "[packages.%s]\n", name)
-			if section.Repo != nil {
-				fmt.Fprintf(out, "repo = %s\n", *section.Repo)
-			}
-			if section.Target != nil {
-				fmt.Fprintf(out, "target = %s\n", *section.Target)
-			}
-			if section.CacheDir != nil {
-				fmt.Fprintf(out, "cache_dir = %s\n", *section.CacheDir)
-			}
-		}
-	}
-}
 
 func printListItemDetails(item *app.ListItem) {
 	fmt.Printf("name: %s\n", item.Name)

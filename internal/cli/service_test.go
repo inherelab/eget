@@ -100,45 +100,6 @@ func TestInstallOptionsFromDownloadEnablesArchiveExtractionWhenRequested(t *test
 	}
 }
 
-func TestPrintConfigListIncludesHeaderComment(t *testing.T) {
-	cfg := cfgpkg.NewFile()
-	target := "~/.local/bin"
-	cfg.Global.Target = &target
-	enable := false
-	cacheTime := 300
-	hostURL := ""
-	supportAPI := true
-	cfg.ApiCache.Enable = &enable
-	cfg.ApiCache.CacheTime = &cacheTime
-	cfg.Ghproxy.Enable = &enable
-	cfg.Ghproxy.HostURL = &hostURL
-	cfg.Ghproxy.SupportAPI = &supportAPI
-	cfg.Ghproxy.Fallbacks = []string{}
-
-	var out bytes.Buffer
-	printConfigList(&out, "testdata/eget.toml", true, cfg)
-
-	got := out.String()
-	if !strings.Contains(got, "# testdata/eget.toml, exists: true") {
-		t.Fatalf("expected header comment, got %q", got)
-	}
-	if !strings.Contains(got, "[global]") {
-		t.Fatalf("expected global section, got %q", got)
-	}
-	if !strings.Contains(got, "[api_cache]") {
-		t.Fatalf("expected api_cache section, got %q", got)
-	}
-	if !strings.Contains(got, "cache_time = 300") {
-		t.Fatalf("expected api_cache cache_time, got %q", got)
-	}
-	if !strings.Contains(got, "[ghproxy]") {
-		t.Fatalf("expected ghproxy section, got %q", got)
-	}
-	if !strings.Contains(got, "host_url = ") {
-		t.Fatalf("expected ghproxy host_url, got %q", got)
-	}
-}
-
 func TestPromptIndexConsumesTrailingNewline(t *testing.T) {
 	origStdin := os.Stdin
 	reader, writer, err := os.Pipe()

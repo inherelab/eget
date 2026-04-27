@@ -206,7 +206,6 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		})
 		ccolor.Yellowln("📦 Configed Packages:")
 		show.MList(cfg.Packages)
-		// printConfigList(os.Stdout, info.Path, info.Exists, cfg)
 		return nil
 	case "get":
 		value, err := s.cfgService.ConfigGet(opts.Key)
