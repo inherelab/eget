@@ -38,7 +38,6 @@ func (f HTTPGetterFunc) Get(url string) (*http.Response, error) {
 	return f(url)
 }
 
-var downloadGet = Get
 var downloadGetWithOptions = GetWithOptions
 var httpDo = func(client *http.Client, req *http.Request) (*http.Response, error) {
 	return client.Do(req)

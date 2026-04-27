@@ -73,7 +73,9 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, err
 	}
-	verbosef("target kind: %s", DetectTargetKind(target))
+	targetKind := DetectTargetKind(target)
+	ccolor.Infof("🚀 Install %s from %s\n", target, targetKind)
+	// verbosef("target kind: %s", targetKind)
 	assets, err := finder.Find()
 	if err != nil {
 		return RunResult{}, err
