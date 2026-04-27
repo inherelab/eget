@@ -32,7 +32,7 @@ func newInstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")
 	cmd.StringVar(&opts.System, "system", "", "Target system")
 	cmd.StringVar(&opts.To, "to", "", "Install destination")
-	cmd.StringVar(&opts.File, "file", "", "File to extract")
+	cmd.StringVar(&opts.File, "file", "", "File to extract, multi use comma split, support glob")
 	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter, multi use comma split;;a")
 	cmd.StringVar(&opts.Name, "name", "", "Managed package name when used with --add")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")

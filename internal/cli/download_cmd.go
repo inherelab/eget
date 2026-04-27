@@ -29,7 +29,7 @@ func newDownloadCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")
 	cmd.StringVar(&opts.System, "system", "", "Target system")
 	cmd.StringVar(&opts.To, "to", "", "Download destination")
-	cmd.StringVar(&opts.File, "file", "", "File to extract")
+	cmd.StringVar(&opts.File, "file", "", "File to extract, multi use comma split, support glob")
 	cmd.StringVar(&opts.Asset, "asset", "", "Asset filter, multi use comma split;;a")
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
 	cmd.BoolVar(&opts.All, "extract-all", false, "Extract all files;;ea")
