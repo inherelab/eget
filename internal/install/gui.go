@@ -2,7 +2,6 @@ package install
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -47,37 +46,23 @@ func DetectInstallerKind(fileName string) InstallerKind {
 }
 
 func (l DefaultInstallerLauncher) LaunchInstaller(path string, kind InstallerKind) error {
-	cmdName, args, err := l.command(path, kind)
-	if err != nil {
-		return err
-	}
-	return exec.Command(cmdName, args...).Start()
-}
-
-func (l DefaultInstallerLauncher) command(path string, kind InstallerKind) (string, []string, error) {
 	goos := l.GOOS
 	if goos == "" {
 		goos = runtime.GOOS
 	}
 	if goos != "windows" {
-		return "", nil, fmt.Errorf("launching GUI installer %s is unsupported on %s", filepath.Base(path), goos)
+		return fmt.Errorf("launching GUI installer %s is unsupported on %s", filepath.Base(path), goos)
 	}
+	return launchWindowsInstaller(path, kind)
+}
+
+func windowsInstallerCommand(path string, kind InstallerKind) (string, string, error) {
 	switch kind {
 	case InstallerKindMSI:
-		return "powershell", []string{
-			"-NoProfile",
-			"-ExecutionPolicy", "Bypass",
-			"-Command", "Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', $args[0]) -Verb RunAs",
-			path,
-		}, nil
+		return "msiexec.exe", fmt.Sprintf("/i %q", path), nil
 	case InstallerKindEXE:
-		return "powershell", []string{
-			"-NoProfile",
-			"-ExecutionPolicy", "Bypass",
-			"-Command", "Start-Process -FilePath $args[0] -Verb RunAs",
-			path,
-		}, nil
+		return path, "", nil
 	default:
-		return "", nil, fmt.Errorf("unsupported installer kind for %s", filepath.Base(path))
+		return "", "", fmt.Errorf("unsupported installer kind for %s", filepath.Base(path))
 	}
 }

@@ -28,21 +28,20 @@ func TestDetectGUIInstallMode(t *testing.T) {
 	}
 }
 
-func TestDefaultInstallerLauncherCommand(t *testing.T) {
-	launcher := DefaultInstallerLauncher{GOOS: "windows"}
-	cmd, args, err := launcher.command("C:/Temp/app.msi", InstallerKindMSI)
+func TestWindowsInstallerCommand(t *testing.T) {
+	file, args, err := windowsInstallerCommand("C:/Temp/app.msi", InstallerKindMSI)
 	if err != nil {
 		t.Fatalf("msi command: %v", err)
 	}
-	if cmd != "powershell" || len(args) != 6 || args[0] != "-NoProfile" || args[4] != "Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', $args[0]) -Verb RunAs" || args[5] != "C:/Temp/app.msi" {
-		t.Fatalf("unexpected msi command: %s %#v", cmd, args)
+	if file != "msiexec.exe" || args != `/i "C:/Temp/app.msi"` {
+		t.Fatalf("unexpected msi command: file=%s args=%s", file, args)
 	}
-	cmd, args, err = launcher.command("C:/Temp/setup.exe", InstallerKindEXE)
+	file, args, err = windowsInstallerCommand("C:/Temp/setup.exe", InstallerKindEXE)
 	if err != nil {
 		t.Fatalf("exe command: %v", err)
 	}
-	if cmd != "powershell" || len(args) != 6 || args[0] != "-NoProfile" || args[4] != "Start-Process -FilePath $args[0] -Verb RunAs" || args[5] != "C:/Temp/setup.exe" {
-		t.Fatalf("unexpected exe command: %s %#v", cmd, args)
+	if file != "C:/Temp/setup.exe" || args != "" {
+		t.Fatalf("unexpected exe command: file=%s args=%s", file, args)
 	}
 }
 
@@ -52,7 +51,7 @@ func TestDefaultInstallerLauncherRejectsUnsupportedPlatform(t *testing.T) {
 		goos = "linux"
 	}
 	launcher := DefaultInstallerLauncher{GOOS: goos}
-	if _, _, err := launcher.command("/tmp/app.msi", InstallerKindMSI); err == nil {
+	if err := launcher.LaunchInstaller("/tmp/app.msi", InstallerKindMSI); err == nil {
 		t.Fatal("expected non-windows msi launcher to fail")
 	}
 }
