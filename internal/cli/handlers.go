@@ -99,7 +99,7 @@ func (s *cliService) handleList(opts *ListOptions) error {
 		if err != nil {
 			return err
 		}
-		printListItemDetails(item)
+		show.AList("Package Info", item)
 		return nil
 	}
 

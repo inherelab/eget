@@ -11,37 +11,6 @@ import (
 	"github.com/inherelab/eget/internal/app"
 )
 
-func printListItemDetails(item *app.ListItem) {
-	fmt.Printf("name: %s\n", item.Name)
-	fmt.Printf("repo: %s\n", item.Repo)
-	if item.Target != "" {
-		fmt.Printf("target: %s\n", item.Target)
-	}
-	if item.Tag != "" {
-		fmt.Printf("tag: %s\n", item.Tag)
-	}
-	fmt.Printf("installed: %s\n", map[bool]string{true: "yes", false: "no"}[item.Installed])
-	fmt.Printf("is_gui: %s\n", map[bool]string{true: "yes", false: "no"}[item.IsGUI])
-	if item.InstallMode != "" {
-		fmt.Printf("install_mode: %s\n", item.InstallMode)
-	}
-	if item.Version != "" {
-		fmt.Printf("version: %s\n", item.Version)
-	}
-	if item.InstalledTag != "" {
-		fmt.Printf("installed_tag: %s\n", item.InstalledTag)
-	}
-	if !item.InstalledAt.IsZero() {
-		fmt.Printf("installed_at: %s\n", item.InstalledAt.Format(time.RFC3339))
-	}
-	if item.Asset != "" {
-		fmt.Printf("asset: %s\n", item.Asset)
-	}
-	if item.URL != "" {
-		fmt.Printf("url: %s\n", item.URL)
-	}
-}
-
 func printQueryResult(result app.QueryResult) {
 	fmt.Printf("action: %s\n", result.Action)
 	fmt.Printf("repo: %s\n", result.Repo)
