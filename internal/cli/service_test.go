@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gookit/cliui"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -482,31 +483,23 @@ func TestHandleListInfoPrintsDetails(t *testing.T) {
 		},
 	}
 
-	origStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer r.Close()
-	defer w.Close()
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout }()
+	var out bytes.Buffer
+	cliui.SetOutput(&out)
+	defer cliui.ResetOutput()
 
-	err = svc.handleList(&ListOptions{Info: "chlog"})
+	err := svc.handleList(&ListOptions{Info: "chlog"})
 	if err != nil {
 		t.Fatalf("handle list info: %v", err)
 	}
 
-	_ = w.Close()
-	var out bytes.Buffer
-	if _, err := io.Copy(&out, r); err != nil {
-		t.Fatalf("copy stdout: %v", err)
-	}
 	got := out.String()
-	if !strings.Contains(got, "name: chlog") || !strings.Contains(got, "version: v0.3.6") {
+	if !strings.Contains(got, "Package Info") || !strings.Contains(got, "Name") || !strings.Contains(got, "chlog") {
 		t.Fatalf("expected detail output, got %q", got)
 	}
-	if !strings.Contains(got, "url: https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe") {
+	if !strings.Contains(got, "Version") || !strings.Contains(got, "v0.3.6") {
+		t.Fatalf("expected version detail output, got %q", got)
+	}
+	if !strings.Contains(got, "URL") || !strings.Contains(got, "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe") {
 		t.Fatalf("expected detailed url output, got %q", got)
 	}
 }
