@@ -188,7 +188,10 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	extract := func(file ExtractedFile) (string, error) {
-		out := outputPath(file, effectiveOutput(opts), opts.All, opts.Name)
+		out, err := outputPath(file, effectiveOutput(opts), opts.All, opts.Name)
+		if err != nil {
+			return "", err
+		}
 		if err := file.Extract(out); err != nil {
 			return "", err
 		}
@@ -534,29 +537,47 @@ func replaceTagInURL(url, newTag string) string {
 	return url
 }
 
-func outputPath(file ExtractedFile, output string, all bool, preferredName string) string {
+func outputPath(file ExtractedFile, output string, all bool, preferredName string) (string, error) {
 	mode := file.Mode()
 	out := resolvedOutputName(file.Name, mode, preferredName)
 	if all && output != "-" && file.Name != "" {
-		out = filepath.FromSlash(file.Name)
+		var err error
+		out, err = safeArchiveOutputPath(output, file.Name)
+		if err != nil {
+			return "", err
+		}
 	}
 	if output == "-" {
-		return "-"
+		return "-", nil
 	}
-	if output != "" && util.IsDirectory(output) {
-		return filepath.Join(output, out)
+	if all && output != "" && file.Name != "" {
+		return out, nil
 	}
 	if output != "" && all {
 		os.MkdirAll(output, 0o755)
-		return filepath.Join(output, out)
+		return filepath.Join(output, out), nil
+	}
+	if output != "" && util.IsDirectory(output) {
+		return filepath.Join(output, out), nil
 	}
 	if output != "" {
 		out = output
 	}
 	if os.Getenv("EGET_BIN") != "" && !strings.ContainsRune(out, os.PathSeparator) && mode&0o111 != 0 && !file.Dir {
-		return filepath.Join(os.Getenv("EGET_BIN"), out)
+		return filepath.Join(os.Getenv("EGET_BIN"), out), nil
 	}
-	return out
+	return out, nil
+}
+
+func safeArchiveOutputPath(output, name string) (string, error) {
+	if output == "" {
+		output = "."
+	}
+	cleanName := filepath.Clean(filepath.FromSlash(name))
+	if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(os.PathSeparator)) || cleanName == ".." || filepath.VolumeName(cleanName) != "" {
+		return "", fmt.Errorf("unsafe archive path %q", name)
+	}
+	return filepath.Join(output, cleanName), nil
 }
 
 func resolvedOutputName(name string, mode os.FileMode, preferredName string) string {

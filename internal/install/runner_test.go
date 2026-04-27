@@ -584,7 +584,10 @@ func TestGetWithOptionsFallsBackToNextGhproxyHost(t *testing.T) {
 
 func TestOutputPathUsesHeuristicExecutableRename(t *testing.T) {
 	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
-	got := outputPath(file, "", false, "")
+	got, err := outputPath(file, "", false, "")
+	if err != nil {
+		t.Fatalf("outputPath(): %v", err)
+	}
 	if got != "chlog.exe" {
 		t.Fatalf("expected heuristic output name chlog.exe, got %q", got)
 	}
@@ -592,7 +595,10 @@ func TestOutputPathUsesHeuristicExecutableRename(t *testing.T) {
 
 func TestOutputPathUsesPreferredNameForExecutable(t *testing.T) {
 	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
-	got := outputPath(file, "", false, "chlog")
+	got, err := outputPath(file, "", false, "chlog")
+	if err != nil {
+		t.Fatalf("outputPath(): %v", err)
+	}
 	if got != "chlog.exe" {
 		t.Fatalf("expected preferred output name chlog.exe, got %q", got)
 	}
@@ -600,7 +606,10 @@ func TestOutputPathUsesPreferredNameForExecutable(t *testing.T) {
 
 func TestOutputPathUsesPreferredNameWithExplicitExtension(t *testing.T) {
 	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
-	got := outputPath(file, "", false, "custom-name.exe")
+	got, err := outputPath(file, "", false, "custom-name.exe")
+	if err != nil {
+		t.Fatalf("outputPath(): %v", err)
+	}
 	if got != "custom-name.exe" {
 		t.Fatalf("expected preferred explicit output name custom-name.exe, got %q", got)
 	}
@@ -608,10 +617,20 @@ func TestOutputPathUsesPreferredNameWithExplicitExtension(t *testing.T) {
 
 func TestOutputPathKeepsArchiveDirectoriesForExtractAll(t *testing.T) {
 	file := ExtractedFile{Name: "Far/7-ZipEng.hlf", mode: 0o644}
-	got := outputPath(file, "dist", true, "")
+	got, err := outputPath(file, "dist", true, "")
+	if err != nil {
+		t.Fatalf("outputPath(): %v", err)
+	}
 	want := filepath.Join("dist", "Far", "7-ZipEng.hlf")
 	if got != want {
 		t.Fatalf("expected extract-all output path %q, got %q", want, got)
+	}
+}
+
+func TestOutputPathRejectsArchivePathTraversalForExtractAll(t *testing.T) {
+	file := ExtractedFile{Name: "../evil.exe", mode: 0o644}
+	if _, err := outputPath(file, "dist", true, ""); err == nil {
+		t.Fatal("expected archive path traversal to be rejected")
 	}
 }
 
