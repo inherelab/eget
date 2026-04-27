@@ -609,6 +609,40 @@ func TestHandleConfigInitRejectsOverwriteWithoutConfirmation(t *testing.T) {
 	}
 }
 
+func TestHandleConfigInitTreatsBlankOverwriteConfirmationAsCancel(t *testing.T) {
+	svc := &cliService{
+		cfgService: app.ConfigService{
+			ConfigPath: "testdata/eget.toml",
+			Load: func() (*cfgpkg.File, error) {
+				return cfgpkg.NewFile(), nil
+			},
+		},
+	}
+
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	os.Stdin = r
+	defer func() { os.Stdin = origStdin }()
+
+	if _, err := w.WriteString("\n"); err != nil {
+		t.Fatalf("write stdin: %v", err)
+	}
+	_ = w.Close()
+
+	err = svc.handleConfig(&ConfigOptions{Action: "init"})
+	if err == nil {
+		t.Fatal("expected blank confirmation to cancel")
+	}
+	if !strings.Contains(err.Error(), "cancelled") {
+		t.Fatalf("expected cancellation error, got %v", err)
+	}
+}
+
 func TestHandleConfigInitAllowsOverwriteWithConfirmation(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")

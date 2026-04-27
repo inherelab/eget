@@ -550,11 +550,8 @@ func promptConfirmOverwrite(path string) (bool, error) {
 	fmt.Fprintf(os.Stderr, "Config file already exists: %s\n", path)
 	fmt.Fprint(os.Stderr, "Overwrite it? [y/N]: ")
 
-	var answer string
-	if _, err := fmt.Fscanln(os.Stdin, &answer); err != nil {
-		if err == io.EOF {
-			return false, nil
-		}
+	answer, err := readStdinLine()
+	if err != nil {
 		return false, err
 	}
 	answer = strings.ToLower(strings.TrimSpace(answer))
