@@ -34,14 +34,14 @@ func TestDefaultInstallerLauncherCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("msi command: %v", err)
 	}
-	if cmd != "msiexec" || len(args) != 2 || args[0] != "/i" || args[1] != "C:/Temp/app.msi" {
+	if cmd != "powershell" || len(args) != 6 || args[0] != "-NoProfile" || args[4] != "Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', $args[0]) -Verb RunAs" || args[5] != "C:/Temp/app.msi" {
 		t.Fatalf("unexpected msi command: %s %#v", cmd, args)
 	}
 	cmd, args, err = launcher.command("C:/Temp/setup.exe", InstallerKindEXE)
 	if err != nil {
 		t.Fatalf("exe command: %v", err)
 	}
-	if cmd != "C:/Temp/setup.exe" || len(args) != 0 {
+	if cmd != "powershell" || len(args) != 6 || args[0] != "-NoProfile" || args[4] != "Start-Process -FilePath $args[0] -Verb RunAs" || args[5] != "C:/Temp/setup.exe" {
 		t.Fatalf("unexpected exe command: %s %#v", cmd, args)
 	}
 }

@@ -175,6 +175,65 @@ func TestLaunchGUIInstallerReturnsInstallerResult(t *testing.T) {
 	}
 }
 
+func TestRunPromptsBeforeLaunchingDetectedInstallerWithoutGUIFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "PicoClaw-Setup.exe")
+	if err := os.WriteFile(path, []byte("installer"), 0o755); err != nil {
+		t.Fatalf("write installer: %v", err)
+	}
+
+	launcher := &fakeInstallerLauncher{}
+	runner := NewRunner(NewDefaultService(nil, nil))
+	runner.InstallerLauncher = launcher
+	runner.Stderr = io.Discard
+	var prompted string
+	runner.ConfirmLaunchInstaller = func(file string) (bool, error) {
+		prompted = file
+		return true, nil
+	}
+
+	result, err := runner.Run(path, Options{})
+	if err != nil {
+		t.Fatalf("run installer: %v", err)
+	}
+	if prompted != "PicoClaw-Setup.exe" {
+		t.Fatalf("expected setup file prompt, got %q", prompted)
+	}
+	if launcher.path != path || launcher.kind != InstallerKindEXE {
+		t.Fatalf("unexpected launcher call path=%q kind=%q", launcher.path, launcher.kind)
+	}
+	if !result.IsGUI || result.InstallMode != InstallModeInstaller {
+		t.Fatalf("expected confirmed installer result, got %#v", result)
+	}
+}
+
+func TestDefaultConfirmLaunchInstallerTreatsBlankLineAsCancel(t *testing.T) {
+	origStdin := os.Stdin
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create stdin pipe: %v", err)
+	}
+	os.Stdin = reader
+	defer func() {
+		os.Stdin = origStdin
+		_ = reader.Close()
+	}()
+	if _, err := writer.WriteString("\n"); err != nil {
+		t.Fatalf("write stdin: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdin writer: %v", err)
+	}
+
+	confirmed, err := defaultConfirmLaunchInstaller("Clash.Verge_2.4.7_x64-setup.exe")
+	if err != nil {
+		t.Fatalf("expected blank line to cancel without error, got %v", err)
+	}
+	if confirmed {
+		t.Fatal("expected blank line to cancel installer launch")
+	}
+}
+
 func TestDownloadSkipsProxyNoticeForLocalFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	localFile := filepath.Join(tmpDir, "tool.tar.gz")

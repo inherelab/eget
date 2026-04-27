@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -400,17 +401,17 @@ func (s *cliService) handleSearch(opts *SearchOptions) error {
 
 func installOptionsFromInstall(opts *InstallOptions) install.Options {
 	return install.Options{
-		Tag:         opts.Tag,
-		Name:        opts.Name,
-		Source:      opts.Source,
-		Output:      opts.To,
+		Tag:            opts.Tag,
+		Name:           opts.Name,
+		Source:         opts.Source,
+		Output:         opts.To,
 		OutputExplicit: opts.To != "",
-		System:      opts.System,
-		ExtractFile: opts.File,
-		All:         opts.All,
-		IsGUI:       opts.GUI,
-		Quiet:       opts.Quiet,
-		Asset:       splitAssetFilters(opts.Asset),
+		System:         opts.System,
+		ExtractFile:    opts.File,
+		All:            opts.All,
+		IsGUI:          opts.GUI,
+		Quiet:          opts.Quiet,
+		Asset:          splitAssetFilters(opts.Asset),
 	}
 }
 
@@ -458,16 +459,16 @@ func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 
 func installOptionsFromAdd(opts *AddOptions) install.Options {
 	return install.Options{
-		Tag:         opts.Tag,
-		Source:      opts.Source,
-		Output:      opts.To,
+		Tag:            opts.Tag,
+		Source:         opts.Source,
+		Output:         opts.To,
 		OutputExplicit: opts.To != "",
-		System:      opts.System,
-		ExtractFile: opts.File,
-		All:         opts.All,
-		IsGUI:       opts.GUI,
-		Quiet:       opts.Quiet,
-		Asset:       splitAssetFilters(opts.Asset),
+		System:         opts.System,
+		ExtractFile:    opts.File,
+		All:            opts.All,
+		IsGUI:          opts.GUI,
+		Quiet:          opts.Quiet,
+		Asset:          splitAssetFilters(opts.Asset),
 	}
 }
 
@@ -507,12 +508,36 @@ func promptIndex(choices []string) (int, error) {
 	for i, choice := range choices {
 		fmt.Fprintf(os.Stderr, "(%d) %s\n", i+1, choice)
 	}
-	var picked int
 	fmt.Fprint(os.Stderr, "Enter selection number: ")
-	if _, err := fmt.Scanf("%d", &picked); err != nil {
+	line, err := readStdinLine()
+	if err != nil {
+		return 0, err
+	}
+	picked, err := strconv.Atoi(strings.TrimSpace(line))
+	if err != nil {
 		return 0, err
 	}
 	return picked - 1, nil
+}
+
+func readStdinLine() (string, error) {
+	var b strings.Builder
+	buf := make([]byte, 1)
+	for {
+		n, err := os.Stdin.Read(buf)
+		if n > 0 {
+			b.WriteByte(buf[0])
+			if buf[0] == '\n' {
+				return b.String(), nil
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				return b.String(), nil
+			}
+			return "", err
+		}
+	}
 }
 
 func promptConfirmOverwrite(path string) (bool, error) {

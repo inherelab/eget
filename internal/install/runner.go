@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -33,22 +34,25 @@ type Runner interface {
 }
 
 type PromptFunc func(choices []string) (int, error)
+type ConfirmFunc func(file string) (bool, error)
 
 type InstallRunner struct {
-	Service           *Service
-	InstalledLoad     func() (map[string]string, map[string]string, error)
-	Prompt            PromptFunc
-	InstallerLauncher InstallerLauncher
-	Stdout            io.Writer
-	Stderr            io.Writer
+	Service                *Service
+	InstalledLoad          func() (map[string]string, map[string]string, error)
+	Prompt                 PromptFunc
+	ConfirmLaunchInstaller ConfirmFunc
+	InstallerLauncher      InstallerLauncher
+	Stdout                 io.Writer
+	Stderr                 io.Writer
 }
 
 func NewRunner(service *Service) *InstallRunner {
 	return &InstallRunner{
-		Service: service,
-		InstallerLauncher: DefaultInstallerLauncher{},
-		Stdout:  os.Stdout,
-		Stderr:  os.Stderr,
+		Service:                service,
+		ConfirmLaunchInstaller: defaultConfirmLaunchInstaller,
+		InstallerLauncher:      DefaultInstallerLauncher{},
+		Stdout:                 os.Stdout,
+		Stderr:                 os.Stderr,
 	}
 }
 
@@ -142,15 +146,19 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if len(bins) == 0 {
 		bins = []ExtractedFile{bin}
 	}
+	selectedName := selectedFileName(url, bin)
 	if opts.IsGUI {
-		selectedName := bin.ArchiveName
-		if selectedName == "" {
-			selectedName = bin.Name
-		}
-		if selectedName == "" {
-			selectedName = path.Base(url)
-		}
 		opts.InstallMode = DetectGUIInstallMode(true, selectedName)
+	} else if DetectInstallerKind(selectedName) != InstallerKindUnknown {
+		confirmed, err := r.confirmLaunchInstaller(selectedName)
+		if err != nil {
+			return RunResult{}, err
+		}
+		if !confirmed {
+			return RunResult{}, fmt.Errorf("installer launch cancelled")
+		}
+		opts.IsGUI = true
+		opts.InstallMode = InstallModeInstaller
 	}
 
 	result := RunResult{
@@ -208,6 +216,39 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	return result, nil
+}
+
+func selectedFileName(url string, file ExtractedFile) string {
+	if file.ArchiveName != "" {
+		return file.ArchiveName
+	}
+	if file.Name != "" {
+		return file.Name
+	}
+	return path.Base(url)
+}
+
+func (r *InstallRunner) confirmLaunchInstaller(file string) (bool, error) {
+	confirm := r.ConfirmLaunchInstaller
+	if confirm == nil {
+		confirm = defaultConfirmLaunchInstaller
+	}
+	return confirm(filepath.Base(file))
+}
+
+func defaultConfirmLaunchInstaller(file string) (bool, error) {
+	fmt.Fprintf(os.Stderr, "%s looks like a GUI installer. Launch it now? [y/N]: ", file)
+	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil {
+		if err == io.EOF && strings.TrimSpace(answer) == "" {
+			return false, nil
+		}
+		if err != io.EOF {
+			return false, err
+		}
+	}
+	answer = strings.ToLower(strings.TrimSpace(answer))
+	return answer == "y" || answer == "yes", nil
 }
 
 func effectiveOutput(opts Options) string {

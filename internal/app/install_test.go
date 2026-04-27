@@ -575,6 +575,35 @@ func TestInstallTargetWithAddRecordsManagedPackage(t *testing.T) {
 	}
 }
 
+func TestInstallTargetWithAddPersistsConfirmedGUIInstaller(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:         "https://github.com/sipeed/picoclaw/releases/download/v0.2.7/PicoClaw-Setup.exe",
+			Asset:       "PicoClaw-Setup.exe",
+			IsGUI:       true,
+			InstallMode: install.InstallModeInstaller,
+		},
+	}
+	config := &fakeConfigRecorder{}
+	svc := Service{
+		Runner: runner,
+		Config: config,
+	}
+
+	opts := install.Options{}
+	_, err := svc.InstallTarget("sipeed/picoclaw", opts, InstallExtras{AddToConfig: true, PackageOpts: opts})
+	if err != nil {
+		t.Fatalf("install target with add: %v", err)
+	}
+
+	if config.calls != 1 {
+		t.Fatalf("expected config add to be called once, got %d", config.calls)
+	}
+	if !config.opts.IsGUI {
+		t.Fatalf("expected confirmed installer to persist IsGUI=true, got %#v", config.opts)
+	}
+}
+
 func TestInstallTargetWithAddRejectsNonRepoTarget(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

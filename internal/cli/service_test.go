@@ -139,6 +139,45 @@ func TestPrintConfigListIncludesHeaderComment(t *testing.T) {
 	}
 }
 
+func TestPromptIndexConsumesTrailingNewline(t *testing.T) {
+	origStdin := os.Stdin
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create stdin pipe: %v", err)
+	}
+	os.Stdin = reader
+	defer func() {
+		os.Stdin = origStdin
+		_ = reader.Close()
+	}()
+	if _, err := writer.WriteString("14\ny\n"); err != nil {
+		t.Fatalf("write stdin: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdin writer: %v", err)
+	}
+
+	choices := make([]string, 14)
+	for i := range choices {
+		choices[i] = "choice"
+	}
+	picked, err := promptIndex(choices)
+	if err != nil {
+		t.Fatalf("prompt index: %v", err)
+	}
+	if picked != 13 {
+		t.Fatalf("expected zero-based selection 13, got %d", picked)
+	}
+
+	rest, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		t.Fatalf("read remaining stdin: %v", err)
+	}
+	if string(rest) != "y\n" {
+		t.Fatalf("expected prompt index to consume selection newline, remaining stdin %q", rest)
+	}
+}
+
 func TestHandleInstallPrintsAddedPackageMessage(t *testing.T) {
 	origStdout := os.Stdout
 	r, w, err := os.Pipe()
@@ -344,7 +383,7 @@ func TestHandleListOutdatedPrintsCheckedInstalledCountWhenNothingOutdated(t *tes
 	if !strings.Contains(got, "Checked 3 packages") {
 		t.Fatalf("expected checked count for all installed packages, got %q", got)
 	}
-	if !strings.Contains(got, "no outdated packages found") {
+	if !strings.Contains(got, "No outdated packages found") {
 		t.Fatalf("expected no outdated message, got %q", got)
 	}
 }

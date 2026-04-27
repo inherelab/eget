@@ -132,7 +132,7 @@ eget config set global.target ~/.local/bin
 
 - 查找、下载、校验、提取目标，并记录安装状态。
 - 可通过 `--name` 指定安装后的可执行文件名；未指定 `--to` 时，也会作为单文件资产的重命名提示。
-- `--gui` 会将目标标记为 GUI 应用。免安装 GUI 应用默认使用 `global.gui_target`，`.msi` 或 `setup.exe` 等 GUI 安装器会被启动，但不会记录最终安装目录。
+- `--gui` 会将目标标记为 GUI 应用。免安装 GUI 应用默认使用 `global.gui_target`，`.msi` 或 `setup.exe` 等 GUI 安装器会被启动，但不会记录最终安装目录。未传 `--gui` 但选中疑似安装器资源时，会先提示是否启动；确认后若同时传入 `--add`，会持久化 `is_gui = true`。
 - 传入 `--add` 时，安装成功后会自动将 repo 目标写入 `[packages.<name>]`；可配合 `--name` 指定包名。
 
 `download`(alias: `dl`)
@@ -190,7 +190,7 @@ eget config set global.target ~/.local/bin
 `install` 额外支持：
 
 - `--add`: 安装成功后，将 repo 目标追加到 `[packages.<name>]` 托管配置中。
-- `--gui`: 按 GUI 应用安装；配合 `--add` 时会持久化 `is_gui = true`。
+- `--gui`: 按 GUI 应用安装；配合 `--add` 时会持久化 `is_gui = true`。未传 `--gui` 但确认启动疑似安装器时，配合 `--add` 也会持久化 `is_gui = true`。
 - `--name`: 指定托管包名；对于单文件可执行资产，也会作为默认输出文件名提示。
 
 `update` 支持选项：

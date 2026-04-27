@@ -64,9 +64,19 @@ func (l DefaultInstallerLauncher) command(path string, kind InstallerKind) (stri
 	}
 	switch kind {
 	case InstallerKindMSI:
-		return "msiexec", []string{"/i", path}, nil
+		return "powershell", []string{
+			"-NoProfile",
+			"-ExecutionPolicy", "Bypass",
+			"-Command", "Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', $args[0]) -Verb RunAs",
+			path,
+		}, nil
 	case InstallerKindEXE:
-		return path, nil, nil
+		return "powershell", []string{
+			"-NoProfile",
+			"-ExecutionPolicy", "Bypass",
+			"-Command", "Start-Process -FilePath $args[0] -Verb RunAs",
+			path,
+		}, nil
 	default:
 		return "", nil, fmt.Errorf("unsupported installer kind for %s", filepath.Base(path))
 	}

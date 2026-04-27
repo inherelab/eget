@@ -98,6 +98,9 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 			return RunResult{}, err
 		}
 		addOpts := extras[0].PackageOpts
+		if result.IsGUI {
+			addOpts.IsGUI = true
+		}
 		if err := s.Config.AddPackage(repo, extras[0].PackageName, addOpts); err != nil {
 			return RunResult{}, err
 		}
