@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gookit/goutil/x/ccolor"
 	pb "github.com/schollz/progressbar/v3"
 )
 
@@ -204,6 +205,36 @@ func TestRunPromptsBeforeLaunchingDetectedInstallerWithoutGUIFlag(t *testing.T) 
 	}
 	if !result.IsGUI || result.InstallMode != InstallModeInstaller {
 		t.Fatalf("expected confirmed installer result, got %#v", result)
+	}
+}
+
+func TestRunQuietSuppressesInstallNotice(t *testing.T) {
+	tmpDir := t.TempDir()
+	source := filepath.Join(tmpDir, "tool.exe")
+	if err := os.WriteFile(source, []byte("tool"), 0o755); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	outputDir := filepath.Join(tmpDir, "bin")
+	if err := os.Mkdir(outputDir, 0o755); err != nil {
+		t.Fatalf("mkdir output: %v", err)
+	}
+
+	var stderr bytes.Buffer
+	var globalOut bytes.Buffer
+	ccolor.SetOutput(&globalOut)
+	defer ccolor.SetOutput(os.Stdout)
+
+	runner := NewRunner(NewDefaultService(nil, nil))
+	runner.Stderr = &stderr
+
+	if _, err := runner.Run(source, Options{Quiet: true, DownloadOnly: true, Output: outputDir}); err != nil {
+		t.Fatalf("run quiet install: %v", err)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected quiet stderr to be empty, got %q", got)
+	}
+	if got := globalOut.String(); got != "" {
+		t.Fatalf("expected quiet global output to be empty, got %q", got)
 	}
 }
 

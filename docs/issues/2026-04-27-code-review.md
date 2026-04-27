@@ -68,4 +68,5 @@ go vet ./...
 - [x] 修复 `update --dry-run` / `--interactive` 误导性真实执行。
 - [x] 修复 installed store tag 记录，优先从实际 release URL 解析。
 - [x] 修复 `config init` prompt 空回车处理。
+- [x] 修复 `--quiet` 绕过全局输出的问题。
 - [ ] 验证 `go test ./...` 和 `go vet ./...`。

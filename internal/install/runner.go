@@ -74,7 +74,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		return RunResult{}, err
 	}
 	targetKind := DetectTargetKind(target)
-	ccolor.Infof("🚀 Install %s from %s\n", target, targetKind)
+	ccolor.Fprintf(output, "🚀 Install <info>%s</> from <info>%s</>\n", target, targetKind)
 	// verbosef("target kind: %s", targetKind)
 	assets, err := finder.Find()
 	if err != nil {
