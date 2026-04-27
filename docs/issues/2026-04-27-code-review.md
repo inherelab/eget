@@ -70,4 +70,5 @@ go vet ./...
 - [x] 修复 `update` 重复配置合并，收敛到 `InstallTarget`。
 - [x] 修复 `config init` prompt 空回车处理。
 - [x] 修复 `--quiet` 绕过全局输出的问题。
+- [x] 拆分 `internal/cli/service.go`，按 wiring、handlers、options、prompts、render 分层。
 - [x] 验证 `go test ./...` 和 `go vet ./...`。
