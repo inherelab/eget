@@ -21,7 +21,7 @@ func (f *fakeInstallService) InstallTarget(target string, opts install.Options, 
 	return f.result, f.err
 }
 
-func TestUpdatePackageUsesManagedPackageConfig(t *testing.T) {
+func TestUpdatePackageDelegatesManagedPackageNameWithRawCLIOptions(t *testing.T) {
 	installer := &fakeInstallService{}
 	svc := UpdateService{
 		Install: installer,
@@ -38,18 +38,19 @@ func TestUpdatePackageUsesManagedPackageConfig(t *testing.T) {
 		},
 	}
 
-	if _, err := svc.UpdatePackage("fzf", install.Options{}); err != nil {
+	cli := install.Options{Tag: "v1.0.0", Quiet: true}
+	if _, err := svc.UpdatePackage("fzf", cli); err != nil {
 		t.Fatalf("update package: %v", err)
 	}
 
-	if len(installer.targets) != 1 || installer.targets[0] != "junegunn/fzf" {
-		t.Fatalf("expected installer to use managed repo, got %#v", installer.targets)
+	if len(installer.targets) != 1 || installer.targets[0] != "fzf" {
+		t.Fatalf("expected installer to resolve managed package name, got %#v", installer.targets)
 	}
-	if installer.options[0].Output != "~/.local/bin" {
-		t.Fatalf("expected package target to be merged, got %#v", installer.options[0].Output)
+	if installer.options[0].Output != "" {
+		t.Fatalf("expected update service to leave config merging to installer, got output %q", installer.options[0].Output)
 	}
-	if installer.options[0].Tag != "nightly" {
-		t.Fatalf("expected package tag to be merged, got %#v", installer.options[0].Tag)
+	if installer.options[0].Tag != "v1.0.0" || !installer.options[0].Quiet {
+		t.Fatalf("expected raw cli options to pass through, got %#v", installer.options[0])
 	}
 }
 
@@ -74,6 +75,61 @@ func TestUpdatePackageAllowsDirectRepo(t *testing.T) {
 	}
 	if installer.options[0].Tag != "v1.0.0" {
 		t.Fatalf("expected cli tag to win, got %#v", installer.options[0].Tag)
+	}
+}
+
+func TestUpdatePackageWithAppInstallerKeepsManagedConfigMerge(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[global]
+target = "~/.local/bin"
+
+["junegunn/fzf"]
+system = "linux/amd64"
+
+[packages.fzf]
+repo = "junegunn/fzf"
+target = "D:/Tools/fzf"
+tag = "nightly"
+asset_filters = ["linux"]
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/junegunn/fzf/releases/download/nightly/fzf.tar.gz",
+			Tool:           "fzf",
+			ExtractedFiles: []string{"./fzf"},
+		},
+	}
+	installSvc := Service{
+		Runner: runner,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+	updateSvc := UpdateService{
+		Install: installSvc,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	if _, err := updateSvc.UpdatePackage("fzf", install.Options{}); err != nil {
+		t.Fatalf("update package: %v", err)
+	}
+
+	if runner.target != "junegunn/fzf" {
+		t.Fatalf("expected installer to resolve repo target, got %q", runner.target)
+	}
+	if runner.opts.Output != "D:/Tools/fzf" {
+		t.Fatalf("expected package target to be merged by installer, got %q", runner.opts.Output)
+	}
+	if runner.opts.System != "linux/amd64" {
+		t.Fatalf("expected repo system to be merged by installer, got %q", runner.opts.System)
+	}
+	if runner.opts.Tag != "nightly" {
+		t.Fatalf("expected package tag to be merged by installer, got %q", runner.opts.Tag)
+	}
+	if len(runner.opts.Asset) != 1 || runner.opts.Asset[0] != "linux" {
+		t.Fatalf("expected package asset filters to be merged by installer, got %#v", runner.opts.Asset)
 	}
 }
 

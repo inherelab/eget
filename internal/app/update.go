@@ -32,17 +32,14 @@ func (s UpdateService) UpdatePackage(nameOrRepo string, cli install.Options) (Ru
 	}
 
 	if pkg, ok := cfg.Packages[nameOrRepo]; ok {
-		repo := util.DerefString(pkg.Repo)
-		if repo == "" {
+		if util.DerefString(pkg.Repo) == "" {
 			return RunResult{}, fmt.Errorf("package %q has no repo", nameOrRepo)
 		}
-		opts := mergeInstallOptions(cfg.Global, cfg.Repos[repo], pkg, cli)
-		return s.Install.InstallTarget(repo, opts)
+		return s.Install.InstallTarget(nameOrRepo, cli)
 	}
 
 	if strings.Contains(nameOrRepo, "/") {
-		opts := mergeInstallOptions(cfg.Global, cfg.Repos[nameOrRepo], cfgpkg.Section{}, cli)
-		return s.Install.InstallTarget(nameOrRepo, opts)
+		return s.Install.InstallTarget(nameOrRepo, cli)
 	}
 
 	return RunResult{}, fmt.Errorf("unknown package %q", nameOrRepo)
@@ -80,49 +77,6 @@ func (s UpdateService) loadConfig() (*cfgpkg.File, error) {
 		return s.LoadConfig()
 	}
 	return cfgpkg.Load()
-}
-
-func mergeInstallOptions(global, repo, pkg cfgpkg.Section, cli install.Options) install.Options {
-	merged := cfgpkg.MergeInstallOptions(global, repo, pkg, cfgpkg.CLIOverrides{
-		ExtractAll:   boolOpt(cli.All),
-		AssetFilters: stringsOpt(cli.Asset),
-		CacheDir:     stringOpt(cli.CacheDir),
-		ProxyURL:     stringOpt(cli.ProxyURL),
-		DownloadOnly: boolOpt(cli.DownloadOnly),
-		File:         stringOpt(cli.ExtractFile),
-		IsGUI:        boolOpt(cli.IsGUI),
-		Quiet:        boolOpt(cli.Quiet),
-		ShowHash:     boolOpt(cli.Hash),
-		Source:       boolOpt(cli.Source),
-		System:       stringOpt(cli.System),
-		Tag:          stringOpt(cli.Tag),
-		Target:       stringOpt(cli.Output),
-		UpgradeOnly:  boolOpt(cli.UpgradeOnly),
-		Verify:       stringOpt(cli.Verify),
-		DisableSSL:   boolOpt(cli.DisableSSL),
-	})
-
-	return install.Options{
-		Tag:          merged.Tag,
-		Name:         cli.Name,
-		Source:       merged.Source,
-		Output:       merged.Target,
-		OutputExplicit: cli.Output != "",
-		CacheDir:     merged.CacheDir,
-		ProxyURL:     merged.ProxyURL,
-		GuiTarget:    merged.GuiTarget,
-		IsGUI:        merged.IsGUI,
-		System:       merged.System,
-		ExtractFile:  merged.File,
-		All:          merged.ExtractAll,
-		Quiet:        merged.Quiet,
-		DownloadOnly: merged.DownloadOnly,
-		UpgradeOnly:  merged.UpgradeOnly,
-		Asset:        append([]string(nil), merged.AssetFilters...),
-		Hash:         merged.ShowHash,
-		Verify:       merged.Verify,
-		DisableSSL:   merged.DisableSSL,
-	}
 }
 
 func boolOpt(value bool) *bool {
