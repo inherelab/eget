@@ -138,7 +138,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 
 	bin, bins, err := extractor.Extract(body, opts.All)
 	if len(bins) != 0 && err != nil && !opts.All {
-		bin, opts.All, err = r.resolveExtractedFile(bins)
+		bin, opts.All, err = r.resolveExtractedFile(bins, opts)
 		if err != nil {
 			return RunResult{}, err
 		}
@@ -432,10 +432,11 @@ func (r *InstallRunner) resolveFallback(target string, opts Options, original er
 	return "", original
 }
 
-func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile) (ExtractedFile, bool, error) {
-	if selected, ok := autoSelectExtractedFile(candidates, runtime.GOARCH); ok {
+func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile, opts Options) (ExtractedFile, bool, error) {
+	goos, goarch := selectionPlatform(opts)
+	if selected, ok := autoSelectExtractedFile(candidates, goos, goarch); ok {
 		if r.Stderr != nil {
-			ccolor.Fprintf(r.Stderr, "🪄 <yellow>Auto-selected extracted file '%s' for %s</>\n", selected.ArchiveName, runtime.GOARCH)
+			ccolor.Fprintf(r.Stderr, "🪄 <yellow>Auto-selected extracted file '%s' for %s/%s</>\n", selected.ArchiveName, goos, goarch)
 		}
 		return selected, false, nil
 	}
@@ -461,9 +462,26 @@ func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile) (Extrac
 	return candidates[choice], false, nil
 }
 
-func autoSelectExtractedFile(candidates []ExtractedFile, goarch string) (ExtractedFile, bool) {
+func selectionPlatform(opts Options) (string, string) {
+	goos, goarch := runtime.GOOS, runtime.GOARCH
+	if opts.System == "" {
+		return goos, goarch
+	}
+	parts := strings.SplitN(opts.System, "/", 2)
+	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+		return parts[0], parts[1]
+	}
+	return goos, goarch
+}
+
+func autoSelectExtractedFile(candidates []ExtractedFile, goos, goarch string) (ExtractedFile, bool) {
 	if len(candidates) == 0 {
 		return ExtractedFile{}, false
+	}
+	if strings.EqualFold(goos, "windows") {
+		if selected, ok := autoSelectOnlyWindowsExecutable(candidates); ok {
+			return selected, true
+		}
 	}
 	patterns := archSelectionPatterns(goarch)
 	if len(patterns) == 0 {
@@ -484,6 +502,18 @@ func autoSelectExtractedFile(candidates []ExtractedFile, goarch string) (Extract
 		return matches[0], true
 	}
 	return ExtractedFile{}, false
+}
+
+func autoSelectOnlyWindowsExecutable(candidates []ExtractedFile) (ExtractedFile, bool) {
+	var selected ExtractedFile
+	count := 0
+	for _, candidate := range candidates {
+		if strings.EqualFold(filepath.Ext(candidate.ArchiveName), ".exe") {
+			selected = candidate
+			count++
+		}
+	}
+	return selected, count == 1
 }
 
 func archSelectionPatterns(goarch string) []*regexp.Regexp {
