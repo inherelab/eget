@@ -338,6 +338,12 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 }
 
 func (s *cliService) handleUpdate(opts *UpdateOptions) error {
+	if opts.DryRun {
+		return fmt.Errorf("update --dry-run is not implemented")
+	}
+	if opts.Interactive {
+		return fmt.Errorf("update --interactive is not implemented")
+	}
 	installOpts := installOptionsFromUpdate(opts)
 	if opts.All {
 		_, err := s.updService.UpdateAllPackages(installOpts)

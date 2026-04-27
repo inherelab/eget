@@ -558,6 +558,20 @@ func TestHandleListRejectsOutdatedWithInfo(t *testing.T) {
 	}
 }
 
+func TestHandleUpdateRejectsUnimplementedDryRunAndInteractive(t *testing.T) {
+	svc := &cliService{}
+
+	err := svc.handleUpdate(&UpdateOptions{DryRun: true, Target: "junegunn/fzf"})
+	if err == nil || !strings.Contains(err.Error(), "update --dry-run is not implemented") {
+		t.Fatalf("expected dry-run unsupported error, got %v", err)
+	}
+
+	err = svc.handleUpdate(&UpdateOptions{Interactive: true, Target: "junegunn/fzf"})
+	if err == nil || !strings.Contains(err.Error(), "update --interactive is not implemented") {
+		t.Fatalf("expected interactive unsupported error, got %v", err)
+	}
+}
+
 func TestHandleConfigInitRejectsOverwriteWithoutConfirmation(t *testing.T) {
 	svc := &cliService{
 		cfgService: app.ConfigService{
