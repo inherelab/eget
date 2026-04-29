@@ -1350,7 +1350,7 @@ git commit -m "docs: document sourceforge packages"
 - No required code files.
 - Optional: update this checklist as tasks complete.
 
-- [ ] **Step 1: Run full tests**
+- [x] **Step 1: Run full tests**
 
 Run:
 
@@ -1360,7 +1360,7 @@ go test ./...
 
 Expected: all packages PASS.
 
-- [ ] **Step 2: Build binary**
+- [x] **Step 2: Build binary**
 
 Run:
 
@@ -1370,7 +1370,7 @@ go build ./cmd/eget
 
 Expected: command exits successfully and creates `eget.exe` on Windows.
 
-- [ ] **Step 3: Smoke-test SourceForge finder without installing to a real destination**
+- [x] **Step 3: Smoke-test SourceForge finder without installing to a real destination**
 
 Use a temporary output directory:
 
@@ -1385,7 +1385,7 @@ Expected:
 - If the asset is an installer and prompts, cancel the prompt; prompt behavior is acceptable for GUI installer assets.
 - If cancelled, the error should be `installer launch cancelled`, not a SourceForge discovery error.
 
-- [ ] **Step 4: Smoke-test docs example parse path**
+- [x] **Step 4: Smoke-test docs example parse path**
 
 Run:
 
@@ -1395,7 +1395,7 @@ go test ./internal/config ./internal/app ./internal/install ./internal/source/so
 
 Expected: PASS.
 
-- [ ] **Step 5: Final commit if smoke-test fixes were needed**
+- [x] **Step 5: Final commit if smoke-test fixes were needed**
 
 Only run this if Step 3 or Step 4 required code/doc changes:
 
