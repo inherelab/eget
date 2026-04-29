@@ -99,3 +99,36 @@ func TestAddPackageWithCustomName(t *testing.T) {
 		t.Fatal("expected packages.myfzf to be created")
 	}
 }
+
+func TestAddPackageNormalizesSourceForgeTargetWithPath(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+
+	svc := ConfigService{
+		ConfigPath: configPath,
+		Load: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		Save: cfgpkg.Save,
+	}
+
+	if err := svc.AddPackage("sourceforge:winmerge/stable", "", install.Options{}); err != nil {
+		t.Fatalf("add package: %v", err)
+	}
+
+	cfg, err := cfgpkg.LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	pkg, ok := cfg.Packages["winmerge"]
+	if !ok {
+		t.Fatal("expected packages.winmerge to be created")
+	}
+	if pkg.Repo == nil || *pkg.Repo != "sourceforge:winmerge" {
+		t.Fatalf("expected repo to be normalized, got %#v", pkg.Repo)
+	}
+	if pkg.SourcePath == nil || *pkg.SourcePath != "stable" {
+		t.Fatalf("expected source_path to be persisted, got %#v", pkg.SourcePath)
+	}
+}

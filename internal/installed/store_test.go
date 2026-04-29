@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/gookit/goutil/testutil/assert"
 )
 
 func TestStoreLoadInitializesEmptyConfig(t *testing.T) {
@@ -214,6 +216,11 @@ func TestStoreRecordAndRemove(t *testing.T) {
 	if _, ok := cfg.Installed["junegunn/fzf"]; ok {
 		t.Fatal("expected normalized repo entry to be removed")
 	}
+}
+
+func TestNormalizeRepoNameSourceForge(t *testing.T) {
+	assert.Eq(t, "sourceforge:winmerge", NormalizeRepoName("sourceforge:winmerge"))
+	assert.Eq(t, "sourceforge:winmerge", NormalizeRepoName("sourceforge:winmerge/stable"))
 }
 
 func TestResolvePathPrefersLegacyDotfileWhenPresent(t *testing.T) {

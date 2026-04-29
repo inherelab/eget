@@ -81,6 +81,20 @@ func TestUpdatePackageAllowsDirectRepo(t *testing.T) {
 	}
 }
 
+func TestUpdatePackageAllowsDirectSourceForgeTarget(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+	}
+
+	_, err := svc.UpdatePackage("sourceforge:winmerge", install.Options{})
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"sourceforge:winmerge"}, installer.targets)
+}
+
 func TestUpdatePackageWithAppInstallerKeepsManagedConfigMerge(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [global]

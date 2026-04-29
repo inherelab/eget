@@ -6,6 +6,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
+	"github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -24,6 +25,16 @@ func (s ConfigService) AddPackage(repo, name string, opts install.Options) error
 	cfg, err := s.load()
 	if err != nil {
 		return err
+	}
+
+	if sfTarget, sfErr := sourceforge.ParseTarget(repo); sfErr == nil {
+		repo = sfTarget.Normalized
+		if opts.SourcePath == "" {
+			opts.SourcePath = sfTarget.Path
+		}
+		if name == "" {
+			name = sfTarget.Project
+		}
 	}
 
 	if name == "" {
