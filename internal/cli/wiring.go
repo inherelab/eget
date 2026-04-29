@@ -61,11 +61,19 @@ func newCLIService() (*cliService, error) {
 		return nil, err
 	}
 	cfgService := app.ConfigService{ConfigPath: cfgPath}
+	latestTag := func(repo, sourcePath string) (string, error) {
+		if sfTarget, err := sourcesf.ParseTarget(repo); err == nil {
+			info, err := sourcesf.LatestVersion(sfTarget.Project, sourcePath, install.NewHTTPGetter(defaultOpts))
+			if err != nil {
+				return "", err
+			}
+			return info.Version, nil
+		}
+		tag, _, err := githubClient.LatestReleaseInfo(repo)
+		return tag, err
+	}
 	listService := app.ListService{
-		LatestTag: func(repo string) (string, error) {
-			tag, _, err := githubClient.LatestReleaseInfo(repo)
-			return tag, err
-		},
+		LatestTag: latestTag,
 	}
 	queryService := app.QueryService{
 		Client: githubClient,
@@ -86,11 +94,8 @@ func newCLIService() (*cliService, error) {
 		},
 	}
 	updService := app.UpdateService{
-		Install: &appService,
-		LatestTag: func(repo string) (string, error) {
-			tag, _, err := githubClient.LatestReleaseInfo(repo)
-			return tag, err
-		},
+		Install:   &appService,
+		LatestTag: latestTag,
 	}
 	return &cliService{
 		appService:       appService,

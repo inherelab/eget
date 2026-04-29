@@ -158,6 +158,33 @@ func TestInstallTargetRecordsTagFromReleaseURLBeforeLatestFallback(t *testing.T)
 	}
 }
 
+func TestInstallTargetRecordsSourceForgeVersionFromURL(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://downloads.sourceforge.net/project/winmerge/stable/2.16.44/WinMerge-2.16.44-x64-Setup.exe",
+			Tool:           "winmerge",
+			ExtractedFiles: []string{"./WinMerge.exe"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+	}
+
+	_, err := svc.InstallTarget("sourceforge:winmerge", install.Options{SourcePath: "stable"})
+	if err != nil {
+		t.Fatalf("install sourceforge target: %v", err)
+	}
+
+	if store.entry.Repo != "sourceforge:winmerge" {
+		t.Fatalf("expected normalized sourceforge repo, got %q", store.entry.Repo)
+	}
+	if store.entry.Tag != "2.16.44" || store.entry.Version != "2.16.44" {
+		t.Fatalf("expected sourceforge version 2.16.44, got tag=%q version=%q", store.entry.Tag, store.entry.Version)
+	}
+}
+
 func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

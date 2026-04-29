@@ -18,6 +18,7 @@ type InstalledLoader interface {
 type ListItem struct {
 	Name         string
 	Repo         string
+	SourcePath   string
 	Target       string
 	Tag          string
 	Version      string
@@ -48,7 +49,7 @@ type OutdatedCheckFailure struct {
 type ListService struct {
 	LoadConfig    func() (*cfgpkg.File, error)
 	LoadInstalled func() (*storepkg.Config, error)
-	LatestTag     func(repo string) (string, error)
+	LatestTag     func(repo, sourcePath string) (string, error)
 }
 
 func (s ListService) ListPackages() ([]ListItem, error) {
@@ -65,10 +66,11 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 	for name, pkg := range cfg.Packages {
 		repo := util.DerefString(pkg.Repo)
 		item := ListItem{
-			Name:   name,
-			Repo:   repo,
-			Target: util.DerefString(pkg.Target),
-			Tag:    util.DerefString(pkg.Tag),
+			Name:       name,
+			Repo:       repo,
+			SourcePath: util.DerefString(pkg.SourcePath),
+			Target:     util.DerefString(pkg.Target),
+			Tag:        util.DerefString(pkg.Tag),
 		}
 		if pkg.IsGUI != nil && *pkg.IsGUI {
 			item.IsGUI = true
@@ -205,7 +207,7 @@ func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFail
 			continue
 		}
 
-		latestTag, err := s.LatestTag(item.Repo)
+		latestTag, err := s.LatestTag(item.Repo, item.SourcePath)
 		if err != nil {
 			failures = append(failures, OutdatedCheckFailure{
 				Name:  item.Name,

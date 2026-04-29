@@ -286,7 +286,7 @@ func TestListOutdatedPackagesIncludesInstalledOnlyEntries(t *testing.T) {
 				},
 			}, nil
 		},
-		LatestTag: func(repo string) (string, error) {
+		LatestTag: func(repo, _ string) (string, error) {
 			switch repo {
 			case "BurntSushi/ripgrep":
 				return "v14.0.0", nil
@@ -341,7 +341,7 @@ func TestListOutdatedPackagesSkipsFailedChecks(t *testing.T) {
 				},
 			}, nil
 		},
-		LatestTag: func(repo string) (string, error) {
+		LatestTag: func(repo, _ string) (string, error) {
 			if repo == "junegunn/fzf" {
 				return "", fmt.Errorf("github api failed")
 			}
@@ -361,6 +361,44 @@ func TestListOutdatedPackagesSkipsFailedChecks(t *testing.T) {
 	}
 	if len(failures) != 1 || failures[0].Repo != "junegunn/fzf" {
 		t.Fatalf("expected one failed check, got %#v", failures)
+	}
+}
+
+func TestListOutdatedPackagesPassesSourcePathToLatestChecker(t *testing.T) {
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["winmerge"] = cfgpkg.Section{
+				Repo:       util.StringPtr("sourceforge:winmerge"),
+				SourcePath: util.StringPtr("stable"),
+			}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"sourceforge:winmerge": {Repo: "sourceforge:winmerge", Tag: "2.16.42"},
+			}}, nil
+		},
+		LatestTag: func(repo, sourcePath string) (string, error) {
+			if repo != "sourceforge:winmerge" || sourcePath != "stable" {
+				t.Fatalf("unexpected latest check repo=%q sourcePath=%q", repo, sourcePath)
+			}
+			return "2.16.44", nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListOutdatedPackages()
+	if err != nil {
+		t.Fatalf("list outdated packages: %v", err)
+	}
+	if checked != 1 {
+		t.Fatalf("expected 1 checked package, got %d", checked)
+	}
+	if len(failures) != 0 {
+		t.Fatalf("expected no failures, got %#v", failures)
+	}
+	if len(items) != 1 || items[0].LatestTag != "2.16.44" {
+		t.Fatalf("expected sourceforge outdated item, got %#v", items)
 	}
 }
 

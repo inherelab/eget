@@ -106,7 +106,7 @@ func (s *cliService) handleList(opts *ListOptions) error {
 	if opts != nil && opts.Outdated {
 		ccolor.Infoln("🚀 Checking outdated packages")
 		sp := progress.RoundTripSpinner(progress.RandomCharTheme(), 100*time.Millisecond)
-		if !cliApp.Verbose() {
+		if !appVerbose() {
 			sp.Start("%s checking")
 		}
 		items, failures, checked, err := s.listService.ListOutdatedPackages()
@@ -167,6 +167,10 @@ func (s *cliService) handleList(opts *ListOptions) error {
 	}
 	ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
 	return nil
+}
+
+func appVerbose() bool {
+	return cliApp != nil && cliApp.Verbose()
 }
 
 func (s *cliService) handleConfig(opts *ConfigOptions) error {
@@ -247,7 +251,7 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 	if opts.All {
 		ccolor.Infoln("🚀 Checking outdated packages")
 		sp := progress.RoundTripSpinner(progress.RandomCharTheme(), 100*time.Millisecond)
-		if !cliApp.Verbose() {
+		if !appVerbose() {
 			sp.Start("%s checking")
 		}
 

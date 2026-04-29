@@ -18,6 +18,11 @@ type Finder struct {
 	Getter  HTTPGetter
 }
 
+type LatestInfo struct {
+	Version string
+	Path    string
+}
+
 func (f Finder) Find() ([]string, error) {
 	if strings.TrimSpace(f.Project) == "" {
 		return nil, fmt.Errorf("sourceforge project is required")
@@ -39,6 +44,18 @@ func (f Finder) Find() ([]string, error) {
 
 	latest, ok := LatestVersionFile(files)
 	if !ok {
+		if sourcePath == "" {
+			stable, stableOK := stableDirectory(files)
+			if stableOK {
+				files, err = f.list(stable.FullPath)
+				if err != nil {
+					return nil, err
+				}
+				latest, ok = LatestVersionFile(files)
+			}
+		}
+	}
+	if !ok {
 		return nil, fmt.Errorf("sourceforge downloadable files not found")
 	}
 	files, err = f.list(latest.FullPath)
@@ -51,6 +68,48 @@ func (f Finder) Find() ([]string, error) {
 		return nil, fmt.Errorf("sourceforge downloadable files not found")
 	}
 	return urls, nil
+}
+
+func LatestVersion(project, sourcePath string, getter HTTPGetter) (LatestInfo, error) {
+	finder := Finder{Project: project, Path: sourcePath, Getter: getter}
+	files, err := finder.list(strings.Trim(sourcePath, "/"))
+	if err != nil {
+		return LatestInfo{}, err
+	}
+
+	latest, ok := LatestVersionFile(files)
+	if !ok {
+		if sourcePath == "" {
+			stable, stableOK := stableDirectory(files)
+			if stableOK {
+				files, err = finder.list(stable.FullPath)
+				if err != nil {
+					return LatestInfo{}, err
+				}
+				latest, ok = LatestVersionFile(files)
+			}
+		}
+	}
+	if !ok {
+		return LatestInfo{}, fmt.Errorf("could not determine SourceForge latest version for %s", project)
+	}
+	version := VersionFromText(latest.Name)
+	if version == "" {
+		version = VersionFromText(latest.FullPath)
+	}
+	if version == "" {
+		return LatestInfo{}, fmt.Errorf("could not determine SourceForge latest version for %s", project)
+	}
+	return LatestInfo{Version: version, Path: latest.FullPath}, nil
+}
+
+func stableDirectory(files []File) (File, bool) {
+	for _, file := range files {
+		if file.Type == TypeDirectory && strings.EqualFold(strings.Trim(file.Name, "/"), "stable") {
+			return file, true
+		}
+	}
+	return File{}, false
 }
 
 func (f Finder) list(sourcePath string) ([]File, error) {

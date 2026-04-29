@@ -11,6 +11,7 @@ import (
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -64,6 +65,10 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	if s.Store != nil && shouldRecord {
 		repo := storepkg.NormalizeRepoName(runTarget)
 		tag, releaseDate := tagFromReleaseURL(result.URL), time.Time{}
+		isSourceForge := sourcesf.IsTarget(repo)
+		if tag == "" && isSourceForge {
+			tag = sourcesf.VersionFromText(result.URL)
+		}
 		if s.ReleaseInfo != nil {
 			if gotTag, gotDate, err := s.ReleaseInfo(repo, result.URL); err == nil {
 				if tag == "" {
@@ -83,6 +88,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 			ExtractedFiles: append([]string(nil), result.ExtractedFiles...),
 			Options:        extractOptionsMap(opts),
 			Tag:            tag,
+			Version:        sourceVersion(tag, isSourceForge),
 			ReleaseDate:    releaseDate,
 			IsGUI:          result.IsGUI || opts.IsGUI,
 			InstallMode:    installMode,
@@ -110,6 +116,13 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	}
 
 	return result, nil
+}
+
+func sourceVersion(tag string, sourceforge bool) string {
+	if sourceforge {
+		return tag
+	}
+	return ""
 }
 
 func (s Service) resolveInstallRequest(target string, cli install.Options, preferCacheDir bool) (string, install.Options, error) {

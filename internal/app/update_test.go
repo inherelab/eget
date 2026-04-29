@@ -166,7 +166,7 @@ func TestUpdateAllPackagesIteratesOutdatedManagedPackages(t *testing.T) {
 				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
 			}}, nil
 		},
-		LatestTag: func(repo string) (string, error) {
+		LatestTag: func(repo, _ string) (string, error) {
 			switch repo {
 			case "junegunn/fzf":
 				return "v0.51.0", nil
@@ -209,7 +209,7 @@ func TestUpdateAllPackagesInstallsOnlyOutdatedInstalledPackages(t *testing.T) {
 				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", InstalledAt: now, Tag: "v13.0.0"},
 			}}, nil
 		},
-		LatestTag: func(repo string) (string, error) {
+		LatestTag: func(repo, _ string) (string, error) {
 			switch repo {
 			case "junegunn/fzf":
 				return "v0.50.0", nil
@@ -228,4 +228,35 @@ func TestUpdateAllPackagesInstallsOnlyOutdatedInstalledPackages(t *testing.T) {
 	assert.Eq(t, 1, len(results))
 	assert.Eq(t, "rg", results[0].Name)
 	assert.Eq(t, "BurntSushi/ripgrep", results[0].Target)
+}
+
+func TestListUpdateCandidatesPassesSourcePathToLatestChecker(t *testing.T) {
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["winmerge"] = cfgpkg.Section{
+				Repo:       util.StringPtr("sourceforge:winmerge"),
+				SourcePath: util.StringPtr("stable"),
+			}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"sourceforge:winmerge": {Repo: "sourceforge:winmerge", Tag: "2.16.42"},
+			}}, nil
+		},
+		LatestTag: func(repo, sourcePath string) (string, error) {
+			if repo != "sourceforge:winmerge" || sourcePath != "stable" {
+				t.Fatalf("unexpected latest check repo=%q sourcePath=%q", repo, sourcePath)
+			}
+			return "2.16.44", nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidates()
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "2.16.44", items[0].LatestTag)
 }

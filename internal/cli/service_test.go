@@ -256,7 +256,7 @@ func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
 func TestHandleListOutdatedPrintsOnlyOutdatedInstalledPackages(t *testing.T) {
 	svc := &cliService{
 		listService: app.ListService{
-			LatestTag: func(repo string) (string, error) {
+			LatestTag: func(repo, _ string) (string, error) {
 				switch repo {
 				case "BurntSushi/ripgrep":
 					return "v14.0.0", nil
@@ -309,7 +309,7 @@ func TestHandleListOutdatedPrintsOnlyOutdatedInstalledPackages(t *testing.T) {
 func TestHandleListOutdatedPrintsCheckedInstalledCountWhenNothingOutdated(t *testing.T) {
 	svc := &cliService{
 		listService: app.ListService{
-			LatestTag: func(repo string) (string, error) {
+			LatestTag: func(repo, _ string) (string, error) {
 				switch repo {
 				case "gookit/gitw":
 					return "v0.3.6", nil
@@ -547,7 +547,7 @@ func TestHandleUpdateAllPrintsCandidatesAndUpdatesOnlyOutdated(t *testing.T) {
 					"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
 				}}, nil
 			},
-			LatestTag: func(repo string) (string, error) {
+			LatestTag: func(repo, _ string) (string, error) {
 				switch repo {
 				case "junegunn/fzf":
 					return "v0.50.0", nil
@@ -586,7 +586,7 @@ func TestHandleUpdateCheckPrintsSameOutdatedListWithoutUpdating(t *testing.T) {
 	installer := &fakeUpdateInstallerForCLI{}
 	svc := &cliService{
 		listService: app.ListService{
-			LatestTag: func(repo string) (string, error) {
+			LatestTag: func(repo, _ string) (string, error) {
 				switch repo {
 				case "BurntSushi/ripgrep":
 					return "v14.0.0", nil

@@ -60,3 +60,61 @@ net.sf.files = {
 	assert.Eq(t, "https://downloads.sourceforge.net/project/winmerge/stable/2.16.44/WinMerge-2.16.44-x64-Setup.exe", urls[0])
 	assert.Len(t, getter.requests, 2)
 }
+
+func TestFinderWithoutPathPrefersStableDirectory(t *testing.T) {
+	rootURL := "https://sourceforge.net/projects/winmerge/files/"
+	stableURL := "https://sourceforge.net/projects/winmerge/files/stable/"
+	versionURL := "https://sourceforge.net/projects/winmerge/files/stable/2.16.44/"
+	getter := &fakeGetter{responses: map[string]string{
+		rootURL: `
+<script>
+net.sf.files = {
+  "beta": {"name":"beta","full_path":"/beta","type":"d"},
+  "stable": {"name":"stable","full_path":"/stable","type":"d"}
+};
+</script>`,
+		stableURL: `
+<script>
+net.sf.files = {
+  "2.16.42": {"name":"2.16.42","full_path":"/stable/2.16.42","type":"d"},
+  "2.16.44": {"name":"2.16.44","full_path":"/stable/2.16.44","type":"d"}
+};
+</script>`,
+		versionURL: `
+<script>
+net.sf.files = {
+  "WinMerge-2.16.44-x64-Setup.exe": {
+    "name":"WinMerge-2.16.44-x64-Setup.exe",
+    "download_url":"https://downloads.sourceforge.net/project/winmerge/stable/2.16.44/WinMerge-2.16.44-x64-Setup.exe",
+    "full_path":"/stable/2.16.44/WinMerge-2.16.44-x64-Setup.exe",
+    "type":"f"
+  }
+};
+</script>`,
+	}}
+
+	urls, err := Finder{Project: "winmerge", Getter: getter}.Find()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"https://downloads.sourceforge.net/project/winmerge/stable/2.16.44/WinMerge-2.16.44-x64-Setup.exe"}, urls)
+	assert.Eq(t, []string{rootURL, stableURL, versionURL}, getter.requests)
+}
+
+func TestLatestVersionUsesSourcePath(t *testing.T) {
+	getter := &fakeGetter{responses: map[string]string{
+		"https://sourceforge.net/projects/winmerge/files/stable/": `
+<script>
+net.sf.files = {
+  "2.16.42": {"name":"2.16.42","full_path":"/stable/2.16.42","type":"d"},
+  "2.16.44": {"name":"2.16.44","full_path":"/stable/2.16.44","type":"d"}
+};
+</script>`,
+	}}
+
+	info, err := LatestVersion("winmerge", "stable", getter)
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"https://sourceforge.net/projects/winmerge/files/stable/"}, getter.requests)
+	assert.Eq(t, "2.16.44", info.Version)
+	assert.Eq(t, "/stable/2.16.44", info.Path)
+}

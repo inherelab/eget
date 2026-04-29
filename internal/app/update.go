@@ -20,7 +20,7 @@ type UpdateService struct {
 	Install       Installer
 	LoadConfig    func() (*cfgpkg.File, error)
 	LoadInstalled func() (*storepkg.Config, error)
-	LatestTag     func(repo string) (string, error)
+	LatestTag     func(repo, sourcePath string) (string, error)
 }
 
 type UpdateResult struct {
@@ -109,7 +109,7 @@ func (s UpdateService) ListUpdateCandidates() ([]OutdatedItem, []OutdatedCheckFa
 			continue
 		}
 
-		latestTag, err := s.LatestTag(item.Repo)
+		latestTag, err := s.LatestTag(item.Repo, item.SourcePath)
 		if err != nil {
 			failures = append(failures, OutdatedCheckFailure{
 				Name:  item.Name,
