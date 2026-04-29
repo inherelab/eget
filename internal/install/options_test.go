@@ -19,6 +19,8 @@ func TestDetectTargetKind(t *testing.T) {
 		want   TargetKind
 	}{
 		{name: "repo target", target: "inhere/markview", want: TargetRepo},
+		{name: "sourceforge target", target: "sourceforge:winmerge", want: TargetSourceForge},
+		{name: "sourceforge target with path", target: "sourceforge:winmerge/stable", want: TargetSourceForge},
 		{name: "github url", target: "https://github.com/inhere/markview", want: TargetGitHubURL},
 		{name: "direct url", target: "https://example.com/download/tool.tar.gz", want: TargetDirectURL},
 		{name: "local file", target: localFile, want: TargetLocalFile},
