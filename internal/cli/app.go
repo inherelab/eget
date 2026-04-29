@@ -33,11 +33,12 @@ func SetBuildInfo(versionStr, gitHashStr, buildTimeStr string) {
 	buildTime = buildTimeStr
 }
 
+var cliApp *App
+
 func Main(args []string, stdout, stderr io.Writer) error {
 	var service *cliService
 	var serviceErr error
-	var app *App
-	app = newApp(func(name string, options any) error {
+	cliApp = newApp(func(name string, options any) error {
 		if service == nil && serviceErr == nil {
 			service, serviceErr = newCLIService()
 		}
@@ -47,10 +48,10 @@ func Main(args []string, stdout, stderr io.Writer) error {
 		if service == nil {
 			return ErrNotImplemented
 		}
-		configureVerbose(app.Verbose(), stderr)
+		configureVerbose(cliApp.Verbose(), stderr)
 		return service.handle(name, options)
 	}, stdout, stderr)
-	return app.RunWithArgs(args)
+	return cliApp.RunWithArgs(args)
 }
 
 func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {

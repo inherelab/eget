@@ -106,7 +106,9 @@ func (s *cliService) handleList(opts *ListOptions) error {
 	if opts != nil && opts.Outdated {
 		ccolor.Infoln("🚀 Checking outdated packages")
 		sp := progress.RoundTripSpinner(progress.RandomCharTheme(), 100*time.Millisecond)
-		sp.Start("%s checking")
+		if !cliApp.Verbose() {
+			sp.Start("%s checking")
+		}
 		items, failures, checked, err := s.listService.ListOutdatedPackages()
 		if err != nil {
 			return err
@@ -245,7 +247,10 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 	if opts.All {
 		ccolor.Infoln("🚀 Checking outdated packages")
 		sp := progress.RoundTripSpinner(progress.RandomCharTheme(), 100*time.Millisecond)
-		sp.Start("%s checking")
+		if !cliApp.Verbose() {
+			sp.Start("%s checking")
+		}
+
 		items, failures, checked, err := s.updService.ListUpdateCandidates()
 		if err != nil {
 			return err
@@ -267,6 +272,8 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 			rows = append(rows, []any{item.Name, item.Repo, item.InstalledTag, item.LatestTag})
 		}
 		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
+
+		ccolor.Magentaf("\n🪄🚀 Updating %d packages:\n", len(items))
 		_, err = s.updService.UpdateCandidates(items, installOpts)
 		return err
 	}
