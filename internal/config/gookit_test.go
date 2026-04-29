@@ -144,6 +144,23 @@ func TestDumpConfigStringKeepsLegacyRepoSections(t *testing.T) {
 	}
 }
 
+func TestDumpConfigStringOmitsEmptySourcePath(t *testing.T) {
+	cfg := NewFile()
+	repo := "junegunn/fzf"
+	cfg.Packages["fzf"] = Section{
+		Repo:       &repo,
+		SourcePath: stringPtr(""),
+	}
+
+	text, err := dumpConfigString(cfg)
+	if err != nil {
+		t.Fatalf("dump config string: %v", err)
+	}
+	if strings.Contains(text, "source_path") {
+		t.Fatalf("expected empty source_path field to be absent, got %q", text)
+	}
+}
+
 func TestSaveAndLoadRoundTrip(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")
