@@ -1260,7 +1260,7 @@ git commit -m "feat(sourceforge): support outdated checks"
 - Modify: `docs/DOCS.md`
 - Modify: `docs/example.eget.toml`
 
-- [ ] **Step 1: Update README command examples**
+- [x] **Step 1: Update README command examples**
 
 In `README.md`, add a SourceForge example near install/add usage:
 
@@ -1282,7 +1282,7 @@ system = "windows/amd64"
 asset_filters = ["x64", "setup"]
 ```
 
-- [ ] **Step 2: Update Chinese README**
+- [x] **Step 2: Update Chinese README**
 
 In `README.zh-CN.md`, add equivalent examples:
 
@@ -1296,7 +1296,7 @@ eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64
 
 Add the same TOML example with Chinese explanatory text.
 
-- [ ] **Step 3: Update docs**
+- [x] **Step 3: Update docs**
 
 In `docs/DOCS.md`, update runtime layout:
 
@@ -1321,7 +1321,7 @@ After SourceForge returns candidate download URLs, `system`, `asset_filters`, `f
 download, verification, extraction, and installed-store recording reuse the normal install flow.
 ```
 
-- [ ] **Step 4: Update example config**
+- [x] **Step 4: Update example config**
 
 In `docs/example.eget.toml`, add:
 
@@ -1335,7 +1335,7 @@ asset_filters = ["x64", "setup"]
 is_gui = true
 ```
 
-- [ ] **Step 5: Commit docs**
+- [x] **Step 5: Commit docs**
 
 ```bash
 git add README.md README.zh-CN.md docs/DOCS.md docs/example.eget.toml
