@@ -29,6 +29,7 @@ eget <command> --options... arguments...
 - `internal/config`: 配置文件路径、加载、合并、写回
 - `internal/installed`: 安装记录读写
 - `internal/source/github`: GitHub release/source 查找
+- `internal/source/sourceforge`: SourceForge 文件发现与最新版本检查
 
 ## Install Flow
 
@@ -47,8 +48,15 @@ eget <command> --options... arguments...
 
 - repo 标识符
 - GitHub URL
+- SourceForge target，例如 `sourceforge:winmerge`
 - 直链 URL
 - 本地文件
+
+## SourceForge Flow
+
+`sourceforge:<project>` 目标由 `internal/source/sourceforge` 解析。
+可选的 `source_path` 配置会把发现范围限制在项目 files 区域下的指定目录。
+SourceForge 返回候选下载 URL 后，`system`、`asset_filters`、`file`、下载、校验、提取和 installed store 记录继续复用普通安装链路。
 
 ## Download Flow
 

@@ -8,14 +8,14 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` helps locate, download, and extract prebuilt binaries from GitHub.
+`eget` helps locate, download, and extract prebuilt binaries from GitHub and SourceForge.
 
 > Forked from https://github.com/zyedidia/eget Refactored and enhanced the tool's functionality.
 
 ## Features
 
 - Explicit subcommand CLI: uses the consistent `eget <command> --options... arguments...` form, with clear command boundaries and better automation ergonomics.
-- Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, direct download URLs, and local files.
+- Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, `sourceforge:<project>` targets, direct download URLs, and local files.
 - Unified download, verify, and extract flow: built-in asset discovery, system/asset selection, SHA-256 verification, and archive extraction reduce manual steps.
 - Cache and proxy support: supports `cache_dir` download reuse, `api_cache` for GitHub API response caching, and combined `proxy_url`/`ghproxy` remote request proxying.
 - Managed package lifecycle: supports `add`, `list`, `update`, and `uninstall` for package definitions, installed state, and cleanup workflows.
@@ -59,9 +59,13 @@ eget install --asset zip windirstat/windirstat
 eget install --asset "REG:\\.deb$" owner/repo
 # Install to a custom directory
 eget install --to ~/.local/bin/fzf junegunn/fzf
+# Install a SourceForge project directly
+eget install sourceforge:winmerge --asset x64,setup
 # Install and record the package definition
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
+# Add a SourceForge project as a managed package
+eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,setup
 # Install a GUI app; portable GUI apps use global.gui_target by default
 eget install --gui sipeed/picoclaw
 eget add --gui --name picoclaw sipeed/picoclaw
@@ -122,6 +126,7 @@ The target argument accepted by `install` and `download` can be:
 - `name` in the config packages
 - `owner/repo`
 - GitHub repository URL
+- SourceForge target, for example `sourceforge:winmerge` or `sourceforge:winmerge/stable`
 - Direct download URL
 - Local file
 
@@ -269,6 +274,12 @@ repo = "inhere/markview"
 target = "~/.local/bin"
 tag = "nightly"
 asset_filters = ["windows"]
+
+[packages.winmerge]
+repo = "sourceforge:winmerge"
+source_path = "stable"
+system = "windows/amd64"
+asset_filters = ["x64", "setup"]
 ```
 
 Common fields:
@@ -285,6 +296,7 @@ Common fields:
 - `ghproxy.fallbacks`
 - `system`
 - `tag`
+- `source_path`
 - `file`
 - `asset_filters`
 - `download_source`
@@ -317,6 +329,7 @@ Directory semantics:
 - `target` is the default install directory
 - `cache_dir` is the default download cache directory
 - `proxy_url` is the global proxy for remote requests; both GitHub lookups and remote downloads use it
+- `source_path` narrows SourceForge discovery under a project's files area, for example `stable`
 - `api_cache` only caches GitHub API `GET` responses, and the cache file directory is derived as `{cache_dir}/api-cache/`
 - `cache_time` is measured in seconds; expired cache entries are refreshed from the network
 - `ghproxy` rewrites GitHub asset download URLs; when `support_api = true`, it also rewrites `api.github.com` requests

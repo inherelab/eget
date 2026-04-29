@@ -8,14 +8,14 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` 用于从 GitHub 查找、下载并提取预构建二进制。
+`eget` 用于从 GitHub 和 SourceForge 查找、下载并提取预构建二进制。
 
 > Forked from https://github.com/zyedidia/eget 重构并增强了工具的功能。
 
 ## 功能特性
 
 - 显式子命令 CLI：统一使用 `eget <command> --options... arguments...` 形式，命令职责清晰，便于扩展和自动化调用。
-- 多种目标输入：`install` 和 `download` 支持 `owner/repo`、GitHub 仓库 URL、直接下载 URL 以及本地文件。
+- 多种目标输入：`install` 和 `download` 支持 `owner/repo`、GitHub 仓库 URL、`sourceforge:<project>` 目标、直接下载 URL 以及本地文件。
 - 下载、校验、提取一体化：内置资源发现、系统/资产筛选、SHA-256 自动校验与归档提取流程，减少手工步骤。
 - 缓存与代理支持：支持 `cache_dir` 下载缓存复用、`api_cache` GitHub API 响应缓存，以及 `proxy_url`/`ghproxy` 组合代理远程请求。
 - 托管包生命周期管理：通过 `add`、`list`、`update`、`uninstall` 管理本地 package 定义、安装状态和卸载流程。
@@ -60,9 +60,13 @@ eget install --asset zip windirstat/windirstat
 eget install --asset "REG:\\.deb$" owner/repo
 # 安装到指定目录
 eget install --to ~/.local/bin/fzf junegunn/fzf
+# 直接安装 SourceForge 项目
+eget install sourceforge:winmerge --asset x64,setup
 # 安装 并 记录
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
+# 添加 SourceForge 项目为托管包
+eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,setup
 # 安装 GUI 应用；免安装 GUI 程序默认写入 global.gui_target
 eget install --gui sipeed/picoclaw
 eget add --gui --name picoclaw sipeed/picoclaw
@@ -123,6 +127,7 @@ eget config set global.target ~/.local/bin
 - `name` in the config packages
 - `owner/repo`
 - GitHub 仓库 URL
+- SourceForge 目标，例如 `sourceforge:winmerge` 或 `sourceforge:winmerge/stable`
 - 直接下载 URL
 - 本地文件
 
@@ -270,6 +275,12 @@ repo = "inhere/markview"
 target = "~/.local/bin"
 tag = "nightly"
 asset_filters = ["windows"]
+
+[packages.winmerge]
+repo = "sourceforge:winmerge"
+source_path = "stable"
+system = "windows/amd64"
+asset_filters = ["x64", "setup"]
 ```
 
 常见字段：
@@ -286,6 +297,7 @@ asset_filters = ["windows"]
 - `ghproxy.fallbacks`
 - `system`
 - `tag`
+- `source_path`
 - `file`
 - `asset_filters`
 - `download_source`
@@ -317,6 +329,7 @@ eget config init
 - `target` 是默认安装目录
 - `cache_dir` 是默认下载缓存目录
 - `proxy_url` 是全局远程请求代理，GitHub 查询和远程下载都会使用它
+- `source_path` 用于限定 SourceForge 项目 files 区域下的发现路径，例如 `stable`
 - `api_cache` 仅缓存 GitHub API 的 `GET` 响应，缓存文件目录派生为 `{cache_dir}/api-cache/`
 - `cache_time` 单位为秒；缓存过期后会重新请求并刷新缓存
 - `ghproxy` 会重写 GitHub 资源下载 URL；当 `support_api = true` 时，也会重写 `api.github.com` 请求

@@ -29,3 +29,11 @@ name = "picoclaw"
 repo = "sipeed/picoclaw"
 is_gui = true
 file = "*.exe"
+
+[packages."winmerge"]
+name = "winmerge"
+repo = "sourceforge:winmerge"
+source_path = "stable"
+system = "windows/amd64"
+asset_filters = ["x64", "setup"]
+is_gui = true
