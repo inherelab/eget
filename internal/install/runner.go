@@ -94,10 +94,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 			return RunResult{}, err
 		}
 	} else if len(candidates) == 0 && err != nil {
-		url, err = r.resolveFallback(target, opts, err)
-		if err != nil {
-			return RunResult{}, err
-		}
+		return RunResult{}, err
 	} else if err != nil {
 		return RunResult{}, err
 	}
@@ -415,23 +412,6 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string) (st
 	return candidates[choice], nil
 }
 
-func (r *InstallRunner) resolveFallback(target string, opts Options, original error) (string, error) {
-	_, previousURLs, _ := r.loadInstalled()
-	repoKey := storepkg.NormalizeRepoName(target)
-	if previousURL := previousURLs[repoKey]; previousURL != "" {
-		currentTag := opts.Tag
-		if currentTag == "" {
-			currentTag = "latest"
-		}
-		fallback := replaceTagInURL(previousURL, currentTag)
-		if r.Stderr != nil {
-			ccolor.Fprintf(r.Stderr, "<yellow>Warning: no assets matched current filters, using fallback asset '%s' from previous installation</>\n", path.Base(fallback))
-		}
-		return fallback, nil
-	}
-	return "", original
-}
-
 func (r *InstallRunner) resolveExtractedFile(candidates []ExtractedFile, opts Options) (ExtractedFile, bool, error) {
 	goos, goarch := selectionPlatform(opts)
 	if selected, ok := autoSelectExtractedFile(candidates, goos, goarch); ok {
@@ -553,18 +533,6 @@ func checksumAsset(asset string, assets []string) string {
 		}
 	}
 	return ""
-}
-
-func replaceTagInURL(url, newTag string) string {
-	parts := strings.Split(url, "/")
-	if len(parts) < 8 || parts[2] != "github.com" {
-		return url
-	}
-	if len(parts) >= 8 && parts[5] == "releases" && parts[6] == "download" {
-		parts[7] = newTag
-		return strings.Join(parts, "/")
-	}
-	return url
 }
 
 func outputPath(file ExtractedFile, output string, all bool, preferredName string) (string, error) {

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gookit/goutil/x/ccolor"
+	sourcegithub "github.com/inherelab/eget/internal/source/github"
 	pb "github.com/schollz/progressbar/v3"
 )
 
@@ -235,6 +236,53 @@ func TestRunQuietSuppressesInstallNotice(t *testing.T) {
 	}
 	if got := globalOut.String(); got != "" {
 		t.Fatalf("expected quiet global output to be empty, got %q", got)
+	}
+}
+
+func TestRunStopsWhenConfiguredAssetFilterMatchesNoCurrentReleaseAssets(t *testing.T) {
+	svc := NewDefaultService(nil, nil)
+	svc.GitHubGetterFactory = func(opts Options) sourcegithub.HTTPGetter {
+		return HTTPGetterFunc(func(url string) (*http.Response, error) {
+			if !strings.Contains(url, "/repos/Zxilly/go-size-analyzer/releases/latest") {
+				t.Fatalf("unexpected GitHub API request %q", url)
+			}
+			body := `{"assets":[{"browser_download_url":"https://github.com/Zxilly/go-size-analyzer/releases/download/v1.12.5/go-size-analyzer_1.12.5_linux_amd64.tar.gz"}]}`
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Body:       io.NopCloser(strings.NewReader(body)),
+			}, nil
+		})
+	}
+
+	downloadCalls := 0
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		downloadCalls++
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("old-asset")),
+		}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stderr = io.Discard
+	runner.InstalledLoad = func() (map[string]string, map[string]string, error) {
+		return map[string]string{}, map[string]string{
+			"Zxilly/go-size-analyzer": "https://github.com/Zxilly/go-size-analyzer/releases/download/v1.12.4/go-size-analyzer_1.12.4_windows_amd64.zip",
+		}, nil
+	}
+
+	_, err := runner.Run("Zxilly/go-size-analyzer", Options{
+		System: "windows/amd64",
+		Asset:  []string{"windows"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "asset `windows` not found") {
+		t.Fatalf("expected missing current asset error, got %v", err)
+	}
+	if downloadCalls != 0 {
+		t.Fatalf("expected no download when current release asset does not match, got %d calls", downloadCalls)
 	}
 }
 
