@@ -80,7 +80,7 @@ func downloadableURLs(files []File) []string {
 	urls := make([]string, 0, len(files))
 	for _, file := range files {
 		if file.Type == TypeFile && file.DownloadURL != "" {
-			urls = append(urls, file.URL)
+			urls = append(urls, file.DownloadURL)
 		}
 	}
 	return urls

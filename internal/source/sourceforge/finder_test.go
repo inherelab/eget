@@ -57,6 +57,6 @@ net.sf.files = {
 		t.Fatalf("Find(): %v", err)
 	}
 	assert.Len(t, urls, 1)
-	assert.Contains(t, urls[0], "WinMerge-2.16.44-x64-Setup.exe/download")
+	assert.Eq(t, "https://downloads.sourceforge.net/project/winmerge/stable/2.16.44/WinMerge-2.16.44-x64-Setup.exe", urls[0])
 	assert.Len(t, getter.requests, 2)
 }
