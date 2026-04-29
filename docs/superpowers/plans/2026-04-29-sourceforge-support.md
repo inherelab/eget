@@ -346,7 +346,7 @@ git commit -m "feat(config): add source path option"
 - Modify: `internal/app/update.go`
 - Modify: `internal/app/update_test.go`
 
-- [ ] **Step 1: Write add normalization test**
+- [x] **Step 1: Write add normalization test**
 
 In `internal/app/add_test.go`, add:
 
@@ -383,7 +383,7 @@ func TestAddPackageNormalizesSourceForgeTargetWithPath(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Write installed-store normalization test**
+- [x] **Step 2: Write installed-store normalization test**
 
 In `internal/installed/store_test.go`, add:
 
@@ -394,7 +394,7 @@ func TestNormalizeRepoNameSourceForge(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run:
 
@@ -404,7 +404,7 @@ go test ./internal/app ./internal/installed -run 'TestAddPackageNormalizesSource
 
 Expected: FAIL because SourceForge normalization is not implemented.
 
-- [ ] **Step 4: Implement config normalization**
+- [x] **Step 4: Implement config normalization**
 
 In `internal/app/config.go`, import SourceForge package:
 
@@ -428,7 +428,7 @@ if sfTarget, sfErr := sourceforge.ParseTarget(repo); sfErr == nil {
 
 Keep existing GitHub-style name fallback after this block.
 
-- [ ] **Step 5: Implement installed normalization**
+- [x] **Step 5: Implement installed normalization**
 
 In `internal/installed/store.go`, import SourceForge package:
 
@@ -444,7 +444,7 @@ if sfTarget, err := sourceforge.ParseTarget(target); err == nil {
 }
 ```
 
-- [ ] **Step 6: Allow direct SourceForge update target**
+- [x] **Step 6: Allow direct SourceForge update target**
 
 In `internal/app/update.go`, import SourceForge and update direct target check:
 
@@ -472,7 +472,7 @@ func TestUpdatePackageAllowsDirectSourceForgeTarget(t *testing.T) {
 }
 ```
 
-- [ ] **Step 7: Run tests**
+- [x] **Step 7: Run tests**
 
 Run:
 
@@ -482,7 +482,7 @@ go test ./internal/app ./internal/installed -run 'TestAddPackageNormalizesSource
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add internal/app/config.go internal/app/add_test.go internal/installed/store.go internal/installed/store_test.go internal/app/update.go internal/app/update_test.go
