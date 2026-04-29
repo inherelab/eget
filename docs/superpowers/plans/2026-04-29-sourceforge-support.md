@@ -208,7 +208,7 @@ git commit -m "feat(sourceforge): detect sourceforge targets"
 - Modify: `internal/app/config.go`
 - Modify: `internal/app/add_test.go`
 
-- [ ] **Step 1: Write config merge test**
+- [x] **Step 1: Write config merge test**
 
 In `internal/config/merge_test.go`, add:
 
@@ -236,13 +236,13 @@ Use the existing helper pattern in that test file for `stringPtr`; if it does no
 func stringPtr(value string) *string { return &value }
 ```
 
-- [ ] **Step 2: Run config test to verify it fails**
+- [x] **Step 2: Run config test to verify it fails**
 
 Run: `go test ./internal/config -run TestMergeInstallOptionsMergesSourcePath -v`
 
 Expected: FAIL because `SourcePath` does not exist.
 
-- [ ] **Step 3: Add `SourcePath` fields**
+- [x] **Step 3: Add `SourcePath` fields**
 
 In `internal/config/model.go`, add to `Section`:
 
@@ -268,7 +268,7 @@ In `internal/config/merge.go`, add:
 merged.SourcePath = firstString(cli.SourcePath, pkg.SourcePath, repo.SourcePath, global.SourcePath)
 ```
 
-- [ ] **Step 4: Add install option field and app option merge**
+- [x] **Step 4: Add install option field and app option merge**
 
 In `internal/install/options.go`, add:
 
@@ -288,7 +288,7 @@ And include it in returned `install.Options`:
 SourcePath: merged.SourcePath,
 ```
 
-- [ ] **Step 5: Write add persistence test**
+- [x] **Step 5: Write add persistence test**
 
 In `internal/app/add_test.go`, extend `TestAddPackage` setup:
 
@@ -307,7 +307,7 @@ if pkg.SourcePath == nil || *pkg.SourcePath != "stable" {
 }
 ```
 
-- [ ] **Step 6: Persist source path from install options**
+- [x] **Step 6: Persist source path from install options**
 
 In `internal/app/config.go`, inside `sectionFromInstallOptions`:
 
@@ -317,7 +317,7 @@ if opts.SourcePath != "" {
 }
 ```
 
-- [ ] **Step 7: Run tests**
+- [x] **Step 7: Run tests**
 
 Run:
 
@@ -327,7 +327,7 @@ go test ./internal/config ./internal/app -run 'TestMergeInstallOptionsMergesSour
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add internal/config/model.go internal/config/merge.go internal/config/merge_test.go internal/install/options.go internal/app/install.go internal/app/config.go internal/app/add_test.go
