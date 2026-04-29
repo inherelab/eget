@@ -497,7 +497,7 @@ git commit -m "feat(sourceforge): normalize managed targets"
 - Create: `internal/source/sourceforge/files.go`
 - Create: `internal/source/sourceforge/files_test.go`
 
-- [ ] **Step 1: Write parser tests**
+- [x] **Step 1: Write parser tests**
 
 Create `internal/source/sourceforge/files_test.go`:
 
@@ -535,13 +535,13 @@ func TestParseFilesPageRejectsMissingData(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run parser tests to verify they fail**
+- [x] **Step 2: Run parser tests to verify they fail**
 
 Run: `go test ./internal/source/sourceforge -run TestParseFilesPage -v`
 
 Expected: FAIL because parser does not exist.
 
-- [ ] **Step 3: Implement parser**
+- [x] **Step 3: Implement parser**
 
 Create `internal/source/sourceforge/files.go`:
 
@@ -596,13 +596,13 @@ func ParseFilesPage(body []byte) ([]File, error) {
 }
 ```
 
-- [ ] **Step 4: Run parser tests**
+- [x] **Step 4: Run parser tests**
 
 Run: `go test ./internal/source/sourceforge -run TestParseFilesPage -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/source/sourceforge/files.go internal/source/sourceforge/files_test.go
