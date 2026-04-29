@@ -57,3 +57,47 @@ func TestParseFilesPageRejectsMissingData(t *testing.T) {
 		t.Fatalf("expected missing data error, got %v", err)
 	}
 }
+
+func TestParseFilesPageHandlesJSONStringsWithBracesAndEscapes(t *testing.T) {
+	body := []byte(`
+<script>
+net.sf.files = {
+  "escaped": {
+    "name": "name with { braces } and \"quote\"",
+    "path": "/project/files/folder\\name",
+    "download_url": "https://downloads.sourceforge.net/project/example/folder\\name/file.zip",
+    "url": "https://sourceforge.net/projects/example/files/folder%5Cname/file.zip/download",
+    "full_path": "/folder\\name/file.zip",
+    "type": "f",
+    "downloadable": true
+  }
+}; net.sf.staging_days = 3;
+</script>`)
+
+	files, err := ParseFilesPage(body)
+	if err != nil {
+		t.Fatalf("ParseFilesPage(): %v", err)
+	}
+
+	assert.Len(t, files, 1)
+	assert.Eq(t, `name with { braces } and "quote"`, files[0].Name)
+	assert.Eq(t, `/project/files/folder\name`, files[0].Path)
+	assert.Eq(t, `https://downloads.sourceforge.net/project/example/folder\name/file.zip`, files[0].DownloadURL)
+	assert.Eq(t, "/folder\\name/file.zip", files[0].FullPath)
+	assert.Eq(t, TypeFile, files[0].Type)
+	assert.True(t, files[0].Downloadable)
+}
+
+func TestParseFilesPageRejectsIncompleteObject(t *testing.T) {
+	_, err := ParseFilesPage([]byte(`net.sf.files = {"a":{"name":"x"}`))
+	if err == nil || !strings.Contains(err.Error(), "sourceforge files data object is incomplete") {
+		t.Fatalf("expected incomplete object error, got %v", err)
+	}
+}
+
+func TestParseFilesPageRejectsInvalidJSON(t *testing.T) {
+	_, err := ParseFilesPage([]byte(`net.sf.files = {"a":{"name":"x" "type":"f"}};`))
+	if err == nil || !strings.Contains(err.Error(), "parse sourceforge files data") {
+		t.Fatalf("expected parse error, got %v", err)
+	}
+}
