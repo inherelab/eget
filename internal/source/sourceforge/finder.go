@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 )
 
@@ -141,8 +143,34 @@ func downloadableURLs(files []File) []string {
 	urls := make([]string, 0, len(files))
 	for _, file := range files {
 		if file.Type == TypeFile && file.DownloadURL != "" {
-			urls = append(urls, file.DownloadURL)
+			urls = append(urls, directDownloadURL(file))
 		}
 	}
 	return urls
+}
+
+func directDownloadURL(file File) string {
+	if strings.TrimSpace(file.FullPath) == "" {
+		return file.DownloadURL
+	}
+	parsed, err := url.Parse(file.DownloadURL)
+	if err != nil || parsed.Host != "sourceforge.net" || !strings.HasSuffix(strings.Trim(parsed.Path, "/"), "/download") {
+		return file.DownloadURL
+	}
+
+	project := projectFromDownloadPath(parsed.Path)
+	if project == "" {
+		return file.DownloadURL
+	}
+	return "https://downloads.sourceforge.net/project/" + project + "/" + strings.Trim(file.FullPath, "/")
+}
+
+func projectFromDownloadPath(rawPath string) string {
+	parts := strings.Split(strings.Trim(rawPath, "/"), "/")
+	for i := 0; i+1 < len(parts); i++ {
+		if parts[i] == "projects" {
+			return path.Clean(parts[i+1])
+		}
+	}
+	return ""
 }

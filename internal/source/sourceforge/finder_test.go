@@ -61,6 +61,28 @@ net.sf.files = {
 	assert.Len(t, getter.requests, 2)
 }
 
+func TestFinderNormalizesSourceForgeDownloadPageURL(t *testing.T) {
+	getter := &fakeGetter{responses: map[string]string{
+		"https://sourceforge.net/projects/winmerge/files/stable/2.16.56/": `
+<script>
+net.sf.files = {
+  "WinMerge-2.16.56-x64-Setup.exe": {
+    "name":"WinMerge-2.16.56-x64-Setup.exe",
+    "download_url":"https://sourceforge.net/projects/winmerge/files/stable/2.16.56/WinMerge-2.16.56-x64-Setup.exe/download",
+    "url":"/projects/winmerge/files/stable/2.16.56/WinMerge-2.16.56-x64-Setup.exe/",
+    "full_path":"/stable/2.16.56/WinMerge-2.16.56-x64-Setup.exe",
+    "type":"f"
+  }
+};
+</script>`,
+	}}
+
+	urls, err := Finder{Project: "winmerge", Path: "stable/2.16.56", Getter: getter}.Find()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"https://downloads.sourceforge.net/project/winmerge/stable/2.16.56/WinMerge-2.16.56-x64-Setup.exe"}, urls)
+}
+
 func TestFinderWithoutPathPrefersStableDirectory(t *testing.T) {
 	rootURL := "https://sourceforge.net/projects/winmerge/files/"
 	stableURL := "https://sourceforge.net/projects/winmerge/files/stable/"

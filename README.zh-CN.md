@@ -61,12 +61,12 @@ eget install --asset "REG:\\.deb$" owner/repo
 # 安装到指定目录
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # 直接安装 SourceForge 项目
-eget install sourceforge:winmerge --asset x64,setup
+eget install sourceforge:winmerge --asset x64,PerUser,setup
 # 安装 并 记录
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 # 添加 SourceForge 项目为托管包
-eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,setup
+eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,PerUser,setup
 # 安装 GUI 应用；免安装 GUI 程序默认写入 global.gui_target
 eget install --gui sipeed/picoclaw
 eget add --gui --name picoclaw sipeed/picoclaw
@@ -280,7 +280,7 @@ asset_filters = ["windows"]
 repo = "sourceforge:winmerge"
 source_path = "stable"
 system = "windows/amd64"
-asset_filters = ["x64", "setup"]
+asset_filters = ["x64", "PerUser", "setup"]
 ```
 
 常见字段：

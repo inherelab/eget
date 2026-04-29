@@ -81,3 +81,21 @@ func TestAssetDetectorSupportsRegexExclude(t *testing.T) {
 		t.Fatalf("expected rpm asset to remain after exclude, got %q", got)
 	}
 }
+
+func TestAssetDetectorMatchesPlainFilterCaseInsensitive(t *testing.T) {
+	d := &assetDetector{Asset: "setup"}
+
+	got, candidates, err := d.Detect([]string{
+		"https://example.com/WinMerge-2.16.56-x64-Setup.exe",
+		"https://example.com/WinMerge-2.16.56-x64.zip",
+	})
+	if err != nil {
+		t.Fatalf("Detect(): %v", err)
+	}
+	if len(candidates) != 0 {
+		t.Fatalf("expected no candidates, got %#v", candidates)
+	}
+	if got != "https://example.com/WinMerge-2.16.56-x64-Setup.exe" {
+		t.Fatalf("expected setup asset to match, got %q", got)
+	}
+}

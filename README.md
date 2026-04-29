@@ -60,12 +60,12 @@ eget install --asset "REG:\\.deb$" owner/repo
 # Install to a custom directory
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # Install a SourceForge project directly
-eget install sourceforge:winmerge --asset x64,setup
+eget install sourceforge:winmerge --asset x64,PerUser,setup
 # Install and record the package definition
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 # Add a SourceForge project as a managed package
-eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,setup
+eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,PerUser,setup
 # Install a GUI app; portable GUI apps use global.gui_target by default
 eget install --gui sipeed/picoclaw
 eget add --gui --name picoclaw sipeed/picoclaw
@@ -279,7 +279,7 @@ asset_filters = ["windows"]
 repo = "sourceforge:winmerge"
 source_path = "stable"
 system = "windows/amd64"
-asset_filters = ["x64", "setup"]
+asset_filters = ["x64", "PerUser", "setup"]
 ```
 
 Common fields:

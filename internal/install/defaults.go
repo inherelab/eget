@@ -279,7 +279,7 @@ func (s *assetDetector) matches(base string) bool {
 	if s.Regex != nil {
 		return s.Regex.MatchString(base)
 	}
-	return strings.Contains(base, s.Asset)
+	return strings.Contains(strings.ToLower(base), strings.ToLower(s.Asset))
 }
 
 func compileAssetRegex(expr string) (*regexp.Regexp, error) {

@@ -35,5 +35,5 @@ name = "winmerge"
 repo = "sourceforge:winmerge"
 source_path = "stable"
 system = "windows/amd64"
-asset_filters = ["x64", "setup"]
+asset_filters = ["x64", "PerUser", "setup"]
 is_gui = true
