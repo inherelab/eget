@@ -619,7 +619,7 @@ git commit -m "feat(sourceforge): parse file listings"
 - Create: `internal/source/sourceforge/finder.go`
 - Create: `internal/source/sourceforge/finder_test.go`
 
-- [ ] **Step 1: Write version tests**
+- [x] **Step 1: Write version tests**
 
 Create `internal/source/sourceforge/version_test.go`:
 
@@ -658,7 +658,7 @@ func TestLatestVersionFile(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Implement version helpers**
+- [x] **Step 2: Implement version helpers**
 
 Create `internal/source/sourceforge/version.go`:
 
@@ -731,7 +731,7 @@ func splitVersion(value string) []int {
 }
 ```
 
-- [ ] **Step 3: Write finder tests**
+- [x] **Step 3: Write finder tests**
 
 Create `internal/source/sourceforge/finder_test.go`:
 
@@ -785,7 +785,7 @@ func htmlResponse(script string) *http.Response {
 }
 ```
 
-- [ ] **Step 4: Implement finder**
+- [x] **Step 4: Implement finder**
 
 Create `internal/source/sourceforge/finder.go`:
 
@@ -879,13 +879,13 @@ func downloadableURLs(files []File) []string {
 }
 ```
 
-- [ ] **Step 5: Run SourceForge package tests**
+- [x] **Step 5: Run SourceForge package tests**
 
 Run: `go test ./internal/source/sourceforge -v`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/source/sourceforge/version.go internal/source/sourceforge/version_test.go internal/source/sourceforge/finder.go internal/source/sourceforge/finder_test.go
