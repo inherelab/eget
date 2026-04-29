@@ -526,6 +526,58 @@ func TestHandleUpdateRejectsUnimplementedDryRunAndInteractive(t *testing.T) {
 	}
 }
 
+func TestHandleUpdateAllPrintsCandidatesAndUpdatesOnlyOutdated(t *testing.T) {
+	installer := &fakeUpdateInstallerForCLI{}
+	svc := &cliService{
+		updService: app.UpdateService{
+			Install: installer,
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+				cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"junegunn/fzf":       {Repo: "junegunn/fzf", Tag: "v0.50.0"},
+					"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+				}}, nil
+			},
+			LatestTag: func(repo string) (string, error) {
+				switch repo {
+				case "junegunn/fzf":
+					return "v0.50.0", nil
+				case "BurntSushi/ripgrep":
+					return "v14.0.0", nil
+				default:
+					t.Fatalf("unexpected latest tag check for %s", repo)
+					return "", nil
+				}
+			},
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	err := svc.handleUpdate(&UpdateOptions{All: true})
+	if err != nil {
+		t.Fatalf("handle update all: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "BurntSushi/ripgrep") || !strings.Contains(got, "v13.0.0") || !strings.Contains(got, "v14.0.0") {
+		t.Fatalf("expected outdated candidate output, got %q", got)
+	}
+	if strings.Contains(got, "junegunn/fzf") {
+		t.Fatalf("expected up-to-date repo to be omitted, got %q", got)
+	}
+	if len(installer.targets) != 1 || installer.targets[0] != "rg" {
+		t.Fatalf("expected only rg to be updated, got %#v", installer.targets)
+	}
+}
+
 func TestHandleConfigInitRejectsOverwriteWithoutConfirmation(t *testing.T) {
 	svc := &cliService{
 		cfgService: app.ConfigService{
@@ -854,6 +906,15 @@ type fakeRunnerForCLI struct {
 
 func (f *fakeRunnerForCLI) Run(target string, opts install.Options) (app.RunResult, error) {
 	return f.result, nil
+}
+
+type fakeUpdateInstallerForCLI struct {
+	targets []string
+}
+
+func (f *fakeUpdateInstallerForCLI) InstallTarget(target string, opts install.Options, extras ...app.InstallExtras) (app.RunResult, error) {
+	f.targets = append(f.targets, target)
+	return app.RunResult{}, nil
 }
 
 type fakeInstalledStoreForCLI struct{}

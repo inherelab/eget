@@ -32,7 +32,7 @@ func newUpdateCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	})
 	cmd.Aliases = []string{"up"}
 
-	cmd.BoolVar(&opts.All, "all", false, "Update all managed packages")
+	cmd.BoolVar(&opts.All, "all", false, "Update all managed packages;;A")
 	cmd.BoolVar(&opts.DryRun, "dry-run", false, "Preview updates without changes")
 	cmd.BoolVar(&opts.Interactive, "interactive", false, "Interactively choose packages")
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")

@@ -2,9 +2,12 @@ package app
 
 import (
 	"testing"
+	"time"
 
+	"github.com/gookit/goutil/testutil/assert"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
+	storepkg "github.com/inherelab/eget/internal/installed"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -133,7 +136,7 @@ asset_filters = ["linux"]
 	}
 }
 
-func TestUpdateAllPackagesIteratesManagedPackages(t *testing.T) {
+func TestUpdateAllPackagesIteratesOutdatedManagedPackages(t *testing.T) {
 	installer := &fakeInstallService{}
 	svc := UpdateService{
 		Install: installer,
@@ -142,6 +145,22 @@ func TestUpdateAllPackagesIteratesManagedPackages(t *testing.T) {
 			cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
 			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
 			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"junegunn/fzf":       {Repo: "junegunn/fzf", Tag: "v0.50.0"},
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+			}}, nil
+		},
+		LatestTag: func(repo string) (string, error) {
+			switch repo {
+			case "junegunn/fzf":
+				return "v0.51.0", nil
+			case "BurntSushi/ripgrep":
+				return "v14.0.0", nil
+			default:
+				return "", nil
+			}
 		},
 	}
 
@@ -156,4 +175,43 @@ func TestUpdateAllPackagesIteratesManagedPackages(t *testing.T) {
 	if len(installer.targets) != 2 {
 		t.Fatalf("expected installer to run twice, got %d", len(installer.targets))
 	}
+}
+
+func TestUpdateAllPackagesInstallsOnlyOutdatedInstalledPackages(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			cfg.Packages["fd"] = cfgpkg.Section{Repo: util.StringPtr("sharkdp/fd")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"junegunn/fzf":       {Repo: "junegunn/fzf", InstalledAt: now, Tag: "v0.50.0"},
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", InstalledAt: now, Tag: "v13.0.0"},
+			}}, nil
+		},
+		LatestTag: func(repo string) (string, error) {
+			switch repo {
+			case "junegunn/fzf":
+				return "v0.50.0", nil
+			case "BurntSushi/ripgrep":
+				return "v14.0.0", nil
+			default:
+				t.Fatalf("unexpected latest tag check for %s", repo)
+				return "", nil
+			}
+		},
+	}
+
+	results, err := svc.UpdateAllPackages(install.Options{})
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"rg"}, installer.targets)
+	assert.Eq(t, 1, len(results))
+	assert.Eq(t, "rg", results[0].Name)
+	assert.Eq(t, "BurntSushi/ripgrep", results[0].Target)
 }

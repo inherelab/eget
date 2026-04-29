@@ -240,7 +240,31 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 	}
 	installOpts := installOptionsFromUpdate(opts)
 	if opts.All {
-		_, err := s.updService.UpdateAllPackages(installOpts)
+		ccolor.Infoln("🚀 Checking outdated packages")
+		sp := progress.RoundTripSpinner(progress.RandomCharTheme(), 100*time.Millisecond)
+		sp.Start("%s checking")
+		items, failures, checked, err := s.updService.ListUpdateCandidates()
+		if err != nil {
+			return err
+		}
+		sp.Stop()
+		ccolor.Successf("✅ Checked %d packages\n", checked)
+
+		for _, failure := range failures {
+			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
+		}
+		if len(items) == 0 {
+			ccolor.Cyanln("🎉 No outdated packages found")
+			return nil
+		}
+
+		cols := []string{"Name", "Repo", "Installed", "Latest version"}
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.Name, item.Repo, item.InstalledTag, item.LatestTag})
+		}
+		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
+		_, err = s.updService.UpdateCandidates(items, installOpts)
 		return err
 	}
 	if opts.Target == "" {

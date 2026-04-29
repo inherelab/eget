@@ -83,6 +83,10 @@ func newCLIService() (*cliService, error) {
 	}
 	updService := app.UpdateService{
 		Install: &appService,
+		LatestTag: func(repo string) (string, error) {
+			tag, _, err := githubClient.LatestReleaseInfo(repo)
+			return tag, err
+		},
 	}
 	return &cliService{
 		appService:       appService,
