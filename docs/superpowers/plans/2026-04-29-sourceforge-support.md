@@ -902,7 +902,7 @@ git commit -m "feat(sourceforge): discover release assets"
 - Modify: `internal/cli/wiring.go`
 - Modify: `internal/cli/service_test.go`
 
-- [ ] **Step 1: Write install service selection test**
+- [x] **Step 1: Write install service selection test**
 
 In `internal/install/service_test.go`, add:
 
@@ -932,13 +932,13 @@ func TestSelectFinderRejectsConflictingSourceForgePaths(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `go test ./internal/install -run 'TestSelectFinderSourceForgeTarget|TestSelectFinderRejectsConflictingSourceForgePaths' -v`
 
 Expected: FAIL because SourceForge selection is not wired.
 
-- [ ] **Step 3: Add SourceForge getter factory to install service**
+- [x] **Step 3: Add SourceForge getter factory to install service**
 
 In `internal/install/service.go`, import SourceForge:
 
@@ -960,7 +960,7 @@ SourceForgeGetterFactory: func(opts Options) sourcesf.HTTPGetter {
 },
 ```
 
-- [ ] **Step 4: Route SourceForge target in `SelectFinder`**
+- [x] **Step 4: Route SourceForge target in `SelectFinder`**
 
 In `internal/install/service.go`, add a case:
 
@@ -989,7 +989,7 @@ case TargetSourceForge:
 	}, sfTarget.Project, nil
 ```
 
-- [ ] **Step 5: Wire CLI service SourceForge verbose configuration**
+- [x] **Step 5: Wire CLI service SourceForge verbose configuration**
 
 In `internal/cli/wiring.go`, import SourceForge package:
 
@@ -1019,7 +1019,7 @@ func SetVerbose(enabled bool, writer io.Writer) {
 }
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run:
 
