@@ -15,6 +15,7 @@ type Section struct {
 	Repo         *string  `toml:"repo" mapstructure:"repo"`
 	ShowHash     *bool    `toml:"show_hash" mapstructure:"show_hash"`
 	Source       *bool    `toml:"download_source" mapstructure:"download_source"`
+	SourcePath   *string  `toml:"source_path" mapstructure:"source_path"`
 	System       *string  `toml:"system" mapstructure:"system"`
 	Tag          *string  `toml:"tag" mapstructure:"tag"`
 	Target       *string  `toml:"target" mapstructure:"target"`
@@ -60,6 +61,7 @@ type Merged struct {
 	Quiet        bool
 	ShowHash     bool
 	Source       bool
+	SourcePath   string
 	System       string
 	Tag          string
 	Target       string
@@ -81,6 +83,7 @@ type CLIOverrides struct {
 	Quiet        *bool
 	ShowHash     *bool
 	Source       *bool
+	SourcePath   *string
 	System       *string
 	Tag          *string
 	Target       *string

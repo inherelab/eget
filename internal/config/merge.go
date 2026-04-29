@@ -18,6 +18,7 @@ func MergeInstallOptions(global, repo, pkg Section, cli CLIOverrides) Merged {
 	merged.GithubToken = firstString(cli.GithubToken, pkg.GithubToken, repo.GithubToken, global.GithubToken)
 	merged.GuiTarget = firstString(global.GuiTarget)
 	merged.Name = firstString(cli.Name, pkg.Name, repo.Name, global.Name)
+	merged.SourcePath = firstString(cli.SourcePath, pkg.SourcePath, repo.SourcePath, global.SourcePath)
 	merged.System = firstString(cli.System, pkg.System, repo.System, global.System)
 	merged.Tag = firstString(cli.Tag, pkg.Tag, repo.Tag, global.Tag)
 	merged.Target = firstString(cli.Target, pkg.Target, repo.Target, global.Target)

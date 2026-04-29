@@ -241,6 +241,9 @@ func sectionToMap(section Section) map[string]any {
 	if section.Source != nil {
 		data["download_source"] = *section.Source
 	}
+	if section.SourcePath != nil {
+		data["source_path"] = *section.SourcePath
+	}
 	if section.System != nil {
 		data["system"] = *section.System
 	}

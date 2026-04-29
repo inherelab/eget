@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/gookit/goutil/testutil/assert"
+)
 
 func TestMergeInstallOptionsUsesGlobalValues(t *testing.T) {
 	merged := MergeInstallOptions(
@@ -157,6 +161,35 @@ func TestMergeInstallOptionsPackageOverridesRepoAndGlobal(t *testing.T) {
 	if merged.Target != "~/package" {
 		t.Fatalf("expected package target override, got %#v", merged)
 	}
+}
+
+func TestMergeInstallOptionsMergesSourcePath(t *testing.T) {
+	merged := MergeInstallOptions(
+		Section{SourcePath: stringPtr("global")},
+		Section{SourcePath: stringPtr("repo")},
+		Section{SourcePath: stringPtr("package")},
+		CLIOverrides{SourcePath: stringPtr("cli")},
+	)
+
+	assert.Eq(t, "cli", merged.SourcePath)
+
+	merged = MergeInstallOptions(
+		Section{SourcePath: stringPtr("global")},
+		Section{SourcePath: stringPtr("repo")},
+		Section{SourcePath: stringPtr("package")},
+		CLIOverrides{},
+	)
+
+	assert.Eq(t, "package", merged.SourcePath)
+
+	merged = MergeInstallOptions(
+		Section{SourcePath: stringPtr("global")},
+		Section{SourcePath: stringPtr("repo")},
+		Section{},
+		CLIOverrides{},
+	)
+
+	assert.Eq(t, "repo", merged.SourcePath)
 }
 
 func boolPtr(v bool) *bool {

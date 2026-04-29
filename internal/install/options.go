@@ -15,6 +15,7 @@ type Options struct {
 	Name              string
 	Verbose           bool
 	Source            bool
+	SourcePath        string
 	Output            string
 	OutputExplicit    bool
 	GuiTarget         string

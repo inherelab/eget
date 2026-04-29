@@ -29,6 +29,7 @@ func TestAddPackage(t *testing.T) {
 		Tag:         "nightly",
 		Verify:      "sha256:123",
 		Source:      true,
+		SourcePath:  "stable",
 		DisableSSL:  true,
 		All:         true,
 		IsGUI:       true,
@@ -58,6 +59,9 @@ func TestAddPackage(t *testing.T) {
 	}
 	if pkg.Source == nil || !*pkg.Source {
 		t.Fatalf("expected download_source to be persisted, got %#v", pkg.Source)
+	}
+	if pkg.SourcePath == nil || *pkg.SourcePath != "stable" {
+		t.Fatalf("expected source_path to be persisted, got %#v", pkg.SourcePath)
 	}
 	if pkg.DisableSSL == nil || !*pkg.DisableSSL {
 		t.Fatalf("expected disable_ssl to be persisted, got %#v", pkg.DisableSSL)
