@@ -4,6 +4,7 @@ import "github.com/gookit/goutil/cflag/capp"
 
 type UpdateOptions struct {
 	All         bool
+	Check       bool
 	DryRun      bool
 	Interactive bool
 	Tag         string
@@ -33,6 +34,7 @@ func newUpdateCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.Aliases = []string{"up"}
 
 	cmd.BoolVar(&opts.All, "all", false, "Update all managed packages;;A")
+	cmd.BoolVar(&opts.Check, "check", false, "Check and list outdated installed packages")
 	cmd.BoolVar(&opts.DryRun, "dry-run", false, "Preview updates without changes")
 	cmd.BoolVar(&opts.Interactive, "interactive", false, "Interactively choose packages")
 	cmd.StringVar(&opts.Tag, "tag", "", "Release tag")

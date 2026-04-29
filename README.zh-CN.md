@@ -195,7 +195,8 @@ eget config set global.target ~/.local/bin
 
 `update` 支持选项：
 
-- `--all`: 更新全部托管包，而不是只更新单个目标。
+- `--all`: 检查托管包，只更新已安装且有新版本的包。
+- `--check`: 检查并列出有新版本的已安装包，等同于 `list --outdated`。
 - `--dry-run`: 仅预览更新计划，不执行实际安装。
 - `--interactive`: 交互式选择要更新的托管包。
 

@@ -568,6 +568,35 @@ func TestApp_RunWithArgsDoesNotLeakCommandStateAcrossRuns(t *testing.T) {
 	}
 }
 
+func TestMain_UpdateCheckBindsOption(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"up", "--check"})
+	if err != nil {
+		t.Fatalf("expected update --check command to parse, got %v", err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected one handler call, got %d", len(calls))
+	}
+	if calls[0].name != "update" {
+		t.Fatalf("expected command update, got %q", calls[0].name)
+	}
+
+	opts, ok := calls[0].options.(*UpdateOptions)
+	if !ok {
+		t.Fatalf("expected UpdateOptions, got %T", calls[0].options)
+	}
+	if !opts.Check {
+		t.Fatalf("expected check flag to be true")
+	}
+}
+
 func TestMain_SearchRoutesAndBindsOptions(t *testing.T) {
 	calls := make([]commandCall, 0, 1)
 	handler := func(name string, options any) error {

@@ -578,6 +578,61 @@ func TestHandleUpdateAllPrintsCandidatesAndUpdatesOnlyOutdated(t *testing.T) {
 	}
 }
 
+func TestHandleUpdateCheckPrintsSameOutdatedListWithoutUpdating(t *testing.T) {
+	installer := &fakeUpdateInstallerForCLI{}
+	svc := &cliService{
+		listService: app.ListService{
+			LatestTag: func(repo string) (string, error) {
+				switch repo {
+				case "BurntSushi/ripgrep":
+					return "v14.0.0", nil
+				case "junegunn/fzf":
+					return "v0.50.0", nil
+				default:
+					return "", nil
+				}
+			},
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+					"junegunn/fzf":       {Repo: "junegunn/fzf", Tag: "v0.50.0"},
+				}}, nil
+			},
+		},
+		updService: app.UpdateService{
+			Install: installer,
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	err := svc.handleUpdate(&UpdateOptions{Check: true})
+	if err != nil {
+		t.Fatalf("handle update check: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(strings.ToLower(got), "latest version") {
+		t.Fatalf("expected outdated table output, got %q", got)
+	}
+	if !strings.Contains(got, "BurntSushi/ripgrep") || !strings.Contains(got, "v14.0.0") {
+		t.Fatalf("expected outdated repo in output, got %q", got)
+	}
+	if strings.Contains(got, "junegunn/fzf") {
+		t.Fatalf("expected up-to-date repo to be omitted, got %q", got)
+	}
+	if len(installer.targets) != 0 {
+		t.Fatalf("expected update --check not to update packages, got %#v", installer.targets)
+	}
+}
+
 func TestHandleConfigInitRejectsOverwriteWithoutConfirmation(t *testing.T) {
 	svc := &cliService{
 		cfgService: app.ConfigService{

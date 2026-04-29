@@ -194,7 +194,8 @@ The target argument accepted by `install` and `download` can be:
 
 `update` options supports:
 
-- `--all`: Update all managed packages instead of a single target.
+- `--all`: Check managed packages and update only outdated installed packages.
+- `--check`: Check and list outdated installed packages, same as `list --outdated`.
 - `--dry-run`: Preview the update plan without performing installation changes.
 - `--interactive`: Interactively select which managed packages to update.
 

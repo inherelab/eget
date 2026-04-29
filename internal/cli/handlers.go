@@ -232,6 +232,9 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 }
 
 func (s *cliService) handleUpdate(opts *UpdateOptions) error {
+	if opts.Check {
+		return s.handleList(&ListOptions{Outdated: true})
+	}
 	if opts.DryRun {
 		return fmt.Errorf("update --dry-run is not implemented")
 	}

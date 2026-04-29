@@ -101,14 +101,15 @@ eget <command> --options... arguments...
 
 - `update <name>` 先查 `[packages.<name>]`
 - `update owner/repo` 可以直接按 repo 更新
-- `update --all` 遍历全部 managed packages
+- `update --all` 先检查 managed packages 的已安装版本，只更新有新版本的包
+- `update --check` 等同于 `list --outdated`，只检查并列出有新版本的已安装包
 
 CLI 当前还保留：
 
 - `--dry-run`
 - `--interactive`
 
-其中 `--all` 已接通；其余行为以当前实现为准。
+其中 `--all` 和 `--check` 已接通；其余行为以当前实现为准。
 
 ## Config Flow
 
@@ -208,6 +209,7 @@ GUI 相关配置：
 `update` 额外支持：
 
 - `--all`
+- `--check`
 - `--dry-run`
 - `--interactive`
 
