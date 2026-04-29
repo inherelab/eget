@@ -43,7 +43,7 @@
 - Modify: `internal/install/options.go`
 - Test: `internal/install/options_test.go`
 
-- [ ] **Step 1: Write SourceForge target parser tests**
+- [x] **Step 1: Write SourceForge target parser tests**
 
 Add `internal/source/sourceforge/target_test.go`:
 
@@ -90,13 +90,13 @@ func TestParseTarget(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run parser test to verify it fails**
+- [x] **Step 2: Run parser test to verify it fails**
 
 Run: `go test ./internal/source/sourceforge -run TestParseTarget -v`
 
 Expected: FAIL because the package or `ParseTarget` does not exist.
 
-- [ ] **Step 3: Implement minimal target parser**
+- [x] **Step 3: Implement minimal target parser**
 
 Create `internal/source/sourceforge/target.go`:
 
@@ -142,7 +142,7 @@ func ParseTarget(value string) (Target, error) {
 }
 ```
 
-- [ ] **Step 4: Add install target kind tests**
+- [x] **Step 4: Add install target kind tests**
 
 In `internal/install/options_test.go`, extend `TestDetectTargetKind` cases:
 
@@ -151,7 +151,7 @@ In `internal/install/options_test.go`, extend `TestDetectTargetKind` cases:
 {name: "sourceforge target with path", target: "sourceforge:winmerge/stable", want: TargetSourceForge},
 ```
 
-- [ ] **Step 5: Implement target kind detection**
+- [x] **Step 5: Implement target kind detection**
 
 In `internal/install/options.go`:
 
@@ -179,7 +179,7 @@ case sourceforge.IsTarget(target):
 	return TargetSourceForge
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run:
 
@@ -189,7 +189,7 @@ go test ./internal/source/sourceforge ./internal/install -run 'TestParseTarget|T
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add internal/source/sourceforge/target.go internal/source/sourceforge/target_test.go internal/install/options.go internal/install/options_test.go
