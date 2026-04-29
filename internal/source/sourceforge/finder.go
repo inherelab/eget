@@ -59,6 +59,7 @@ func (f Finder) list(sourcePath string) ([]File, error) {
 		url += strings.Trim(sourcePath, "/") + "/"
 	}
 
+	verbosef("sourceforge finder request: %s", url)
 	resp, err := f.Getter.Get(url)
 	if err != nil {
 		return nil, err
@@ -73,6 +74,7 @@ func (f Finder) list(sourcePath string) ([]File, error) {
 	if err != nil {
 		return nil, err
 	}
+	verbosef("sourceforge finder response: %s", truncateBody(body))
 	return ParseFilesPage(body)
 }
 

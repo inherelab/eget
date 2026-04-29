@@ -16,6 +16,7 @@ import (
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -245,6 +246,9 @@ func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
 	}
 	if !sourcegithub.VerboseEnabledForTest() {
 		t.Fatalf("expected source verbose to be enabled")
+	}
+	if !sourcesf.VerboseEnabledForTest() {
+		t.Fatalf("expected sourceforge verbose to be enabled")
 	}
 	configureVerbose(false, &out)
 }

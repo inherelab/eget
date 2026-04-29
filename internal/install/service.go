@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 )
 
 type Finder interface {
@@ -39,9 +40,10 @@ func (f HTTPGetterFunc) Get(url string) (*http.Response, error) {
 }
 
 type Service struct {
-	BinaryModTime       func(tool, output string) time.Time
-	GitHubGetter        sourcegithub.HTTPGetter
-	GitHubGetterFactory func(opts Options) sourcegithub.HTTPGetter
+	BinaryModTime            func(tool, output string) time.Time
+	GitHubGetter             sourcegithub.HTTPGetter
+	GitHubGetterFactory      func(opts Options) sourcegithub.HTTPGetter
+	SourceForgeGetterFactory func(opts Options) sourcesf.HTTPGetter
 
 	AllDetectorFactory    func() Detector
 	SystemDetectorFactory func(goos, goarch string) (Detector, error)
@@ -120,6 +122,30 @@ func (s *Service) SelectFinder(target string, opts *Options) (Finder, string, er
 			finder.Getter = s.GitHubGetter
 		}
 		return finder, tool, nil
+	case TargetSourceForge:
+		sfTarget, err := sourcesf.ParseTarget(target)
+		if err != nil {
+			return nil, "", err
+		}
+
+		sourcePath := strings.Trim(opts.SourcePath, "/")
+		targetPath := strings.Trim(sfTarget.Path, "/")
+		if sourcePath != "" && targetPath != "" && sourcePath != targetPath {
+			return nil, "", fmt.Errorf("source_path %q conflicts with target path %q", sourcePath, targetPath)
+		}
+		if sourcePath == "" {
+			sourcePath = targetPath
+		}
+		if s.SourceForgeGetterFactory == nil {
+			return nil, "", fmt.Errorf("sourceforge getter factory is required")
+		}
+
+		return sourcesf.Finder{
+			Project: sfTarget.Project,
+			Path:    sourcePath,
+			Tag:     opts.Tag,
+			Getter:  s.SourceForgeGetterFactory(*opts),
+		}, sfTarget.Project, nil
 	default:
 		return nil, "", fmt.Errorf("invalid argument (must be of the form `user/repo`)")
 	}

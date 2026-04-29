@@ -12,6 +12,7 @@ import (
 	"time"
 
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 )
 
 type fakeDetector struct {
@@ -196,6 +197,64 @@ func TestSelectFinder(t *testing.T) {
 		}
 		if opts.System != "all" {
 			t.Fatalf("opts.System = %q, want %q", opts.System, "all")
+		}
+	})
+
+	t.Run("sourceforge target", func(t *testing.T) {
+		opts := &Options{SourcePath: "stable", Tag: "2.16.44", ProxyURL: "http://127.0.0.1:7890"}
+		svc.SourceForgeGetterFactory = func(opts Options) sourcesf.HTTPGetter {
+			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) {
+				if opts.ProxyURL != "http://127.0.0.1:7890" {
+					t.Fatalf("expected proxy url to propagate to sourceforge getter, got %q", opts.ProxyURL)
+				}
+				return nil, nil
+			})
+		}
+
+		finder, tool, err := svc.SelectFinder("sourceforge:winmerge", opts)
+		if err != nil {
+			t.Fatalf("SelectFinder(sourceforge): %v", err)
+		}
+		if tool != "winmerge" {
+			t.Fatalf("tool = %q, want %q", tool, "winmerge")
+		}
+		got, ok := finder.(sourcesf.Finder)
+		if !ok {
+			t.Fatalf("finder type = %T, want sourceforge.Finder", finder)
+		}
+		if got.Project != "winmerge" || got.Path != "stable" || got.Tag != "2.16.44" {
+			t.Fatalf("finder = %+v", got)
+		}
+		if got.Getter == nil {
+			t.Fatal("expected sourceforge getter")
+		}
+	})
+
+	t.Run("sourceforge target path", func(t *testing.T) {
+		svc.SourceForgeGetterFactory = func(opts Options) sourcesf.HTTPGetter {
+			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) { return nil, nil })
+		}
+
+		finder, tool, err := svc.SelectFinder("sourceforge:winmerge/stable", &Options{})
+		if err != nil {
+			t.Fatalf("SelectFinder(sourceforge path): %v", err)
+		}
+		if tool != "winmerge" {
+			t.Fatalf("tool = %q, want %q", tool, "winmerge")
+		}
+		got, ok := finder.(sourcesf.Finder)
+		if !ok {
+			t.Fatalf("finder type = %T, want sourceforge.Finder", finder)
+		}
+		if got.Path != "stable" {
+			t.Fatalf("finder path = %q, want stable", got.Path)
+		}
+	})
+
+	t.Run("sourceforge conflicting paths", func(t *testing.T) {
+		_, _, err := svc.SelectFinder("sourceforge:winmerge/beta", &Options{SourcePath: "stable"})
+		if err == nil || !strings.Contains(err.Error(), "source_path") {
+			t.Fatalf("expected source_path conflict, got %v", err)
 		}
 	})
 

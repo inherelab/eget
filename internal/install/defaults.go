@@ -25,6 +25,7 @@ import (
 	"github.com/ulikunitz/xz"
 
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 )
 
 type Extractor interface {
@@ -173,6 +174,9 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 		BinaryModTime: binaryModTime,
 		GitHubGetter:  githubGetter,
 		GitHubGetterFactory: func(opts Options) sourcegithub.HTTPGetter {
+			return NewHTTPGetter(opts)
+		},
+		SourceForgeGetterFactory: func(opts Options) sourcesf.HTTPGetter {
 			return NewHTTPGetter(opts)
 		},
 		AllDetectorFactory: func() Detector {

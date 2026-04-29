@@ -12,6 +12,7 @@ import (
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
+	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -25,6 +26,9 @@ func newCLIService() (*cliService, error) {
 	githubClient := client.NewGitHubClient(install.ClientOptions(defaultOpts))
 	installService := install.NewDefaultService(githubClient, binaryModTime)
 	installService.GitHubGetterFactory = func(opts install.Options) sourcegithub.HTTPGetter {
+		return client.NewGitHubClient(install.ClientOptions(opts))
+	}
+	installService.SourceForgeGetterFactory = func(opts install.Options) sourcesf.HTTPGetter {
 		return client.NewGitHubClient(install.ClientOptions(opts))
 	}
 	runner := install.NewRunner(installService)
@@ -102,6 +106,7 @@ func newCLIService() (*cliService, error) {
 func configureVerbose(verbose bool, stderr io.Writer) {
 	install.SetVerbose(verbose, stderr)
 	sourcegithub.SetVerbose(verbose, stderr)
+	sourcesf.SetVerbose(verbose, stderr)
 }
 
 func binaryModTime(bin, output string) time.Time {
