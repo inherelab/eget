@@ -1051,7 +1051,7 @@ git commit -m "feat(sourceforge): wire install finder"
 - Modify: `internal/app/update_test.go`
 - Modify: `internal/cli/wiring.go`
 
-- [ ] **Step 1: Add latest info API to SourceForge package**
+- [x] **Step 1: Add latest info API to SourceForge package**
 
 In `internal/source/sourceforge/finder_test.go`, add:
 
@@ -1102,7 +1102,7 @@ func LatestVersion(project, sourcePath string, getter HTTPGetter) (LatestInfo, e
 }
 ```
 
-- [ ] **Step 2: Record SourceForge version from URL**
+- [x] **Step 2: Record SourceForge version from URL**
 
 In `internal/app/install_test.go`, add:
 
@@ -1140,7 +1140,7 @@ if tag == "" && strings.HasPrefix(repo, "sourceforge:") {
 
 If tag was found for SourceForge, also set `Version: tag` in `storepkg.Entry`.
 
-- [ ] **Step 3: Pass source path to list items**
+- [x] **Step 3: Pass source path to list items**
 
 In `internal/app/list.go`, add `SourcePath string` to `ListItem` and set it from package config:
 
@@ -1162,7 +1162,7 @@ latestTag, err := s.LatestTag(item.Repo, item.SourcePath)
 
 Update all list tests' fake functions to accept the second argument.
 
-- [ ] **Step 4: Update update candidate latest signature**
+- [x] **Step 4: Update update candidate latest signature**
 
 In `internal/app/update.go`, change:
 
@@ -1178,7 +1178,7 @@ latestTag, err := s.LatestTag(item.Repo, item.SourcePath)
 
 Update `UpdateService` tests accordingly.
 
-- [ ] **Step 5: Wire source-aware latest checker**
+- [x] **Step 5: Wire source-aware latest checker**
 
 In `internal/cli/wiring.go`, define a helper closure:
 
@@ -1198,7 +1198,7 @@ latestTag := func(repo, sourcePath string) (string, error) {
 
 Use it for both `listService.LatestTag` and `updService.LatestTag`.
 
-- [ ] **Step 6: Add mixed outdated test**
+- [x] **Step 6: Add mixed outdated test**
 
 In `internal/app/list_test.go`, add a test with GitHub and SourceForge installed packages:
 
@@ -1233,7 +1233,7 @@ func TestListOutdatedPackagesPassesSourcePathToLatestChecker(t *testing.T) {
 }
 ```
 
-- [ ] **Step 7: Run tests**
+- [x] **Step 7: Run tests**
 
 Run:
 
@@ -1243,7 +1243,7 @@ go test ./internal/source/sourceforge ./internal/app ./internal/cli -run 'Source
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add internal/source/sourceforge internal/app/install.go internal/app/install_test.go internal/app/list.go internal/app/list_test.go internal/app/update.go internal/app/update_test.go internal/cli/wiring.go internal/cli/service_test.go
