@@ -1173,7 +1173,7 @@ git commit -m "feat(forge): normalize managed targets"
 - Modify: `internal/app/list_test.go`
 - Modify: `internal/app/update_test.go`
 
-- [ ] **Step 1: 编写安装元数据测试**
+- [x] **Step 1: 编写安装元数据测试**
 
 在 `internal/app/install_test.go` 新增：
 
@@ -1210,7 +1210,7 @@ func TestInstallTargetRecordsForgeVersionFromReleaseInfo(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 编写 list outdated forge 测试**
+- [x] **Step 2: 编写 list outdated forge 测试**
 
 在 `internal/app/list_test.go` 新增：
 
@@ -1245,7 +1245,7 @@ func TestListOutdatedPackagesChecksForgeRepo(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 编写 update candidate forge 测试**
+- [x] **Step 3: 编写 update candidate forge 测试**
 
 在 `internal/app/update_test.go` 新增：
 
@@ -1280,7 +1280,7 @@ func TestListUpdateCandidatesChecksForgeRepo(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: 运行 app 测试确认当前缺口**
+- [x] **Step 4: 运行 app 测试确认当前缺口**
 
 Run:
 
@@ -1290,7 +1290,7 @@ go test ./internal/app -run 'TestInstallTargetRecordsForgeVersionFromReleaseInfo
 
 Expected: metadata test 在 forge repo `Version` 未写入前失败；list/update 测试可能已经通过，保留作为回归覆盖。
 
-- [ ] **Step 5: 在 installed entry 记录 forge version**
+- [x] **Step 5: 在 installed entry 记录 forge version**
 
 在 `internal/app/install.go` 导入 forge：
 
@@ -1325,7 +1325,7 @@ func sourceVersion(tag string, sourceBacked bool) string {
 }
 ```
 
-- [ ] **Step 6: 在 CLI 接入 forge latest checker**
+- [x] **Step 6: 在 CLI 接入 forge latest checker**
 
 在 `internal/cli/wiring.go` 的 `latestTag` closure 中，GitHub fallback 前增加：
 
@@ -1353,7 +1353,7 @@ ReleaseInfo: func(repo, url string) (string, time.Time, error) {
 
 保持 SourceForge 行为不变；SourceForge install metadata 仍可从 URL 解析。
 
-- [ ] **Step 7: 运行聚焦测试**
+- [x] **Step 7: 运行聚焦测试**
 
 Run:
 
@@ -1363,7 +1363,7 @@ go test ./internal/app ./internal/cli -run 'Forge|Outdated|UpdateCandidates|NewC
 
 Expected: PASS。
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 
 ```bash
 git add internal/app/install.go internal/app/install_test.go internal/app/list_test.go internal/app/update_test.go internal/cli/wiring.go
