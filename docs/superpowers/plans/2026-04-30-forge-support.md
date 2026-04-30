@@ -833,7 +833,7 @@ git commit -m "feat(forge): add gitea release finder"
 - Modify: `internal/cli/wiring.go`
 - Modify: `internal/cli/service_test.go`
 
-- [ ] **Step 1: 编写 install service 选择测试**
+- [x] **Step 1: 编写 install service 选择测试**
 
 在 `internal/install/service_test.go` 导入 forge：
 
@@ -890,7 +890,7 @@ t.Run("forge gitea target", func(t *testing.T) {
 })
 ```
 
-- [ ] **Step 2: 编写 verbose wiring 测试**
+- [x] **Step 2: 编写 verbose wiring 测试**
 
 在 `internal/cli/service_test.go` 导入 forge：
 
@@ -906,7 +906,7 @@ if !forge.VerboseEnabledForTest() {
 }
 ```
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 Run:
 
@@ -916,7 +916,7 @@ go test ./internal/install ./internal/cli -run 'TestSelectFinder|TestConfigureVe
 
 Expected: FAIL，原因是 forge factory 和 CLI verbose wiring 尚未接入。
 
-- [ ] **Step 4: 在 install service 接入 forge finder**
+- [x] **Step 4: 在 install service 接入 forge finder**
 
 在 `internal/install/service.go` 导入 forge：
 
@@ -948,7 +948,7 @@ case TargetForge:
 	}, forgeTarget.Project, nil
 ```
 
-- [ ] **Step 5: 接入 default service 和 CLI**
+- [x] **Step 5: 接入 default service 和 CLI**
 
 在 `internal/install/defaults.go` 导入 forge，并添加：
 
@@ -972,7 +972,7 @@ installService.ForgeGetterFactory = func(opts install.Options) forge.HTTPGetter 
 forge.SetVerbose(verbose, stderr)
 ```
 
-- [ ] **Step 6: 运行 wiring 测试**
+- [x] **Step 6: 运行 wiring 测试**
 
 Run:
 
@@ -982,7 +982,7 @@ go test ./internal/install ./internal/cli -run 'TestSelectFinder|TestConfigureVe
 
 Expected: PASS。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add internal/install/service.go internal/install/defaults.go internal/install/service_test.go internal/cli/wiring.go internal/cli/service_test.go
