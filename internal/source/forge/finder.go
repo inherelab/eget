@@ -58,7 +58,7 @@ func (f Finder) release() (releaseInfo, error) {
 	case ProviderGitLab:
 		return f.gitLabRelease()
 	case ProviderGitea, ProviderForgejo:
-		return releaseInfo{}, fmt.Errorf("%s release finder is not implemented", f.Target.Provider)
+		return f.giteaRelease()
 	default:
 		return releaseInfo{}, fmt.Errorf("unsupported forge provider %q", f.Target.Provider)
 	}
