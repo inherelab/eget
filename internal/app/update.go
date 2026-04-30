@@ -3,13 +3,10 @@ package app
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
-	forge "github.com/inherelab/eget/internal/source/forge"
-	"github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -43,11 +40,25 @@ func (s UpdateService) UpdatePackage(nameOrRepo string, cli install.Options) (Ru
 		return s.Install.InstallTarget(nameOrRepo, cli)
 	}
 
-	if strings.Contains(nameOrRepo, "/") || sourceforge.IsTarget(nameOrRepo) || forge.IsTarget(nameOrRepo) {
+	if isDirectUpdateTarget(nameOrRepo) {
 		return s.Install.InstallTarget(nameOrRepo, cli)
 	}
 
 	return RunResult{}, fmt.Errorf("unknown package %q", nameOrRepo)
+}
+
+func isDirectUpdateTarget(target string) bool {
+	switch install.DetectTargetKind(target) {
+	case install.TargetRepo,
+		install.TargetGitHubURL,
+		install.TargetDirectURL,
+		install.TargetLocalFile,
+		install.TargetSourceForge,
+		install.TargetForge:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s UpdateService) UpdateAllPackages(cli install.Options) ([]UpdateResult, error) {

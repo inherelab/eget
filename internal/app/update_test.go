@@ -111,6 +111,26 @@ func TestUpdatePackageAllowsDirectForgeTargets(t *testing.T) {
 	assert.Eq(t, []string{"gitlab:fdroid/fdroidserver", "gitea:codeberg.org/forgejo/forgejo"}, installer.targets)
 }
 
+func TestUpdatePackageRejectsUnknownPlainWords(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+	}
+
+	for _, name := range []string{"gitlab", "not-managed"} {
+		t.Run(name, func(t *testing.T) {
+			_, err := svc.UpdatePackage(name, install.Options{})
+			if err == nil || err.Error() != `unknown package "`+name+`"` {
+				t.Fatalf("expected unknown package error for %q, got %v", name, err)
+			}
+		})
+	}
+	assert.Eq(t, 0, len(installer.targets))
+}
+
 func TestUpdatePackageWithAppInstallerKeepsManagedConfigMerge(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [global]
