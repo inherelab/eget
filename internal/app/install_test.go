@@ -190,7 +190,7 @@ func TestInstallTargetRecordsForgeVersionFromReleaseInfo(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	runner := &fakeRunner{
 		result: RunResult{
-			URL:            "https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/fdroidserver-linux-amd64.tar.gz",
+			URL:            "https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.3/downloads/fdroidserver-linux-amd64.tar.gz",
 			Tool:           "fdroidserver",
 			ExtractedFiles: []string{"./fdroidserver"},
 		},
@@ -203,7 +203,7 @@ func TestInstallTargetRecordsForgeVersionFromReleaseInfo(t *testing.T) {
 			if repo != "gitlab:gitlab.com/fdroid/fdroidserver" {
 				t.Fatalf("unexpected repo %q", repo)
 			}
-			return "v2.3.4", now.Add(-time.Hour), nil
+			return "v9.9.9", now.Add(-time.Hour), nil
 		},
 	}
 
@@ -213,8 +213,55 @@ func TestInstallTargetRecordsForgeVersionFromReleaseInfo(t *testing.T) {
 	}
 
 	assert.Eq(t, "gitlab:gitlab.com/fdroid/fdroidserver", store.entry.Repo)
-	assert.Eq(t, "v2.3.4", store.entry.Tag)
-	assert.Eq(t, "v2.3.4", store.entry.Version)
+	assert.Eq(t, "v2.3.3", store.entry.Tag)
+	assert.Eq(t, "v2.3.3", store.entry.Version)
+}
+
+func TestInstallTargetRecordsForgeTagFromOptionsBeforeLatestFallback(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://gitlab.com/fdroid/fdroidserver/-/package_files/123/download",
+			Tool:           "fdroidserver",
+			ExtractedFiles: []string{"./fdroidserver"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+			return "v9.9.9", now.Add(-time.Hour), nil
+		},
+	}
+
+	_, err := svc.InstallTarget("gitlab:fdroid/fdroidserver", install.Options{Tag: "v2.3.3"})
+	if err != nil {
+		t.Fatalf("install pinned forge target: %v", err)
+	}
+
+	assert.Eq(t, "gitlab:gitlab.com/fdroid/fdroidserver", store.entry.Repo)
+	assert.Eq(t, "v2.3.3", store.entry.Tag)
+	assert.Eq(t, "v2.3.3", store.entry.Version)
+}
+
+func TestTagFromReleaseURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{name: "github release download", url: "https://github.com/junegunn/fzf/releases/download/v1.0.0/fzf.tar.gz", want: "v1.0.0"},
+		{name: "gitlab release asset", url: "https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.3/downloads/fdroidserver-linux-amd64.tar.gz", want: "v2.3.3"},
+		{name: "gitea release download", url: "https://codeberg.org/forgejo/forgejo/releases/download/v9.0.0/forgejo-9.0.0-linux-amd64.xz", want: "v9.0.0"},
+		{name: "not release url", url: "https://gitlab.com/fdroid/fdroidserver/-/package_files/123/download", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Eq(t, tt.want, tagFromReleaseURL(tt.url))
+		})
+	}
 }
 
 func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {

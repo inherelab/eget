@@ -71,6 +71,9 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 		if tag == "" && isSourceForge {
 			tag = sourcesf.VersionFromText(result.URL)
 		}
+		if tag == "" && isForge && opts.Tag != "" {
+			tag = opts.Tag
+		}
 		if s.ReleaseInfo != nil {
 			if gotTag, gotDate, err := s.ReleaseInfo(repo, result.URL); err == nil {
 				if tag == "" {
@@ -215,6 +218,13 @@ func tagFromReleaseURL(rawURL string) string {
 			tag, err := url.PathUnescape(parts[i+2])
 			if err != nil {
 				return parts[i+2]
+			}
+			return tag
+		}
+		if parts[i] == "releases" && parts[i+2] == "downloads" {
+			tag, err := url.PathUnescape(parts[i+1])
+			if err != nil {
+				return parts[i+1]
 			}
 			return tag
 		}
