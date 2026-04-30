@@ -95,6 +95,22 @@ func TestUpdatePackageAllowsDirectSourceForgeTarget(t *testing.T) {
 	assert.Eq(t, []string{"sourceforge:winmerge"}, installer.targets)
 }
 
+func TestUpdatePackageAllowsDirectForgeTargets(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+	}
+
+	_, err := svc.UpdatePackage("gitlab:fdroid/fdroidserver", install.Options{})
+	assert.NoErr(t, err)
+	_, err = svc.UpdatePackage("gitea:codeberg.org/forgejo/forgejo", install.Options{})
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"gitlab:fdroid/fdroidserver", "gitea:codeberg.org/forgejo/forgejo"}, installer.targets)
+}
+
 func TestUpdatePackageWithAppInstallerKeepsManagedConfigMerge(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [global]

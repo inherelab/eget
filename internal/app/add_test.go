@@ -132,3 +132,45 @@ func TestAddPackageNormalizesSourceForgeTargetWithPath(t *testing.T) {
 		t.Fatalf("expected source_path to be persisted, got %#v", pkg.SourcePath)
 	}
 }
+
+func TestAddPackageNormalizesForgeTargets(t *testing.T) {
+	tests := []struct {
+		name     string
+		repo     string
+		wantName string
+		wantRepo string
+	}{
+		{name: "gitlab default host", repo: "gitlab:fdroid/fdroidserver", wantName: "fdroidserver", wantRepo: "gitlab:gitlab.com/fdroid/fdroidserver"},
+		{name: "gitea explicit host", repo: "gitea:codeberg.org/forgejo/forgejo", wantName: "forgejo", wantRepo: "gitea:codeberg.org/forgejo/forgejo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			configPath := filepath.Join(tmp, "eget.toml")
+			svc := ConfigService{
+				ConfigPath: configPath,
+				Load: func() (*cfgpkg.File, error) {
+					return cfgpkg.NewFile(), nil
+				},
+				Save: cfgpkg.Save,
+			}
+
+			if err := svc.AddPackage(tt.repo, "", install.Options{}); err != nil {
+				t.Fatalf("add forge package: %v", err)
+			}
+
+			cfg, err := cfgpkg.LoadFile(configPath)
+			if err != nil {
+				t.Fatalf("load config: %v", err)
+			}
+			pkg, ok := cfg.Packages[tt.wantName]
+			if !ok {
+				t.Fatalf("expected packages.%s, got %#v", tt.wantName, cfg.Packages)
+			}
+			if pkg.Repo == nil || *pkg.Repo != tt.wantRepo {
+				t.Fatalf("expected normalized repo %q, got %#v", tt.wantRepo, pkg.Repo)
+			}
+		})
+	}
+}

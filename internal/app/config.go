@@ -6,6 +6,7 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
+	forge "github.com/inherelab/eget/internal/source/forge"
 	"github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
@@ -34,6 +35,13 @@ func (s ConfigService) AddPackage(repo, name string, opts install.Options) error
 		}
 		if name == "" {
 			name = sfTarget.Project
+		}
+	}
+
+	if forgeTarget, forgeErr := forge.ParseTarget(repo); forgeErr == nil {
+		repo = forgeTarget.Normalized
+		if name == "" {
+			name = forgeTarget.Project
 		}
 	}
 

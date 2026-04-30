@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	forge "github.com/inherelab/eget/internal/source/forge"
 	"github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
@@ -123,6 +124,9 @@ func (s *Store) fallbackPath() string {
 func NormalizeRepoName(target string) string {
 	if sfTarget, err := sourceforge.ParseTarget(target); err == nil {
 		return sfTarget.Normalized
+	}
+	if forgeTarget, err := forge.ParseTarget(target); err == nil {
+		return forgeTarget.Normalized
 	}
 
 	if strings.Contains(target, "github.com/") {

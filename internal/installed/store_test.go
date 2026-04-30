@@ -223,6 +223,13 @@ func TestNormalizeRepoNameSourceForge(t *testing.T) {
 	assert.Eq(t, "sourceforge:winmerge", NormalizeRepoName("sourceforge:winmerge/stable"))
 }
 
+func TestNormalizeRepoNameForge(t *testing.T) {
+	assert.Eq(t, "gitlab:gitlab.com/fdroid/fdroidserver", NormalizeRepoName("gitlab:fdroid/fdroidserver"))
+	assert.Eq(t, "gitlab:gitlab.gnome.org/GNOME/gtk", NormalizeRepoName("gitlab:gitlab.gnome.org/GNOME/gtk"))
+	assert.Eq(t, "gitea:codeberg.org/forgejo/forgejo", NormalizeRepoName("gitea:codeberg.org/forgejo/forgejo"))
+	assert.Eq(t, "forgejo:codeberg.org/forgejo/forgejo", NormalizeRepoName("forgejo:codeberg.org/forgejo/forgejo"))
+}
+
 func TestResolvePathPrefersLegacyDotfileWhenPresent(t *testing.T) {
 	tmp := t.TempDir()
 	homeDir := filepath.Join(tmp, "home")
