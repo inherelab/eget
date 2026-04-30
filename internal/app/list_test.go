@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gookit/goutil/testutil/assert"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	"github.com/inherelab/eget/internal/util"
@@ -400,6 +401,35 @@ func TestListOutdatedPackagesPassesSourcePathToLatestChecker(t *testing.T) {
 	if len(items) != 1 || items[0].LatestTag != "2.16.44" {
 		t.Fatalf("expected sourceforge outdated item, got %#v", items)
 	}
+}
+
+func TestListOutdatedPackagesChecksForgeRepo(t *testing.T) {
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["forgejo"] = cfgpkg.Section{Repo: util.StringPtr("gitea:codeberg.org/forgejo/forgejo")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"gitea:codeberg.org/forgejo/forgejo": {Repo: "gitea:codeberg.org/forgejo/forgejo", Tag: "v8.0.0"},
+			}}, nil
+		},
+		LatestTag: func(repo, sourcePath string) (string, error) {
+			if repo != "gitea:codeberg.org/forgejo/forgejo" || sourcePath != "" {
+				t.Fatalf("unexpected latest check repo=%q sourcePath=%q", repo, sourcePath)
+			}
+			return "v9.0.0", nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListOutdatedPackages()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "v9.0.0", items[0].LatestTag)
 }
 
 func TestFindPackageReturnsMergedItem(t *testing.T) {

@@ -296,3 +296,32 @@ func TestListUpdateCandidatesPassesSourcePathToLatestChecker(t *testing.T) {
 	assert.Eq(t, 1, len(items))
 	assert.Eq(t, "2.16.44", items[0].LatestTag)
 }
+
+func TestListUpdateCandidatesChecksForgeRepo(t *testing.T) {
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["fdroidserver"] = cfgpkg.Section{Repo: util.StringPtr("gitlab:gitlab.com/fdroid/fdroidserver")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"gitlab:gitlab.com/fdroid/fdroidserver": {Repo: "gitlab:gitlab.com/fdroid/fdroidserver", Tag: "v2.3.3"},
+			}}, nil
+		},
+		LatestTag: func(repo, sourcePath string) (string, error) {
+			if repo != "gitlab:gitlab.com/fdroid/fdroidserver" || sourcePath != "" {
+				t.Fatalf("unexpected latest check repo=%q sourcePath=%q", repo, sourcePath)
+			}
+			return "v2.3.4", nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidates()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "v2.3.4", items[0].LatestTag)
+}

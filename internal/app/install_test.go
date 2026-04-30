@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gookit/goutil/testutil/assert"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
@@ -183,6 +184,37 @@ func TestInstallTargetRecordsSourceForgeVersionFromURL(t *testing.T) {
 	if store.entry.Tag != "2.16.44" || store.entry.Version != "2.16.44" {
 		t.Fatalf("expected sourceforge version 2.16.44, got tag=%q version=%q", store.entry.Tag, store.entry.Version)
 	}
+}
+
+func TestInstallTargetRecordsForgeVersionFromReleaseInfo(t *testing.T) {
+	now := time.Unix(1710000000, 0).UTC()
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/fdroidserver-linux-amd64.tar.gz",
+			Tool:           "fdroidserver",
+			ExtractedFiles: []string{"./fdroidserver"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+			if repo != "gitlab:gitlab.com/fdroid/fdroidserver" {
+				t.Fatalf("unexpected repo %q", repo)
+			}
+			return "v2.3.4", now.Add(-time.Hour), nil
+		},
+	}
+
+	_, err := svc.InstallTarget("gitlab:fdroid/fdroidserver", install.Options{})
+	if err != nil {
+		t.Fatalf("install forge target: %v", err)
+	}
+
+	assert.Eq(t, "gitlab:gitlab.com/fdroid/fdroidserver", store.entry.Repo)
+	assert.Eq(t, "v2.3.4", store.entry.Tag)
+	assert.Eq(t, "v2.3.4", store.entry.Version)
 }
 
 func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {

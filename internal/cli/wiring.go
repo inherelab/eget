@@ -73,6 +73,13 @@ func newCLIService() (*cliService, error) {
 			}
 			return info.Version, nil
 		}
+		if forgeTarget, err := forge.ParseTarget(repo); err == nil {
+			info, err := forge.LatestVersion(forgeTarget, install.NewHTTPGetter(defaultOpts))
+			if err != nil {
+				return "", err
+			}
+			return info.Tag, nil
+		}
 		tag, _, err := githubClient.LatestReleaseInfo(repo)
 		return tag, err
 	}
@@ -94,6 +101,10 @@ func newCLIService() (*cliService, error) {
 		Config: &cfgService,
 		Now:    time.Now,
 		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+			if forgeTarget, err := forge.ParseTarget(repo); err == nil {
+				info, err := forge.LatestVersion(forgeTarget, install.NewHTTPGetter(defaultOpts))
+				return info.Tag, time.Time{}, err
+			}
 			return githubClient.LatestReleaseInfo(repo)
 		},
 	}

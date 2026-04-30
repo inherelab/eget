@@ -11,6 +11,7 @@ import (
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
 )
@@ -66,6 +67,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 		repo := storepkg.NormalizeRepoName(runTarget)
 		tag, releaseDate := tagFromReleaseURL(result.URL), time.Time{}
 		isSourceForge := sourcesf.IsTarget(repo)
+		isForge := forge.IsTarget(repo)
 		if tag == "" && isSourceForge {
 			tag = sourcesf.VersionFromText(result.URL)
 		}
@@ -88,7 +90,7 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 			ExtractedFiles: append([]string(nil), result.ExtractedFiles...),
 			Options:        extractOptionsMap(opts),
 			Tag:            tag,
-			Version:        sourceVersion(tag, isSourceForge),
+			Version:        sourceVersion(tag, isSourceForge || isForge),
 			ReleaseDate:    releaseDate,
 			IsGUI:          result.IsGUI || opts.IsGUI,
 			InstallMode:    installMode,
@@ -118,8 +120,8 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	return result, nil
 }
 
-func sourceVersion(tag string, sourceforge bool) string {
-	if sourceforge {
+func sourceVersion(tag string, sourceBacked bool) string {
+	if sourceBacked {
 		return tag
 	}
 	return ""
