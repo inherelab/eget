@@ -261,13 +261,10 @@ func TestSelectFinder(t *testing.T) {
 
 	t.Run("forge gitlab target", func(t *testing.T) {
 		opts := &Options{Tag: "v1.2.3", ProxyURL: "http://127.0.0.1:7890"}
+		var gotProxyURL string
 		svc.ForgeGetterFactory = func(opts Options) forge.HTTPGetter {
-			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) {
-				if opts.ProxyURL != "http://127.0.0.1:7890" {
-					t.Fatalf("expected proxy url to propagate to forge getter, got %q", opts.ProxyURL)
-				}
-				return nil, nil
-			})
+			gotProxyURL = opts.ProxyURL
+			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) { return nil, nil })
 		}
 
 		finder, tool, err := svc.SelectFinder("gitlab:fdroid/fdroidserver", opts)
@@ -284,14 +281,18 @@ func TestSelectFinder(t *testing.T) {
 		if got.Target.Normalized != "gitlab:gitlab.com/fdroid/fdroidserver" || got.Tag != "v1.2.3" || got.Getter == nil {
 			t.Fatalf("unexpected forge finder: %+v", got)
 		}
+		if gotProxyURL != "http://127.0.0.1:7890" {
+			t.Fatalf("expected proxy url to propagate to forge getter, got %q", gotProxyURL)
+		}
 	})
 
 	t.Run("forge gitea target", func(t *testing.T) {
+		opts := &Options{Tag: "v9.0.0"}
 		svc.ForgeGetterFactory = func(opts Options) forge.HTTPGetter {
 			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) { return nil, nil })
 		}
 
-		finder, tool, err := svc.SelectFinder("gitea:codeberg.org/forgejo/forgejo", &Options{})
+		finder, tool, err := svc.SelectFinder("gitea:codeberg.org/forgejo/forgejo", opts)
 		if err != nil {
 			t.Fatalf("SelectFinder(gitea): %v", err)
 		}
@@ -301,6 +302,17 @@ func TestSelectFinder(t *testing.T) {
 		got, ok := finder.(forge.Finder)
 		if !ok || got.Target.Provider != forge.ProviderGitea {
 			t.Fatalf("finder type = %T value=%+v, want gitea forge.Finder", finder, got)
+		}
+		if got.Target.Normalized != "gitea:codeberg.org/forgejo/forgejo" || got.Tag != "v9.0.0" || got.Getter == nil {
+			t.Fatalf("unexpected forge finder: %+v", got)
+		}
+	})
+
+	t.Run("forge target without getter factory", func(t *testing.T) {
+		svc.ForgeGetterFactory = nil
+		_, _, err := svc.SelectFinder("gitlab:fdroid/fdroidserver", &Options{})
+		if err == nil || !strings.Contains(err.Error(), "forge getter factory is required") {
+			t.Fatalf("expected forge getter factory error, got %v", err)
 		}
 	})
 
