@@ -636,7 +636,7 @@ git commit -m "feat(forge): add gitlab release finder"
 - Create: `internal/source/forge/gitea.go`
 - Create: `internal/source/forge/gitea_test.go`
 
-- [ ] **Step 1: 编写 Gitea / Forgejo finder 失败测试**
+- [x] **Step 1: 编写 Gitea / Forgejo finder 失败测试**
 
 新增 `internal/source/forge/gitea_test.go`：
 
@@ -728,7 +728,7 @@ func TestGiteaLatestVersion(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行 Gitea 测试确认失败**
+- [x] **Step 2: 运行 Gitea 测试确认失败**
 
 Run:
 
@@ -738,7 +738,7 @@ go test ./internal/source/forge -run 'TestGitea|TestForgejo' -v
 
 Expected: FAIL，原因是 `giteaRelease` 尚未实现。
 
-- [ ] **Step 3: 实现 Gitea API adapter**
+- [x] **Step 3: 实现 Gitea API adapter**
 
 先在 `internal/source/forge/finder.go` 中把 `release()` 的 Gitea/Forgejo 分支改为调用 adapter：
 
@@ -805,7 +805,7 @@ func giteaReleaseURL(target Target, tag string) string {
 }
 ```
 
-- [ ] **Step 4: 运行 forge 包测试**
+- [x] **Step 4: 运行 forge 包测试**
 
 Run:
 
@@ -815,7 +815,7 @@ go test ./internal/source/forge -v
 
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add internal/source/forge/gitea.go internal/source/forge/gitea_test.go internal/source/forge/finder.go
