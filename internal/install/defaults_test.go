@@ -1,6 +1,13 @@
 package install
 
-import "testing"
+import (
+	"archive/zip"
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestNewFileChooserSupportsCommaSeparatedPatterns(t *testing.T) {
 	chooser, err := NewFileChooser("README*, LICENSE")
@@ -35,6 +42,44 @@ func TestExtractFileRequestsMultipleMatches(t *testing.T) {
 	}
 	if !extractAllFromFileSpec("*.exe") {
 		t.Fatal("expected glob file spec to enable multi extraction mode")
+	}
+}
+
+func TestArchiveDirectoryExtractRejectsPathTraversal(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	if _, err := zw.Create("safe/"); err != nil {
+		t.Fatalf("create zip dir: %v", err)
+	}
+	w, err := zw.Create("safe/../../evil.txt")
+	if err != nil {
+		t.Fatalf("create zip file: %v", err)
+	}
+	if _, err := w.Write([]byte("evil")); err != nil {
+		t.Fatalf("write zip file: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("close zip: %v", err)
+	}
+
+	chooser, err := NewFileChooser("*")
+	if err != nil {
+		t.Fatalf("NewFileChooser: %v", err)
+	}
+	extractor := NewArchiveExtractor(chooser, NewZipArchive, nil)
+	file, _, err := extractor.Extract(buf.Bytes(), true)
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+
+	root := t.TempDir()
+	target := filepath.Join(root, "out", "safe")
+	err = file.Extract(target)
+	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
+		t.Fatalf("expected unsafe archive path error, got %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "evil.txt")); !os.IsNotExist(statErr) {
+		t.Fatalf("expected traversal output to be absent, stat error: %v", statErr)
 	}
 }
 

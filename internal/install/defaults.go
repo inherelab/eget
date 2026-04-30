@@ -567,16 +567,34 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 						if err != nil {
 							return fmt.Errorf("extract: %w", err)
 						}
-						if !strings.HasPrefix(subf.Name, f.Name) {
+						rel, ok := archiveChildPath(f.Name, subf.Name)
+						if !ok {
+							continue
+						}
+						if rel == "" {
+							if subf.Dir() {
+								os.MkdirAll(to, 0o755)
+							}
 							continue
 						}
 						if subf.Dir() {
-							os.MkdirAll(filepath.Join(to, subf.Name[len(f.Name):]), 0o755)
+							dir, err := safeArchiveOutputPath(to, rel)
+							if err != nil {
+								return fmt.Errorf("extract: %w", err)
+							}
+							os.MkdirAll(dir, 0o755)
 							continue
 						}
 						if subf.Type == TypeLink || subf.Type == TypeSymlink {
+							newname, err := safeArchiveOutputPath(to, rel)
+							if err != nil {
+								return fmt.Errorf("extract: %w", err)
+							}
+							if err := validateArchiveLinkTarget(subf.LinkName); err != nil {
+								return fmt.Errorf("extract: %w", err)
+							}
 							links = append(links, link{
-								newname: filepath.Join(to, subf.Name[len(f.Name):]),
+								newname: newname,
 								oldname: subf.LinkName,
 								sym:     subf.Type == TypeSymlink,
 							})
@@ -586,7 +604,10 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 						if err != nil {
 							return fmt.Errorf("extract: %w", err)
 						}
-						name := filepath.Join(to, subf.Name[len(f.Name):])
+						name, err := safeArchiveOutputPath(to, rel)
+						if err != nil {
+							return fmt.Errorf("extract: %w", err)
+						}
 						if err := writeFile(subData, name, subf.Mode); err != nil {
 							return fmt.Errorf("extract: %w", err)
 						}
@@ -642,6 +663,36 @@ func (s *SingleFileExtractor) Extract(data []byte, multiple bool) (ExtractedFile
 			return writeFile(decdata, to, modeFrom(name, 0o666))
 		},
 	}, nil, nil
+}
+
+func archiveChildPath(parent, name string) (string, bool) {
+	parent = archivePathForCompare(parent)
+	name = archivePathForCompare(name)
+	if parent != "" && !strings.HasSuffix(parent, "/") {
+		parent += "/"
+	}
+	if !strings.HasPrefix(name, parent) {
+		return "", false
+	}
+	return strings.TrimPrefix(name, parent), true
+}
+
+func archivePathForCompare(name string) string {
+	return strings.ReplaceAll(name, `\`, "/")
+}
+
+func safeArchiveRelativePath(name string) (string, error) {
+	name = archivePathForCompare(name)
+	cleanName := filepath.Clean(filepath.FromSlash(name))
+	if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(os.PathSeparator)) || cleanName == ".." || filepath.VolumeName(cleanName) != "" {
+		return "", fmt.Errorf("unsafe archive path %q", name)
+	}
+	return cleanName, nil
+}
+
+func validateArchiveLinkTarget(name string) error {
+	_, err := safeArchiveRelativePath(name)
+	return err
 }
 
 func (b *BinaryChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bool) {
