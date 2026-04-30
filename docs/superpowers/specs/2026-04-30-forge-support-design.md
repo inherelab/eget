@@ -1,18 +1,18 @@
-# GitLab and Gitea Forge Support Design
+# GitLab / Gitea Forge 支持设计
 
-## Goal
+## 目标
 
-Add first-class public release support for GitLab, Gitea, and Forgejo-style repositories while preserving the existing install pipeline:
+为 GitLab、Gitea、Forgejo 风格的仓库增加一等公开 release 资源支持，同时保持现有安装主链路不变：
 
 ```text
-source target -> candidate asset URLs -> system/asset/file selection -> download -> verify -> extract -> installed store
+source target -> 候选 asset URL -> system/asset/file 筛选 -> 下载 -> 校验 -> 提取 -> installed store
 ```
 
-The first implementation should support public release assets on both public and self-hosted instances. Authentication for private repositories is intentionally deferred, but the target and config model should not block adding tokens later.
+第一版支持公有站点和自托管实例上的公开 release assets。私有仓库认证暂不实现，但 target 和配置模型需要为后续 token 支持保留空间，避免未来推翻语法。
 
-## Supported Targets
+## 支持的目标格式
 
-Use provider-prefixed, host-aware targets:
+采用 provider 前缀和 host-aware target：
 
 ```text
 gitlab:<namespace>/<project>
@@ -21,7 +21,7 @@ gitea:<host>/<owner>/<repo>
 forgejo:<host>/<owner>/<repo>
 ```
 
-Examples:
+示例：
 
 ```bash
 eget install gitlab:fdroid/fdroidserver
@@ -30,18 +30,18 @@ eget install gitea:codeberg.org/forgejo/forgejo
 eget install forgejo:codeberg.org/forgejo/forgejo
 ```
 
-Rules:
+规则：
 
-- `gitlab:<namespace>/<project>` defaults to `gitlab.com`.
-- `gitlab:<host>/<namespace>/<project>` targets a self-hosted GitLab-compatible instance.
-- `gitea:` and `forgejo:` require an explicit host.
-- `forgejo:` is treated as a Gitea-compatible API target with a distinct normalized prefix.
-- Existing `owner/repo` targets continue to mean GitHub only.
-- Direct `https://...` URLs continue to mean direct downloads unless they are explicitly supported later as repository page URLs.
+- `gitlab:<namespace>/<project>` 默认 host 为 `gitlab.com`。
+- `gitlab:<host>/<namespace>/<project>` 指向自托管 GitLab 兼容实例。
+- `gitea:` 和 `forgejo:` 第一版必须显式提供 host。
+- `forgejo:` 按 Gitea-compatible API 处理，但保留独立 normalized prefix。
+- 现有 `owner/repo` 继续只表示 GitHub，不改变已有行为。
+- 直接 `https://...` URL 继续表示直接下载 URL。第一版不自动把任意仓库网页 URL 识别为 GitLab/Gitea 仓库。
 
-## Managed Config
+## 托管配置
 
-Managed packages keep using `repo` as the source identity:
+托管包继续使用 `repo` 表示来源身份：
 
 ```toml
 [packages.forgejo]
@@ -55,9 +55,9 @@ system = "linux/amd64"
 asset_filters = ["linux", "x86_64"]
 ```
 
-No new required config fields are needed for the first version.
+第一版不需要新增必填配置字段。
 
-Token fields can be added later without changing target syntax:
+后续可以在不改变 target 语法的前提下补 token 配置：
 
 ```toml
 [global]
@@ -68,11 +68,11 @@ gitea_token = "..."
 token = "..."
 ```
 
-These token fields are not part of the first implementation.
+这些 token 字段不属于第一版实现范围。
 
-## Normalization
+## 规范化
 
-Installed store and config normalization should use full host-qualified keys:
+配置和 installed store 都应使用带 host 的完整 normalized key：
 
 ```text
 gitlab:gitlab.com/fdroid/fdroidserver
@@ -81,24 +81,24 @@ gitea:codeberg.org/forgejo/forgejo
 forgejo:codeberg.org/forgejo/forgejo
 ```
 
-This means:
+含义：
 
-- `gitlab:fdroid/fdroidserver` is accepted as user input.
-- It is normalized to `gitlab:gitlab.com/fdroid/fdroidserver`.
-- `gitea:codeberg.org/forgejo/forgejo` stays unchanged.
-- Case in namespace/project should be preserved in URLs, but comparisons should use the normalized string already stored by the package config.
+- 用户可以输入 `gitlab:fdroid/fdroidserver`。
+- 内部记录时规范化为 `gitlab:gitlab.com/fdroid/fdroidserver`。
+- `gitea:codeberg.org/forgejo/forgejo` 保持原样。
+- namespace/project 的大小写在 URL 中应保留；比较时依赖已存储的 normalized string。
 
-The installed store key should be the normalized target, not the raw user input.
+installed store 的 key 使用 normalized target，而不是用户原始输入。
 
-## Architecture
+## 架构
 
-Add a small shared forge package for target parsing and provider dispatch:
+新增一个小型 forge 包，用于 target 解析和 provider 分发：
 
 ```text
 internal/source/forge
 ```
 
-Recommended files:
+建议文件结构：
 
 ```text
 internal/source/forge/target.go
@@ -108,14 +108,14 @@ internal/source/forge/gitea.go
 internal/source/forge/log.go
 ```
 
-Core model:
+核心模型：
 
 ```go
 type Provider string
 
 const (
-	ProviderGitLab Provider = "gitlab"
-	ProviderGitea  Provider = "gitea"
+	ProviderGitLab  Provider = "gitlab"
+	ProviderGitea   Provider = "gitea"
 	ProviderForgejo Provider = "forgejo"
 )
 
@@ -128,21 +128,21 @@ type Target struct {
 }
 ```
 
-For GitLab, `Namespace` may include nested groups:
+GitLab 的 `Namespace` 可以包含多级 group：
 
 ```text
 gitlab:gitlab.example.com/group/subgroup/project
 ```
 
-Parsing rule:
+解析规则：
 
-- For `gitlab:` with 2 path parts, use `gitlab.com` and treat the first part as namespace and second as project.
-- For `gitlab:` with 3 or more path parts, treat the first part as host, the last part as project, and everything in between as namespace.
-- For `gitea:` / `forgejo:`, require at least 3 path parts: host, owner/namespace, repo. The last part is project; middle parts are namespace. This keeps room for nested namespaces on Gitea-compatible servers that support them.
+- `gitlab:` 后只有 2 段 path 时，使用 `gitlab.com`，第一段为 namespace，第二段为 project。
+- `gitlab:` 后有 3 段或更多 path 时，第一段为 host，最后一段为 project，中间所有段拼成 namespace。
+- `gitea:` / `forgejo:` 至少需要 3 段 path：host、owner/namespace、repo。第一段为 host，最后一段为 project，中间所有段拼成 namespace。
 
-## Finder Interface
+## Finder 接口
 
-The forge finder should implement the existing install `Finder` interface:
+forge finder 实现现有 install `Finder` 接口：
 
 ```go
 type Finder struct {
@@ -154,38 +154,38 @@ type Finder struct {
 func (f Finder) Find() ([]string, error)
 ```
 
-Behavior:
+行为：
 
-- If `Tag` is empty, discover the latest release.
-- If `Tag` is set, fetch that release tag.
-- Return real asset download URLs.
-- Do not apply `system`, `asset_filters`, `file`, or archive extraction logic in the forge package.
-- Do not fall back to older installed assets if the selected release has no matching current asset.
+- `Tag` 为空时发现 latest release。
+- `Tag` 非空时获取指定 tag 的 release。
+- 返回真实 asset download URL。
+- 不在 forge 包里处理 `system`、`asset_filters`、`file` 或归档提取。
+- 当前 release 没有匹配 asset 时，不回退旧 installed asset。
 
 ## GitLab API
 
-GitLab project paths must be URL-escaped as a single path parameter for API calls.
+GitLab project path 需要作为一个 API path 参数整体 URL escape。
 
-For `gitlab:gitlab.com/fdroid/fdroidserver`:
+对于 `gitlab:gitlab.com/fdroid/fdroidserver`：
 
 ```text
 project path: fdroid/fdroidserver
 encoded: fdroid%2Ffdroidserver
 ```
 
-Latest release:
+latest release：
 
 ```text
 GET https://<host>/api/v4/projects/<encoded-project-path>/releases/permalink/latest
 ```
 
-Specific release:
+指定 release：
 
 ```text
 GET https://<host>/api/v4/projects/<encoded-project-path>/releases/<url-escaped-tag>
 ```
 
-Relevant response fields:
+相关响应字段：
 
 ```json
 {
@@ -202,35 +202,35 @@ Relevant response fields:
 }
 ```
 
-URL choice:
+URL 选择：
 
-- Prefer `direct_asset_url` when present.
-- Fall back to `url` when `direct_asset_url` is empty.
-- Ignore links with no usable URL.
+- 优先使用 `direct_asset_url`。
+- `direct_asset_url` 为空时回退到 `url`。
+- 忽略没有可用 URL 的 link。
 
-Error handling:
+错误处理：
 
-- Non-200 responses should return an error with status and request URL.
-- `404` for a specific tag should not search old releases in the first version.
-- Empty release assets should return a source-specific error before detector selection when possible.
+- 非 200 响应返回包含状态码和请求 URL 的错误。
+- 指定 tag 返回 404 时，第一版不扫描旧 release 列表做模糊匹配。
+- release assets 为空时，在进入 detector 前尽量返回 source-specific error。
 
-## Gitea and Forgejo API
+## Gitea / Forgejo API
 
-Gitea-compatible release API:
+Gitea-compatible release API：
 
-Latest release:
+latest release：
 
 ```text
 GET https://<host>/api/v1/repos/<namespace>/<project>/releases/latest
 ```
 
-Specific release:
+指定 release：
 
 ```text
 GET https://<host>/api/v1/repos/<namespace>/<project>/releases/tags/<url-escaped-tag>
 ```
 
-Relevant response fields:
+相关响应字段：
 
 ```json
 {
@@ -244,22 +244,22 @@ Relevant response fields:
 }
 ```
 
-URL choice:
+URL 选择：
 
-- Use `browser_download_url`.
-- Ignore assets with no download URL.
+- 使用 `browser_download_url`。
+- 忽略没有下载 URL 的 asset。
 
-Forgejo should use the same API shape unless a smoke test proves an instance requires a small compatibility branch. That branch should stay inside `internal/source/forge`, not in the install runner.
+Forgejo 默认复用同一套 API。若 smoke test 证明某个实例存在小差异，兼容逻辑应限制在 `internal/source/forge` 内，不进入 install runner。
 
-## Latest Version Checks
+## 最新版本检查
 
-Current app services use:
+当前 app services 使用：
 
 ```go
 LatestTag func(repo, sourcePath string) (string, error)
 ```
 
-This can continue for the first version, but the implementation should route by target parser:
+第一版可以继续沿用这个签名，但实现要按 target parser 路由：
 
 ```text
 sourceforge.ParseTarget(repo) -> SourceForge latest
@@ -267,7 +267,7 @@ forge.ParseTarget(repo)       -> GitLab/Gitea latest
 else                          -> GitHub latest
 ```
 
-The forge package should expose:
+forge 包暴露：
 
 ```go
 type LatestInfo struct {
@@ -277,34 +277,34 @@ type LatestInfo struct {
 func LatestVersion(target Target, getter HTTPGetter) (LatestInfo, error)
 ```
 
-Rules:
+规则：
 
-- GitLab uses `releases/permalink/latest`.
-- Gitea/Forgejo uses `releases/latest`.
-- Returned tag is compared directly with installed store tag/version, matching existing update behavior.
-- If no latest release can be determined, report a `check_failed` row through existing list/update failure handling.
+- GitLab 使用 `releases/permalink/latest`。
+- Gitea/Forgejo 使用 `releases/latest`。
+- 返回 tag 直接与 installed store 中的 tag/version 比较，保持现有 update 行为。
+- 无法判断 latest release 时，通过现有 list/update failure 流程输出 `check_failed`。
 
-A later cleanup can replace `LatestTag(repo, sourcePath)` with a more general source-aware interface. That is not required for the first version.
+后续可以把 `LatestTag(repo, sourcePath)` 重构成更通用的 source-aware interface，但这不是第一版必须项。
 
-## Install Service Integration
+## Install Service 接入
 
-Add a new target kind:
+新增 target kind：
 
 ```go
 TargetForge TargetKind = "forge"
 ```
 
-or explicit kinds:
+也可以拆成显式 kind：
 
 ```go
-TargetGitLab TargetKind = "gitlab"
-TargetGitea  TargetKind = "gitea"
+TargetGitLab  TargetKind = "gitlab"
+TargetGitea   TargetKind = "gitea"
 TargetForgejo TargetKind = "forgejo"
 ```
 
-Recommendation: use `TargetForge` internally and let `forge.Target.Provider` distinguish provider behavior.
+推荐内部使用 `TargetForge`，具体 provider 由 `forge.Target.Provider` 区分。
 
-`DetectTargetKind` should check forge targets before generic URL and GitHub repo checks:
+`DetectTargetKind` 的检测顺序应为：
 
 ```text
 local file
@@ -316,29 +316,29 @@ owner/repo
 unknown
 ```
 
-`install.Service` should avoid adding one factory per provider. Add one forge factory:
+`install.Service` 不应该为每个 provider 继续增加单独 factory。新增一个 forge factory 即可：
 
 ```go
 ForgeGetterFactory func(opts Options) forge.HTTPGetter
 ```
 
-`SelectFinder` should parse forge target, create `forge.Finder`, and return project name as the tool hint.
+`SelectFinder` 解析 forge target 后创建 `forge.Finder`，并返回项目名作为 tool hint。
 
-Tool hint:
+tool hint 规则：
 
-- Use the target project/repo basename.
-- For `gitlab:gitlab.com/group/tool`, tool is `tool`.
+- 使用 target 的 project/repo basename。
+- `gitlab:gitlab.com/group/tool` 的 tool 是 `tool`。
 
-## App Layer Integration
+## App 层接入
 
-Update paths that currently special-case SourceForge:
+需要更新当前 special-case SourceForge 的路径：
 
-- `internal/app/config.go`: normalize `repo` and default package name for forge targets.
-- `internal/installed/store.go`: normalize forge targets for installed store keys.
-- `internal/app/update.go`: allow direct `update gitlab:...`, `update gitea:...`, and `update forgejo:...`.
-- `internal/app/install.go`: record forge tag/version from release URL only if API release info is unavailable.
+- `internal/app/config.go`：规范化 forge `repo`，并为未指定 name 的包使用 project 作为默认包名。
+- `internal/installed/store.go`：规范化 forge target 作为 installed store key。
+- `internal/app/update.go`：允许直接 `update gitlab:...`、`update gitea:...`、`update forgejo:...`。
+- `internal/app/install.go`：优先通过 API release info 记录 tag/version；API 信息不可用时，再尝试从 release URL 提取 tag。
 
-Preferred installed store metadata:
+推荐 installed store 结构：
 
 ```toml
 [installed."gitlab:gitlab.com/fdroid/fdroidserver"]
@@ -350,7 +350,7 @@ tag = "v1.2.3"
 version = "v1.2.3"
 ```
 
-For Gitea/Forgejo:
+Gitea/Forgejo：
 
 ```toml
 [installed."gitea:codeberg.org/forgejo/forgejo"]
@@ -361,7 +361,7 @@ version = "v1.2.3"
 
 ## CLI Wiring
 
-`newCLIService` should configure the forge getter through the same network stack:
+`newCLIService` 通过同一套网络配置创建 forge getter：
 
 ```go
 installService.ForgeGetterFactory = func(opts install.Options) forge.HTTPGetter {
@@ -369,15 +369,15 @@ installService.ForgeGetterFactory = func(opts install.Options) forge.HTTPGetter 
 }
 ```
 
-The existing client name is GitHub-specific, but its `Get(url)` behavior is already generic enough for public HTTP APIs. A future cleanup can rename this to a neutral HTTP client.
+当前 client 名称带 GitHub，但它的 `Get(url)` 行为已经足够通用，可先复用。后续可单独把它重命名为中性的 HTTP client。
 
-Verbose wiring:
+verbose wiring：
 
 ```go
 forge.SetVerbose(verbose, stderr)
 ```
 
-Verbose logs should include:
+verbose 日志示例：
 
 ```text
 [verbose] forge gitlab request: ...
@@ -385,29 +385,29 @@ Verbose logs should include:
 [verbose] forge gitlab assets: 3
 ```
 
-## Query and Search
+## Query 和 Search
 
-First version does not add:
+第一版不增加：
 
 - `query gitlab:...`
 - `query gitea:...`
 - `search gitlab ...`
 - `search gitea ...`
 
-Existing `query` and `search` remain GitHub-only. Documentation should say that GitLab/Gitea support is for install/download/update release assets only.
+现有 `query` 和 `search` 仍然是 GitHub-only。文档需要说明 GitLab/Gitea 支持范围是 install/download/update release assets。
 
-## Authentication
+## 认证
 
-First version does not implement authentication.
+第一版不实现认证。
 
-Design constraints for future token support:
+后续 token 支持需要考虑：
 
-- GitLab public API can work without token but has rate limits.
-- GitLab private repos will need `PRIVATE-TOKEN` or `Authorization: Bearer`.
-- Gitea/Forgejo private repos typically use `Authorization: token <token>` or bearer token depending on server version.
-- Token config should be host-aware, not only provider-wide, because self-hosted instances differ.
+- GitLab 公共 API 无 token 可用，但有 rate limit。
+- GitLab 私有仓库需要 `PRIVATE-TOKEN` 或 `Authorization: Bearer`。
+- Gitea/Forgejo 私有仓库通常使用 `Authorization: token <token>` 或 bearer token，取决于服务端版本。
+- token 配置应按 host 维度管理，而不是只按 provider 管理，因为自托管实例各不相同。
 
-Potential future config:
+后续可能的配置：
 
 ```toml
 [forge_hosts."gitlab.example.com"]
@@ -419,11 +419,11 @@ provider = "gitea"
 token = "..."
 ```
 
-This is intentionally not part of the first implementation.
+这不属于第一版实现。
 
-## Error Handling
+## 错误处理
 
-Errors should be source-specific and explicit:
+错误应明确带 source 信息：
 
 - `invalid forge target "gitlab:"`
 - `gitlab project is required`
@@ -431,57 +431,57 @@ Errors should be source-specific and explicit:
 - `unsupported forge provider "bitbucket"`
 - `gitlab release request failed: 404 Not Found (URL: ...)`
 - `gitea release assets not found for codeberg.org/forgejo/forgejo`
-- Existing detector errors such as `asset "linux" not found` should be preserved when assets exist but no filter matches.
+- release 存在但 asset filter 不匹配时，继续复用现有 detector 错误，例如 `asset "linux" not found`
 
-Do not silently fall back to an old installed asset when the current release has no matching asset.
+当前 release 没有匹配 asset 时，不允许静默回退到旧 installed asset。
 
-## Testing Strategy
+## 测试策略
 
-Unit tests:
+单元测试：
 
-- Target parsing:
+- target 解析：
   - `gitlab:fdroid/fdroidserver`
   - `gitlab:gitlab.gnome.org/GNOME/gtk`
   - `gitlab:gitlab.example.com/group/subgroup/project`
   - `gitea:codeberg.org/forgejo/forgejo`
   - `forgejo:codeberg.org/forgejo/forgejo`
-  - invalid empty host/project cases
-- Target kind detection.
-- Normalized installed store keys.
-- Add package normalization and default package names.
-- GitLab release JSON parsing and URL selection.
-- Gitea release JSON parsing and URL selection.
-- Latest version checks for GitLab and Gitea.
-- `list --outdated` and `update --all` with mixed GitHub, SourceForge, GitLab, and Gitea packages.
-- Direct `update gitlab:...` and `update gitea:...` target routing.
+  - 空 host / 空 project 等非法输入
+- target kind detection。
+- installed store normalized key。
+- add package normalization 和默认 package name。
+- GitLab release JSON 解析和 URL 选择。
+- Gitea release JSON 解析和 URL 选择。
+- GitLab/Gitea latest version 检查。
+- 混合 GitHub、SourceForge、GitLab、Gitea 包的 `list --outdated` 和 `update --all`。
+- 直接 `update gitlab:...` / `update gitea:...` 的路由。
 
-Integration-style tests with fake HTTP getters:
+使用 fake HTTP getter 的 integration-style 测试：
 
-- GitLab latest release returns candidate assets.
-- GitLab specific tag returns candidate assets.
-- Gitea latest release returns candidate assets.
-- Empty release assets return source-specific errors.
-- Non-200 API responses include status and URL.
+- GitLab latest release 返回候选 assets。
+- GitLab 指定 tag 返回候选 assets。
+- Gitea latest release 返回候选 assets。
+- 空 release assets 返回 source-specific error。
+- 非 200 API 响应包含状态码和 URL。
 
-Manual smoke tests:
+手动 smoke 测试：
 
 ```bash
 go run ./cmd/eget download --asset linux,amd64 --to .tmp-forge-smoke gitea:codeberg.org/forgejo/forgejo
 go run ./cmd/eget download --asset linux,amd64 --to .tmp-forge-smoke gitlab:gitlab.com/<known-public-project>
 ```
 
-The implementation plan should identify stable public test projects before relying on smoke tests.
+实现计划需要先确定稳定的公开测试项目，再依赖 smoke 测试。
 
-## Documentation Updates
+## 文档更新
 
-Update:
+需要更新：
 
 - `README.md`
 - `README.zh-CN.md`
 - `docs/DOCS.md`
 - `docs/example.eget.toml`
 
-Docs should show:
+文档示例：
 
 ```bash
 eget install gitlab:fdroid/fdroidserver
@@ -489,7 +489,7 @@ eget install gitlab:gitlab.gnome.org/GNOME/gtk
 eget install gitea:codeberg.org/forgejo/forgejo
 ```
 
-And:
+配置示例：
 
 ```toml
 [packages.forgejo]
@@ -498,27 +498,27 @@ system = "linux/amd64"
 asset_filters = ["linux", "amd64"]
 ```
 
-## Non-Goals
+## 非目标
 
-This first version does not support:
+第一版不支持：
 
-- Private repositories.
-- Provider search.
-- Query command parity.
-- Automatic provider detection from arbitrary repository web URLs.
-- Bitbucket, Gogs, or custom non-Gitea-compatible APIs.
-- Package registry artifacts.
-- GitLab job artifacts.
-- Release notes display.
-- Project-specific install recipes.
+- 私有仓库。
+- provider search。
+- query 命令对 GitLab/Gitea 的等价支持。
+- 从任意 repository web URL 自动检测 provider。
+- Bitbucket、Gogs 或非 Gitea-compatible 的自定义 API。
+- package registry artifacts。
+- GitLab job artifacts。
+- release notes 展示。
+- 项目专用安装配方。
 
-## Open Implementation Decisions
+## 实现前需要验证的事项
 
-Before implementation, validate public API behavior for:
+实现前需要确认这些公开 API 行为：
 
-- GitLab latest release endpoint availability on `gitlab.com`.
-- GitLab self-hosted project path encoding with nested namespaces.
-- Codeberg/Forgejo release API response shape and download URLs.
-- A stable public GitLab project with release assets suitable for smoke tests.
+- `gitlab.com` 的 latest release endpoint 是否稳定可用。
+- GitLab 自托管多级 namespace 的 project path encoding。
+- Codeberg/Forgejo release API 响应结构和 download URL 字段。
+- 可用于 smoke test 的稳定公开 GitLab release assets 项目。
 
-If a public instance behaves differently but is still Gitea-compatible, keep the compatibility branch isolated in `internal/source/forge`.
+如果某个公开实例存在兼容差异，但仍属于 Gitea-compatible 范畴，兼容分支应限制在 `internal/source/forge` 内。
