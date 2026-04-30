@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
 	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 )
@@ -255,6 +256,51 @@ func TestSelectFinder(t *testing.T) {
 		_, _, err := svc.SelectFinder("sourceforge:winmerge/beta", &Options{SourcePath: "stable"})
 		if err == nil || !strings.Contains(err.Error(), "source_path") {
 			t.Fatalf("expected source_path conflict, got %v", err)
+		}
+	})
+
+	t.Run("forge gitlab target", func(t *testing.T) {
+		opts := &Options{Tag: "v1.2.3", ProxyURL: "http://127.0.0.1:7890"}
+		svc.ForgeGetterFactory = func(opts Options) forge.HTTPGetter {
+			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) {
+				if opts.ProxyURL != "http://127.0.0.1:7890" {
+					t.Fatalf("expected proxy url to propagate to forge getter, got %q", opts.ProxyURL)
+				}
+				return nil, nil
+			})
+		}
+
+		finder, tool, err := svc.SelectFinder("gitlab:fdroid/fdroidserver", opts)
+		if err != nil {
+			t.Fatalf("SelectFinder(gitlab): %v", err)
+		}
+		if tool != "fdroidserver" {
+			t.Fatalf("tool = %q, want fdroidserver", tool)
+		}
+		got, ok := finder.(forge.Finder)
+		if !ok {
+			t.Fatalf("finder type = %T, want forge.Finder", finder)
+		}
+		if got.Target.Normalized != "gitlab:gitlab.com/fdroid/fdroidserver" || got.Tag != "v1.2.3" || got.Getter == nil {
+			t.Fatalf("unexpected forge finder: %+v", got)
+		}
+	})
+
+	t.Run("forge gitea target", func(t *testing.T) {
+		svc.ForgeGetterFactory = func(opts Options) forge.HTTPGetter {
+			return fakeHTTPGetterFunc(func(url string) (*http.Response, error) { return nil, nil })
+		}
+
+		finder, tool, err := svc.SelectFinder("gitea:codeberg.org/forgejo/forgejo", &Options{})
+		if err != nil {
+			t.Fatalf("SelectFinder(gitea): %v", err)
+		}
+		if tool != "forgejo" {
+			t.Fatalf("tool = %q, want forgejo", tool)
+		}
+		got, ok := finder.(forge.Finder)
+		if !ok || got.Target.Provider != forge.ProviderGitea {
+			t.Fatalf("finder type = %T value=%+v, want gitea forge.Finder", finder, got)
 		}
 	})
 

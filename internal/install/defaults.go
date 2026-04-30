@@ -24,6 +24,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 
+	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
 	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 )
@@ -174,6 +175,9 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 		BinaryModTime: binaryModTime,
 		GitHubGetter:  githubGetter,
 		GitHubGetterFactory: func(opts Options) sourcegithub.HTTPGetter {
+			return NewHTTPGetter(opts)
+		},
+		ForgeGetterFactory: func(opts Options) forge.HTTPGetter {
 			return NewHTTPGetter(opts)
 		},
 		SourceForgeGetterFactory: func(opts Options) sourcesf.HTTPGetter {

@@ -11,6 +11,7 @@ import (
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
+	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
 	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 	"github.com/inherelab/eget/internal/util"
@@ -26,6 +27,9 @@ func newCLIService() (*cliService, error) {
 	githubClient := client.NewGitHubClient(install.ClientOptions(defaultOpts))
 	installService := install.NewDefaultService(githubClient, binaryModTime)
 	installService.GitHubGetterFactory = func(opts install.Options) sourcegithub.HTTPGetter {
+		return client.NewGitHubClient(install.ClientOptions(opts))
+	}
+	installService.ForgeGetterFactory = func(opts install.Options) forge.HTTPGetter {
 		return client.NewGitHubClient(install.ClientOptions(opts))
 	}
 	installService.SourceForgeGetterFactory = func(opts install.Options) sourcesf.HTTPGetter {
@@ -110,6 +114,7 @@ func newCLIService() (*cliService, error) {
 
 func configureVerbose(verbose bool, stderr io.Writer) {
 	install.SetVerbose(verbose, stderr)
+	forge.SetVerbose(verbose, stderr)
 	sourcegithub.SetVerbose(verbose, stderr)
 	sourcesf.SetVerbose(verbose, stderr)
 }

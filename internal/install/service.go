@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
 	sourcesf "github.com/inherelab/eget/internal/source/sourceforge"
 )
@@ -43,6 +44,7 @@ type Service struct {
 	BinaryModTime            func(tool, output string) time.Time
 	GitHubGetter             sourcegithub.HTTPGetter
 	GitHubGetterFactory      func(opts Options) sourcegithub.HTTPGetter
+	ForgeGetterFactory       func(opts Options) forge.HTTPGetter
 	SourceForgeGetterFactory func(opts Options) sourcesf.HTTPGetter
 
 	AllDetectorFactory    func() Detector
@@ -146,6 +148,20 @@ func (s *Service) SelectFinder(target string, opts *Options) (Finder, string, er
 			Tag:     opts.Tag,
 			Getter:  s.SourceForgeGetterFactory(*opts),
 		}, sfTarget.Project, nil
+	case TargetForge:
+		forgeTarget, err := forge.ParseTarget(target)
+		if err != nil {
+			return nil, "", err
+		}
+		if s.ForgeGetterFactory == nil {
+			return nil, "", fmt.Errorf("forge getter factory is required")
+		}
+
+		return forge.Finder{
+			Target: forgeTarget,
+			Tag:    opts.Tag,
+			Getter: s.ForgeGetterFactory(*opts),
+		}, forgeTarget.Project, nil
 	default:
 		return nil, "", fmt.Errorf("invalid argument (must be of the form `user/repo`)")
 	}
