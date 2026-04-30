@@ -37,3 +37,9 @@ source_path = "stable"
 system = "windows/amd64"
 asset_filters = ["x64", "PerUser", "setup"]
 is_gui = true
+
+[packages."forgejo"]
+name = "forgejo"
+repo = "gitea:codeberg.org/forgejo/forgejo"
+system = "linux/amd64"
+asset_filters = ["linux", "amd64"]

@@ -8,14 +8,14 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` 用于从 GitHub 和 SourceForge 查找、下载并提取预构建二进制。
+`eget` 用于从 GitHub、GitLab、Gitea/Forgejo 和 SourceForge 查找、下载并提取预构建二进制。
 
 > Forked from https://github.com/zyedidia/eget 重构并增强了工具的功能。
 
 ## 功能特性
 
 - 显式子命令 CLI：统一使用 `eget <command> --options... arguments...` 形式，命令职责清晰，便于扩展和自动化调用。
-- 多种目标输入：`install` 和 `download` 支持 `owner/repo`、GitHub 仓库 URL、`sourceforge:<project>` 目标、直接下载 URL 以及本地文件。
+- 多种目标输入：`install` 和 `download` 支持 `owner/repo`、GitHub 仓库 URL、GitLab 目标、Gitea/Forgejo 目标、`sourceforge:<project>` 目标、直接下载 URL 以及本地文件。
 - 下载、校验、提取一体化：内置资源发现、系统/资产筛选、SHA-256 自动校验与归档提取流程，减少手工步骤。
 - 缓存与代理支持：支持 `cache_dir` 下载缓存复用、`api_cache` GitHub API 响应缓存，以及 `proxy_url`/`ghproxy` 组合代理远程请求。
 - 托管包生命周期管理：通过 `add`、`list`、`update`、`uninstall` 管理本地 package 定义、安装状态和卸载流程。
@@ -62,6 +62,11 @@ eget install --asset "REG:\\.deb$" owner/repo
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # 直接安装 SourceForge 项目
 eget install sourceforge:winmerge --asset x64,PerUser,setup
+# 从 GitLab releases 安装
+eget install gitlab:fdroid/fdroidserver
+eget install gitlab:gitlab.gnome.org/GNOME/gtk
+# 从 Gitea/Forgejo-compatible releases 安装
+eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
 # 安装 并 记录
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
@@ -127,9 +132,13 @@ eget config set global.target ~/.local/bin
 - `name` in the config packages
 - `owner/repo`
 - GitHub 仓库 URL
+- GitLab 目标，例如 `gitlab:fdroid/fdroidserver` 或 `gitlab:gitlab.gnome.org/GNOME/gtk`
+- Gitea/Forgejo 目标，例如 `gitea:codeberg.org/forgejo/forgejo`
 - SourceForge 目标，例如 `sourceforge:winmerge` 或 `sourceforge:winmerge/stable`
 - 直接下载 URL
 - 本地文件
+
+GitLab 和 Gitea/Forgejo 第一版支持通过 release assets 进行 `install`、`download` 和 `update`。暂不支持与 `query`/`search` 对齐、私有仓库认证，也不会从任意网页 URL 自动识别 provider。
 
 ## 当前命令
 
@@ -281,6 +290,11 @@ repo = "sourceforge:winmerge"
 source_path = "stable"
 system = "windows/amd64"
 asset_filters = ["x64", "PerUser", "setup"]
+
+[packages.forgejo]
+repo = "gitea:codeberg.org/forgejo/forgejo"
+system = "linux/amd64"
+asset_filters = ["linux", "amd64"]
 ```
 
 常见字段：
@@ -358,6 +372,7 @@ make test
 - `internal/config`: 配置加载、合并、写回
 - `internal/installed`: 安装记录存储
 - `internal/source/github`: GitHub 资源查找
+- `internal/source/forge`: GitLab/Gitea/Forgejo 资源查找
 
 > 更详细说明见 [docs/DOCS.md](docs/DOCS.md)。
 

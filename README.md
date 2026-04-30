@@ -8,14 +8,14 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-`eget` helps locate, download, and extract prebuilt binaries from GitHub and SourceForge.
+`eget` helps locate, download, and extract prebuilt binaries from GitHub, GitLab, Gitea/Forgejo, and SourceForge.
 
 > Forked from https://github.com/zyedidia/eget Refactored and enhanced the tool's functionality.
 
 ## Features
 
 - Explicit subcommand CLI: uses the consistent `eget <command> --options... arguments...` form, with clear command boundaries and better automation ergonomics.
-- Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, `sourceforge:<project>` targets, direct download URLs, and local files.
+- Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, GitLab targets, Gitea/Forgejo targets, `sourceforge:<project>` targets, direct download URLs, and local files.
 - Unified download, verify, and extract flow: built-in asset discovery, system/asset selection, SHA-256 verification, and archive extraction reduce manual steps.
 - Cache and proxy support: supports `cache_dir` download reuse, `api_cache` for GitHub API response caching, and combined `proxy_url`/`ghproxy` remote request proxying.
 - Managed package lifecycle: supports `add`, `list`, `update`, and `uninstall` for package definitions, installed state, and cleanup workflows.
@@ -61,6 +61,11 @@ eget install --asset "REG:\\.deb$" owner/repo
 eget install --to ~/.local/bin/fzf junegunn/fzf
 # Install a SourceForge project directly
 eget install sourceforge:winmerge --asset x64,PerUser,setup
+# Install from GitLab releases
+eget install gitlab:fdroid/fdroidserver
+eget install gitlab:gitlab.gnome.org/GNOME/gtk
+# Install from Gitea/Forgejo-compatible releases
+eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
 # Install and record the package definition
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
@@ -126,9 +131,13 @@ The target argument accepted by `install` and `download` can be:
 - `name` in the config packages
 - `owner/repo`
 - GitHub repository URL
+- GitLab target, for example `gitlab:fdroid/fdroidserver` or `gitlab:gitlab.gnome.org/GNOME/gtk`
+- Gitea/Forgejo target, for example `gitea:codeberg.org/forgejo/forgejo`
 - SourceForge target, for example `sourceforge:winmerge` or `sourceforge:winmerge/stable`
 - Direct download URL
 - Local file
+
+GitLab and Gitea/Forgejo support currently covers `install`, `download`, and `update` for release assets. The first version does not provide query/search parity, private repository authentication, or automatic provider detection from arbitrary web URLs.
 
 ## Available Commands
 
@@ -280,6 +289,11 @@ repo = "sourceforge:winmerge"
 source_path = "stable"
 system = "windows/amd64"
 asset_filters = ["x64", "PerUser", "setup"]
+
+[packages.forgejo]
+repo = "gitea:codeberg.org/forgejo/forgejo"
+system = "linux/amd64"
+asset_filters = ["linux", "amd64"]
 ```
 
 Common fields:
@@ -358,6 +372,7 @@ The current version has been restructured into an explicit subcommand CLI, with 
 - `internal/config`: config loading, merging, and persistence
 - `internal/installed`: installed-state storage
 - `internal/source/github`: GitHub asset discovery
+- `internal/source/forge`: GitLab/Gitea/Forgejo asset discovery
 
 > For more details, see [docs/DOCS.md](docs/DOCS.md).
 

@@ -30,6 +30,7 @@ eget <command> --options... arguments...
 - `internal/installed`: 安装记录读写
 - `internal/source/github`: GitHub release/source 查找
 - `internal/source/sourceforge`: SourceForge 文件发现与最新版本检查
+- `internal/source/forge`: GitLab/Gitea/Forgejo release asset 发现与 latest-version 检查
 
 ## Install Flow
 
@@ -48,6 +49,7 @@ eget <command> --options... arguments...
 
 - repo 标识符
 - GitHub URL
+- Forge target，例如 `gitlab:fdroid/fdroidserver`、`gitea:codeberg.org/forgejo/forgejo`
 - SourceForge target，例如 `sourceforge:winmerge`
 - 直链 URL
 - 本地文件
@@ -57,6 +59,12 @@ eget <command> --options... arguments...
 `sourceforge:<project>` 目标由 `internal/source/sourceforge` 解析。
 可选的 `source_path` 配置会把发现范围限制在项目 files 区域下的指定目录。
 SourceForge 返回候选下载 URL 后，`system`、`asset_filters`、`file`、下载、校验、提取和 installed store 记录继续复用普通安装链路。
+
+## Forge Flow
+
+`gitlab:`、`gitea:`、`forgejo:` 目标由 `internal/source/forge` 解析并调用对应公开 release API。
+Forge 后端只返回候选下载 URL；`system`、`asset_filters`、`file`、下载、校验、提取和 installed store 记录继续复用普通安装链路。
+第一版不支持私有仓库认证、query/search parity 或从任意网页 URL 自动识别 provider。
 
 ## Download Flow
 
