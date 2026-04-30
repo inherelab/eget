@@ -34,7 +34,7 @@ func TestGitLabFinderFindsLatestReleaseAssets(t *testing.T) {
 
 	url := "https://gitlab.com/api/v4/projects/fdroid%2Ffdroidserver/releases/permalink/latest"
 	getter := &fakeGetter{responses: map[string]string{
-		url: `{"tag_name":"v2.3.4","assets":{"links":[{"name":"fdroidserver-linux-amd64.tar.gz","direct_asset_url":"https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/fdroidserver-linux-amd64.tar.gz"},{"name":"fdroidserver.sha256","url":"https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/fdroidserver.sha256"}]}}`,
+		url: `{"tag_name":"v2.3.4","assets":{"links":[{"name":"fdroidserver-linux-amd64.tar.gz","direct_asset_url":"https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/fdroidserver-linux-amd64.tar.gz","url":"https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/metadata/fdroidserver-linux-amd64.tar.gz"},{"name":"fdroidserver.sha256","url":"https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.4/downloads/fdroidserver.sha256"}]}}`,
 	}}
 
 	assets, err := Finder{Target: target, Getter: getter}.Find()
