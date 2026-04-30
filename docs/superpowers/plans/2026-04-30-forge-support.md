@@ -1001,7 +1001,7 @@ git commit -m "feat(forge): wire install finder"
 - Modify: `internal/app/update.go`
 - Modify: `internal/app/update_test.go`
 
-- [ ] **Step 1: 编写 add package normalization 测试**
+- [x] **Step 1: 编写 add package normalization 测试**
 
 在 `internal/app/add_test.go` 新增：
 
@@ -1049,7 +1049,7 @@ func TestAddPackageNormalizesForgeTargets(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 编写 installed normalization 测试**
+- [x] **Step 2: 编写 installed normalization 测试**
 
 在 `internal/installed/store_test.go` 新增：
 
@@ -1062,7 +1062,7 @@ func TestNormalizeRepoNameForge(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 编写 direct update target 测试**
+- [x] **Step 3: 编写 direct update target 测试**
 
 在 `internal/app/update_test.go` 新增：
 
@@ -1084,7 +1084,7 @@ func TestUpdatePackageAllowsDirectForgeTargets(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: 运行测试确认失败**
+- [x] **Step 4: 运行测试确认失败**
 
 Run:
 
@@ -1094,7 +1094,7 @@ go test ./internal/app ./internal/installed -run 'TestAddPackageNormalizesForgeT
 
 Expected: FAIL，原因是 forge normalization 和 direct update routing 尚未实现。
 
-- [ ] **Step 5: 实现 app config normalization**
+- [x] **Step 5: 实现 app config normalization**
 
 在 `internal/app/config.go` 导入 forge：
 
@@ -1113,7 +1113,7 @@ if forgeTarget, forgeErr := forge.ParseTarget(repo); forgeErr == nil {
 }
 ```
 
-- [ ] **Step 6: 实现 installed normalization**
+- [x] **Step 6: 实现 installed normalization**
 
 在 `internal/installed/store.go` 导入 forge：
 
@@ -1129,7 +1129,7 @@ if forgeTarget, err := forge.ParseTarget(target); err == nil {
 }
 ```
 
-- [ ] **Step 7: 允许 direct forge update target**
+- [x] **Step 7: 允许 direct forge update target**
 
 在 `internal/app/update.go` 导入 forge：
 
@@ -1145,7 +1145,7 @@ if strings.Contains(nameOrRepo, "/") || sourceforge.IsTarget(nameOrRepo) || forg
 }
 ```
 
-- [ ] **Step 8: 运行 normalization 测试**
+- [x] **Step 8: 运行 normalization 测试**
 
 Run:
 
@@ -1155,7 +1155,7 @@ go test ./internal/app ./internal/installed -run 'TestAddPackageNormalizesForgeT
 
 Expected: PASS。
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add internal/app/config.go internal/app/add_test.go internal/installed/store.go internal/installed/store_test.go internal/app/update.go internal/app/update_test.go
