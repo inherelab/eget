@@ -28,6 +28,14 @@ func (g *fakeGetter) Get(url string) (*http.Response, error) {
 	}, nil
 }
 
+type responseGetter struct {
+	resp *http.Response
+}
+
+func (g responseGetter) Get(string) (*http.Response, error) {
+	return g.resp, nil
+}
+
 func TestGitLabFinderFindsLatestReleaseAssets(t *testing.T) {
 	target, err := ParseTarget("gitlab:fdroid/fdroidserver")
 	assert.NoErr(t, err)
@@ -91,6 +99,34 @@ func TestGitLabFinderReportsHTTPStatus(t *testing.T) {
 	}
 }
 
+func TestGitLabFinderReportsNilResponse(t *testing.T) {
+	target, err := ParseTarget("gitlab:fdroid/fdroidserver")
+	assert.NoErr(t, err)
+
+	_, err = Finder{Target: target, Getter: responseGetter{}}.Find()
+
+	if err == nil || !strings.Contains(err.Error(), "gitlab release response is nil") {
+		t.Fatalf("expected nil response error, got %v", err)
+	}
+}
+
+func TestGitLabFinderReportsNilResponseBody(t *testing.T) {
+	target, err := ParseTarget("gitlab:fdroid/fdroidserver")
+	assert.NoErr(t, err)
+
+	_, err = Finder{
+		Target: target,
+		Getter: responseGetter{resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     http.StatusText(http.StatusOK),
+		}},
+	}.Find()
+
+	if err == nil || !strings.Contains(err.Error(), "gitlab release response body is nil") {
+		t.Fatalf("expected nil response body error, got %v", err)
+	}
+}
+
 func TestGitLabLatestVersion(t *testing.T) {
 	target, err := ParseTarget("gitlab:fdroid/fdroidserver")
 	assert.NoErr(t, err)
@@ -103,4 +139,15 @@ func TestGitLabLatestVersion(t *testing.T) {
 
 	assert.NoErr(t, err)
 	assert.Eq(t, "v2.3.4", info.Tag)
+}
+
+func TestLatestVersionRequiresGetter(t *testing.T) {
+	target, err := ParseTarget("gitlab:fdroid/fdroidserver")
+	assert.NoErr(t, err)
+
+	_, err = LatestVersion(target, nil)
+
+	if err == nil || !strings.Contains(err.Error(), "forge HTTP getter is required") {
+		t.Fatalf("expected getter required error, got %v", err)
+	}
 }

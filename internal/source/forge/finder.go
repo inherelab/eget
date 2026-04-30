@@ -40,6 +40,9 @@ func (f Finder) Find() ([]string, error) {
 }
 
 func LatestVersion(target Target, getter HTTPGetter) (LatestInfo, error) {
+	if getter == nil {
+		return LatestInfo{}, fmt.Errorf("forge HTTP getter is required")
+	}
 	release, err := Finder{Target: target, Getter: getter}.release()
 	if err != nil {
 		return LatestInfo{}, err
@@ -66,6 +69,12 @@ func (f Finder) getJSON(rawURL string) ([]byte, error) {
 	resp, err := f.Getter.Get(rawURL)
 	if err != nil {
 		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("%s release response is nil (URL: %s)", f.Target.Provider, rawURL)
+	}
+	if resp.Body == nil {
+		return nil, fmt.Errorf("%s release response body is nil (URL: %s)", f.Target.Provider, rawURL)
 	}
 	defer resp.Body.Close()
 
