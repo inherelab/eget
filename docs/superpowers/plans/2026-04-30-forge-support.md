@@ -296,7 +296,7 @@ git commit -m "feat(forge): detect forge targets"
 - Create: `internal/source/forge/gitlab_test.go`
 - Create: `internal/source/forge/log.go`
 
-- [ ] **Step 1: 编写 GitLab finder 失败测试**
+- [x] **Step 1: 编写 GitLab finder 失败测试**
 
 新增 `internal/source/forge/gitlab_test.go`：
 
@@ -409,7 +409,7 @@ func TestGitLabLatestVersion(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行 GitLab 测试确认失败**
+- [x] **Step 2: 运行 GitLab 测试确认失败**
 
 Run:
 
@@ -419,7 +419,7 @@ go test ./internal/source/forge -run 'TestGitLab' -v
 
 Expected: FAIL，原因是 `Finder` 和 `LatestVersion` 尚未实现。
 
-- [ ] **Step 3: 实现 shared finder 和 log helpers**
+- [x] **Step 3: 实现 shared finder 和 log helpers**
 
 新增 `internal/source/forge/finder.go`：
 
@@ -551,7 +551,7 @@ func VerboseEnabledForTest() bool {
 }
 ```
 
-- [ ] **Step 4: 实现 GitLab API adapter**
+- [x] **Step 4: 实现 GitLab API adapter**
 
 新增 `internal/source/forge/gitlab.go`：
 
@@ -610,7 +610,7 @@ func gitLabReleaseURL(target Target, tag string) string {
 }
 ```
 
-- [ ] **Step 5: 运行 GitLab 测试**
+- [x] **Step 5: 运行 GitLab 测试**
 
 Run:
 
@@ -620,7 +620,7 @@ go test ./internal/source/forge -run 'TestGitLab' -v
 
 Expected: PASS。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add internal/source/forge/finder.go internal/source/forge/gitlab.go internal/source/forge/gitlab_test.go internal/source/forge/log.go
