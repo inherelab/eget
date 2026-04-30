@@ -708,6 +708,43 @@ func TestInstallTargetWithAddRecordsManagedPackage(t *testing.T) {
 	}
 }
 
+func TestInstallTargetWithAddRecordsForgePackage(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://gitlab.com/fdroid/fdroidserver/-/releases/v2.3.3/downloads/fdroidserver-linux-amd64.tar.gz",
+			Tool:           "fdroidserver",
+			ExtractedFiles: []string{"./fdroidserver"},
+		},
+	}
+	config := &fakeConfigRecorder{}
+	svc := Service{
+		Runner: runner,
+		Config: config,
+	}
+
+	opts := install.Options{Tag: "v2.3.3", Asset: []string{"linux", "amd64"}}
+	_, err := svc.InstallTarget("gitlab:fdroid/fdroidserver", opts, InstallExtras{
+		AddToConfig: true,
+		PackageOpts: opts,
+	})
+	if err != nil {
+		t.Fatalf("install forge target with add: %v", err)
+	}
+
+	if config.calls != 1 {
+		t.Fatalf("expected config add to be called once, got %d", config.calls)
+	}
+	if config.repo != "gitlab:fdroid/fdroidserver" {
+		t.Fatalf("expected raw forge repo to be forwarded for config normalization, got %q", config.repo)
+	}
+	if config.opts.Tag != "v2.3.3" {
+		t.Fatalf("expected tag to be forwarded, got %q", config.opts.Tag)
+	}
+	if len(config.opts.Asset) != 2 || config.opts.Asset[0] != "linux" || config.opts.Asset[1] != "amd64" {
+		t.Fatalf("expected asset filters to be forwarded, got %#v", config.opts.Asset)
+	}
+}
+
 func TestInstallTargetWithAddPersistsConfirmedGUIInstaller(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

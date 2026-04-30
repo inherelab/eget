@@ -107,8 +107,10 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 		if s.Config == nil {
 			return RunResult{}, fmt.Errorf("config service is required")
 		}
-		repo, err := install.NormalizeRepoTarget(runTarget)
-		if err != nil {
+		repo := runTarget
+		if normalized, err := install.NormalizeRepoTarget(runTarget); err == nil {
+			repo = normalized
+		} else if !isManagedConfigTarget(runTarget) {
 			return RunResult{}, err
 		}
 		addOpts := extras[0].PackageOpts
@@ -121,6 +123,15 @@ func (s Service) InstallTarget(target string, opts install.Options, extras ...In
 	}
 
 	return result, nil
+}
+
+func isManagedConfigTarget(target string) bool {
+	switch install.DetectTargetKind(target) {
+	case install.TargetRepo, install.TargetGitHubURL, install.TargetSourceForge, install.TargetForge:
+		return true
+	default:
+		return false
+	}
 }
 
 func sourceVersion(tag string, sourceBacked bool) string {
