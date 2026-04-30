@@ -1485,7 +1485,7 @@ git commit -m "docs: document forge packages"
 - smoke test 暴露问题时才修改相关代码或文档。
 - 完成前更新本 checklist。
 
-- [ ] **Step 1: 运行全量测试**
+- [x] **Step 1: 运行全量测试**
 
 Run:
 
@@ -1495,7 +1495,7 @@ go test ./...
 
 Expected: all packages PASS。
 
-- [ ] **Step 2: 构建二进制**
+- [x] **Step 2: 构建二进制**
 
 Run:
 
@@ -1505,7 +1505,7 @@ go build ./cmd/eget
 
 Expected: 命令成功退出，Windows 下生成 `eget.exe`。
 
-- [ ] **Step 3: Smoke-test Gitea/Forgejo release discovery**
+- [x] **Step 3: Smoke-test Gitea/Forgejo release discovery**
 
 使用临时输出目录：
 
@@ -1520,7 +1520,7 @@ Expected:
 - 如果多个 Linux amd64 assets 匹配，命令可能进入 prompt；此时收窄 `--asset` 过滤条件，并把可工作的过滤条件写入文档。
 - 不应因 target parsing、API response parsing 或 getter 缺失失败。
 
-- [ ] **Step 4: Smoke-test GitLab release discovery**
+- [x] **Step 4: Smoke-test GitLab release discovery**
 
 先确认一个稳定公开 GitLab 项目，且 latest release 包含可下载 assets。优先选择 asset 文件名包含 OS/arch 的项目。
 
@@ -1536,7 +1536,7 @@ Expected:
 - 不应因 project path encoding、API response parsing 或 getter 缺失失败。
 - 如果候选公开项目没有合适 latest release assets，记录为 smoke-target 问题并更换项目。
 
-- [ ] **Step 5: Smoke-test managed config parse path**
+- [x] **Step 5: Smoke-test managed config parse path**
 
 Run:
 
@@ -1546,7 +1546,7 @@ go test ./internal/config ./internal/app ./internal/install ./internal/source/fo
 
 Expected: PASS。
 
-- [ ] **Step 6: 如 smoke 暴露问题则提交修复**
+- [x] **Step 6: 如 smoke 暴露问题则提交修复**
 
 只有 smoke test 需要代码或文档修复时才运行：
 
