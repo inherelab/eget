@@ -14,20 +14,17 @@
 
 ## Features
 
-- Explicit subcommand CLI: uses the consistent `eget <command> --options... arguments...` form, with clear command boundaries and better automation ergonomics.
-- Multiple target types: `install` and `download` accept `owner/repo`, GitHub repository URLs, GitLab targets, Gitea/Forgejo targets, `sourceforge:<project>` targets, direct download URLs, and local files.
-- Unified download, verify, and extract flow: built-in asset discovery, system/asset selection, SHA-256 verification, and archive extraction reduce manual steps.
-- Cache and proxy support: supports `cache_dir` download reuse, `api_cache` for GitHub API response caching, and combined `proxy_url`/`ghproxy` remote request proxying.
-- Managed package lifecycle: supports `add`, `list`, `update`, and `uninstall` for package definitions, installed state, and cleanup workflows.
-- GitHub repository search: supports `search` with native GitHub search qualifiers, text output, and JSON output.
-- Traceable installed state: keeps a dedicated installed store with the latest asset, install time, and extracted files for each package.
-- Layered configuration merging: supports `global`, repo sections, and `packages.<name>` with predictable option precedence.
-- Unified default config directory: configuration and installed-state files default to `~/.config/eget/`, while legacy paths remain readable.
+- Multi-source installs: install or download binaries from GitHub, GitLab, Gitea/Forgejo, SourceForge, direct download URLs, and local files.
+- Automatic selection and extraction: filter release assets by OS/arch, keyword, or regex, with SHA-256 verification and common archive extraction.
+- Managed package workflow: use `add`, `list`, `update`, and `uninstall` to manage frequently used tools, record install state, and check batch updates.
+- Query and search: query GitHub release info, list assets, and search repositories with native GitHub search qualifiers.
+- Cache and proxy support: use download cache, API response cache, `proxy_url`, and `ghproxy` for restricted networks or repeated installs.
+- Config-driven usage: configure global defaults, repo-level options, and `packages.<name>` managed packages; config and installed store default to `~/.config/eget/`.
 
 ## Install
 
 - Download from Releases [https://github.com/inherelab/eget/releases](https://github.com/inherelab/eget/releases)
-- Install by `go install` command(require Go sdk)
+- Install by `go install` command (requires a local Go SDK)
 
 ```bash
 go install github.com/inherelab/eget/cmd/eget@latest
@@ -39,17 +36,14 @@ go install github.com/inherelab/eget/cmd/eget@latest
 eget <command> --options... arguments...
 ```
 
-example:
+## Usage Examples
+
+### Install Examples
+
+**Install from GitHub**:
 
 ```bash
-eget install --tag nightly owner/repo
-```
-
-## Examples
-
-**Install Examples**
-
-```bash
+# install
 eget install --tag nightly inhere/markview
 # Install and override the executable name
 eget install --name chlog gookit/gitw
@@ -59,24 +53,44 @@ eget install --asset zip windirstat/windirstat
 eget install --asset "REG:\\.deb$" owner/repo
 # Install to a custom directory
 eget install --to ~/.local/bin/fzf junegunn/fzf
+```
+
+**Install a SourceForge project**:
+
+```bash
 # Install a SourceForge project directly
 eget install sourceforge:winmerge --asset x64,PerUser,setup
+```
+
+**Install a GitLab/Gitea/Forgejo project**:
+
+```bash
 # Install from GitLab releases
 eget install gitlab:fdroid/fdroidserver
 eget install gitlab:gitlab.gnome.org/GNOME/gtk
 # Install from Gitea/Forgejo-compatible releases
 eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
+```
+
+**Install and record**:
+
+```bash
 # Install and record the package definition
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 # Add a SourceForge project as a managed package
 eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,PerUser,setup
+```
+
+**Install GUI apps**:
+
+```bash
 # Install a GUI app; portable GUI apps use global.gui_target by default
 eget install --gui sipeed/picoclaw
 eget add --gui --name picoclaw sipeed/picoclaw
 ```
 
-**Download Examples**
+### Download Examples
 
 ```bash
 # download
@@ -88,7 +102,27 @@ eget download --file "bin/*" owner/repo
 eget download --extract-all --to ./dist windirstat/windirstat
 ```
 
-**Others Examples**
+### Query Examples
+
+**Query repository info**:
+
+```bash
+# query repo info
+eget query owner/repo
+eget query --action releases --limit 5 owner/repo
+eget query --action assets --tag v1.2.3 owner/repo
+```
+
+**Search GitHub repositories**:
+
+```bash
+eget search ripgrep
+eget search skillc language:go user:inhere
+eget search --limit 5 --sort stars --order desc terminal ui
+eget search --json picoclaw user:sipeed
+```
+
+### Other Examples
 
 ```bash
 # uninstall
@@ -99,21 +133,12 @@ eget list|ls
 eget list --all
 # list GUI packages
 eget list --gui
-# query repo info
-eget query owner/repo
-eget query --action releases --limit 5 owner/repo
-eget query --action assets --tag v1.2.3 owner/repo
-# search GitHub repositories
-eget search ripgrep
-eget search skillc language:rust user:inhere
-eget search --limit 5 --sort stars --order desc terminal ui
-eget search --json picoclaw user:sipeed
 # update fzf
 eget update fzf
 eget update --all
 ```
 
-**Config Examples**
+### Config Examples
 
 ```bash
 # config
@@ -128,16 +153,16 @@ eget config set global.target ~/.local/bin
 
 The target argument accepted by `install` and `download` can be:
 
-- `name` in the config packages
-- `owner/repo`
-- GitHub repository URL
+- `name` configured in packages
+- GitHub repository, for example `owner/repo`
+- GitHub repository URL, for example `https://github.com/owner/repo`
 - GitLab target, for example `gitlab:fdroid/fdroidserver` or `gitlab:gitlab.gnome.org/GNOME/gtk`
 - Gitea/Forgejo target, for example `gitea:codeberg.org/forgejo/forgejo`
 - SourceForge target, for example `sourceforge:winmerge` or `sourceforge:winmerge/stable`
-- Direct download URL
-- Local file
+- Direct download URL, for example `https://example.com/file.tar.gz`
+- Local file path, for example `file:///path/to/file`
 
-GitLab and Gitea/Forgejo support currently covers `install`, `download`, and `update` for release assets. The first version does not provide query/search parity, private repository authentication, or automatic provider detection from arbitrary web URLs.
+> Note: GitLab and Gitea/Forgejo support currently covers `install`, `download`, and `update` for release assets. The first version does not provide query/search parity, private repository authentication, or automatic provider detection from arbitrary web URLs.
 
 ## Available Commands
 
@@ -206,14 +231,14 @@ GitLab and Gitea/Forgejo support currently covers `install`, `download`, and `up
 - `--gui`: Install as a GUI application; with `--add`, persist `is_gui = true`. Installer-like assets selected without `--gui` prompt before launch and also persist `is_gui = true` when confirmed with `--add`.
 - `--name`: Override the managed package name; for single executable assets, it also acts as the default output-name hint.
 
-`update` options supports:
+`update` options:
 
 - `--all`: Check managed packages and update only outdated installed packages.
 - `--check`: Check and list outdated installed packages, same as `list --outdated`.
 - `--dry-run`: Preview the update plan without performing installation changes.
 - `--interactive`: Interactively select which managed packages to update.
 
-`query` options supports:
+`query` options:
 
 - `--action`, `-a`: Query action. Supported values: `latest`, `releases`, `assets`, `info`.
 - `--tag`, `-t`: Select the release tag for the `assets` action; defaults to latest when omitted.
@@ -221,7 +246,7 @@ GitLab and Gitea/Forgejo support currently covers `install`, `download`, and `up
 - `--json`, `-j`: Output JSON for scripting or automation.
 - `--prerelease`, `-p`: Include prerelease entries for `latest` and `releases`.
 
-`search` options supports:
+`search` options:
 
 - `--limit`, `-l`: Limit the number of repositories returned. Default: `10`.
 - `--sort`: Sort search results. Supported values: `stars`, `updated`.
@@ -354,7 +379,7 @@ Directory semantics:
 
 The installed-state store also defaults to `~/.config/eget/installed.toml`.
 
-## Build And Test
+## Build and Test
 
 ```bash
 make build
