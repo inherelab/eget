@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/inherelab/eget/internal/source/forge"
 	"github.com/inherelab/eget/internal/source/sourceforge"
 )
 
@@ -56,6 +57,7 @@ const (
 	TargetDirectURL   TargetKind = "direct_url"
 	TargetLocalFile   TargetKind = "local_file"
 	TargetSourceForge TargetKind = "sourceforge"
+	TargetForge       TargetKind = "forge"
 )
 
 var githubURLPattern = regexp.MustCompile(`^(http(s)?://)?github\.com/[\w\-_.,]+/[\w\-_.,]+(.git)?(/)?$`)
@@ -80,6 +82,8 @@ func DetectTargetKind(target string) TargetKind {
 		return TargetLocalFile
 	case sourceforge.IsTarget(target):
 		return TargetSourceForge
+	case forge.IsTarget(target):
+		return TargetForge
 	case IsGitHubURL(target):
 		return TargetGitHubURL
 	case IsURL(target):
