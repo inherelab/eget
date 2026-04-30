@@ -52,7 +52,7 @@
 - Modify: `internal/install/options.go`
 - Modify: `internal/install/options_test.go`
 
-- [ ] **Step 1: 编写 forge target parser 失败测试**
+- [x] **Step 1: 编写 forge target parser 失败测试**
 
 新增 `internal/source/forge/target_test.go`：
 
@@ -117,7 +117,7 @@ func TestIsTarget(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行 parser 测试确认失败**
+- [x] **Step 2: 运行 parser 测试确认失败**
 
 Run:
 
@@ -127,7 +127,7 @@ go test ./internal/source/forge -run 'TestParseTarget|TestIsTarget' -v
 
 Expected: FAIL，原因是 `internal/source/forge` 尚不存在。
 
-- [ ] **Step 3: 实现 target parser**
+- [x] **Step 3: 实现 target parser**
 
 新增 `internal/source/forge/target.go`：
 
@@ -237,7 +237,7 @@ func splitPath(value string) []string {
 }
 ```
 
-- [ ] **Step 4: 添加 target kind 测试**
+- [x] **Step 4: 添加 target kind 测试**
 
 在 `internal/install/options_test.go` 的 `TestDetectTargetKind` cases 中增加：
 
@@ -248,7 +248,7 @@ func splitPath(value string) []string {
 {name: "forgejo target", target: "forgejo:codeberg.org/forgejo/forgejo", want: TargetForge},
 ```
 
-- [ ] **Step 5: 实现 target kind 检测**
+- [x] **Step 5: 实现 target kind 检测**
 
 在 `internal/install/options.go` 导入 forge：
 
@@ -269,7 +269,7 @@ case forge.IsTarget(target):
 	return TargetForge
 ```
 
-- [ ] **Step 6: 运行 target 测试**
+- [x] **Step 6: 运行 target 测试**
 
 Run:
 
@@ -279,7 +279,7 @@ go test ./internal/source/forge ./internal/install -run 'TestParseTarget|TestIsT
 
 Expected: PASS。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add internal/source/forge/target.go internal/source/forge/target_test.go internal/install/options.go internal/install/options_test.go
