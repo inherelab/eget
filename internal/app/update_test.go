@@ -120,7 +120,7 @@ func TestUpdatePackageRejectsUnknownPlainWords(t *testing.T) {
 		},
 	}
 
-	for _, name := range []string{"gitlab", "not-managed"} {
+	for _, name := range []string{"gitlab", "not-managed", "foo/bar/baz"} {
 		t.Run(name, func(t *testing.T) {
 			_, err := svc.UpdatePackage(name, install.Options{})
 			if err == nil || err.Error() != `unknown package "`+name+`"` {
