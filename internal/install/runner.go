@@ -318,13 +318,19 @@ func installerMaterializePath(opts Options, file ExtractedFile) string {
 	if dir == "" {
 		dir = os.TempDir()
 	}
-	name := file.Name
-	if name == "" {
-		name = file.ArchiveName
+
+	rawName := file.Name
+	if rawName == "" {
+		rawName = file.ArchiveName
 	}
-	if name == "" {
-		name = "installer"
+
+	name := "installer"
+	if rawName != "" {
+		if safeName, err := safeArchiveRelativePath(rawName); err == nil && safeName != "" {
+			name = safeName
+		}
 	}
+
 	return filepath.Join(dir, "installers", filepath.Base(name))
 }
 
