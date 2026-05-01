@@ -17,7 +17,6 @@ import (
 
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/util"
-	pb "github.com/schollz/progressbar/v3"
 )
 
 type Options struct {
@@ -266,7 +265,11 @@ func ProxyFuncFor(proxyURL string) (func(*http.Request) (*url.URL, error), error
 	return http.ProxyURL(parsed), nil
 }
 
-func Download(rawURL string, out io.Writer, getbar func(size int64) *pb.ProgressBar, opts Options) error {
+type progressFinisher interface {
+	Finish(...string)
+}
+
+func Download(rawURL string, out io.Writer, getbar func(size int64) io.Writer, opts Options) error {
 	if isLocalFile(rawURL) {
 		file, err := os.Open(rawURL)
 		if err != nil {
@@ -295,7 +298,15 @@ func Download(rawURL string, out io.Writer, getbar func(size int64) *pb.Progress
 	}
 
 	bar := getbar(resp.ContentLength)
+	if bar == nil {
+		bar = io.Discard
+	}
 	_, err = io.Copy(io.MultiWriter(out, bar), resp.Body)
+	if err == nil {
+		if finisher, ok := bar.(progressFinisher); ok {
+			finisher.Finish()
+		}
+	}
 	return err
 }
 

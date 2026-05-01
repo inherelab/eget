@@ -11,12 +11,11 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"time"
 
+	"github.com/gookit/cliui/progress"
 	"github.com/gookit/goutil/x/ccolor"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	"github.com/inherelab/eget/internal/util"
-	pb "github.com/schollz/progressbar/v3"
 )
 
 type RunResult struct {
@@ -343,30 +342,12 @@ func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
 	}
 
 	buf := &bytes.Buffer{}
-	err := Download(url, buf, func(size int64) *pb.ProgressBar {
+	err := Download(url, buf, func(size int64) io.Writer {
 		pbout := r.Stderr
 		if pbout == nil || opts.Quiet {
 			pbout = io.Discard
 		}
-		return pb.NewOptions64(size,
-			pb.OptionSetWriter(pbout),
-			pb.OptionShowBytes(true),
-			pb.OptionSetWidth(10),
-			pb.OptionThrottle(65*time.Millisecond),
-			pb.OptionShowCount(),
-			pb.OptionSpinnerType(14),
-			pb.OptionFullWidth(),
-			pb.OptionSetDescription("⬇️ Downloading"),
-			pb.OptionOnCompletion(func() {
-				fmt.Fprint(pbout, "\n")
-			}),
-			pb.OptionSetTheme(pb.Theme{
-				Saucer:        "=",
-				SaucerHead:    ">",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}))
+		return newDownloadProgress(pbout, size)
 	}, opts)
 	if err != nil {
 		return nil, err
@@ -379,6 +360,18 @@ func (r *InstallRunner) downloadBody(url string, opts Options) ([]byte, error) {
 		}
 	}
 	return body, nil
+}
+
+func newDownloadProgress(out io.Writer, size int64) *progress.Progress {
+	if out == nil {
+		out = io.Discard
+	}
+	p := progress.CustomBar(20, progress.BarStyles[0], size)
+	p.Out = out
+	p.RedrawFreq = 128
+	p.Format = "Downloading [{@bar}] {@curSize}/{@maxSize}"
+	p.Start()
+	return p
 }
 
 func (r *InstallRunner) resolveCandidate(target string, candidates []string) (string, error) {

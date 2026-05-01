@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/inherelab/eget/internal/client"
-	pb "github.com/schollz/progressbar/v3"
 )
 
 type RateLimit = client.RateLimit
@@ -70,7 +69,7 @@ func GetRateLimit(opts Options) (RateLimit, error) {
 	return client.GetRateLimit(ClientOptions(opts))
 }
 
-func Download(url string, out io.Writer, getbar func(size int64) *pb.ProgressBar, opts Options) error {
+func Download(url string, out io.Writer, getbar func(size int64) io.Writer, opts Options) error {
 	restoreDownloadGet := client.SetDownloadGetWithOptionsForTest(func(url string, clientOpts client.Options) (*http.Response, error) {
 		return downloadGetWithOptions(url, opts)
 	})

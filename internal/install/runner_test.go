@@ -12,7 +12,6 @@ import (
 
 	"github.com/gookit/goutil/x/ccolor"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
-	pb "github.com/schollz/progressbar/v3"
 )
 
 func TestCacheFilePath(t *testing.T) {
@@ -117,8 +116,8 @@ func TestDownloadPrintsProxyNoticeForRemoteRequest(t *testing.T) {
 		}, nil
 	}
 
-	err := Download("https://example.com/tool.tar.gz", io.Discard, func(size int64) *pb.ProgressBar {
-		return pb.NewOptions64(size, pb.OptionSetWriter(io.Discard))
+	err := Download("https://example.com/tool.tar.gz", io.Discard, func(size int64) io.Writer {
+		return io.Discard
 	}, Options{ProxyURL: "http://127.0.0.1:7890"})
 	if err != nil {
 		t.Fatalf("Download(): %v", err)
@@ -126,6 +125,53 @@ func TestDownloadPrintsProxyNoticeForRemoteRequest(t *testing.T) {
 
 	if got := notice.String(); !strings.Contains(got, "proxy_url for download request") {
 		t.Fatalf("expected download proxy notice, got %q", got)
+	}
+}
+
+type recordingProgress struct {
+	bytes    int
+	finished bool
+}
+
+func (p *recordingProgress) Write(data []byte) (int, error) {
+	p.bytes += len(data)
+	return len(data), nil
+}
+
+func (p *recordingProgress) Finish(...string) {
+	p.finished = true
+}
+
+func TestDownloadWritesAndFinishesProgressWriter(t *testing.T) {
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 12,
+			Body:          io.NopCloser(strings.NewReader("network-data")),
+		}, nil
+	}
+
+	progress := &recordingProgress{}
+	var out bytes.Buffer
+	err := Download("https://example.com/tool.tar.gz", &out, func(size int64) io.Writer {
+		if size != 12 {
+			t.Fatalf("expected content length 12, got %d", size)
+		}
+		return progress
+	}, Options{})
+	if err != nil {
+		t.Fatalf("Download(): %v", err)
+	}
+	if out.String() != "network-data" {
+		t.Fatalf("expected downloaded body, got %q", out.String())
+	}
+	if progress.bytes != len("network-data") {
+		t.Fatalf("expected progress bytes %d, got %d", len("network-data"), progress.bytes)
+	}
+	if !progress.finished {
+		t.Fatal("expected progress writer to be finished")
 	}
 }
 
@@ -325,8 +371,8 @@ func TestDownloadSkipsProxyNoticeForLocalFile(t *testing.T) {
 	defer func() { proxyNoticeWriter = origNoticeWriter }()
 	proxyNoticeWriter = &notice
 
-	err := Download(localFile, io.Discard, func(size int64) *pb.ProgressBar {
-		return pb.NewOptions64(size, pb.OptionSetWriter(io.Discard))
+	err := Download(localFile, io.Discard, func(size int64) io.Writer {
+		return io.Discard
 	}, Options{ProxyURL: "http://127.0.0.1:7890"})
 	if err != nil {
 		t.Fatalf("Download(local): %v", err)
