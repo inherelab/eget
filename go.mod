@@ -5,9 +5,9 @@ go 1.24.2
 require (
 	github.com/bodgit/sevenzip v1.6.1
 	github.com/gobwas/glob v0.2.3
-	github.com/gookit/cliui v0.2.2
+	github.com/gookit/cliui v0.2.3-0.20260501153104-61c601542d3a
 	github.com/gookit/config/v2 v2.2.7
-	github.com/gookit/goutil v0.7.5-0.20260425113623-3d1cd97ea712
+	github.com/gookit/goutil v0.7.5-0.20260501141109-e40f11079592
 	github.com/klauspost/compress v1.17.11
 	github.com/ulikunitz/xz v0.5.12
 	golang.org/x/sys v0.38.0
@@ -20,7 +20,7 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/gookit/color v1.6.0 // indirect
+	github.com/gookit/color v1.6.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
