@@ -619,7 +619,11 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 						if l.sym {
 							err = os.Symlink(l.oldname, l.newname)
 						} else {
-							err = os.Link(l.oldname, l.newname)
+							oldname, pathErr := safeArchiveOutputPath(to, l.oldname)
+							if pathErr != nil {
+								return fmt.Errorf("extract: %w", pathErr)
+							}
+							err = os.Link(oldname, l.newname)
 						}
 						if err != nil && err != os.ErrExist {
 							return fmt.Errorf("extract: %w", err)
@@ -693,6 +697,17 @@ func safeArchiveRelativePath(name string) (string, error) {
 func validateArchiveLinkTarget(name string) error {
 	_, err := safeArchiveRelativePath(name)
 	return err
+}
+
+func safeArchiveLinkName(name string, typ FileType) (string, error) {
+	if typ != TypeLink && typ != TypeSymlink || name == "" {
+		return name, nil
+	}
+	cleanName, err := safeArchiveRelativePath(name)
+	if err != nil {
+		return "", err
+	}
+	return cleanName, nil
 }
 
 func (b *BinaryChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bool) {
@@ -776,7 +791,15 @@ func (t *TarArchive) Next() (File, error) {
 		}
 		ft := tarft(hdr.Typeflag)
 		if ft != TypeOther {
-			return File{Name: hdr.Name, LinkName: hdr.Linkname, Mode: fs.FileMode(hdr.Mode), Type: ft}, nil
+			name, err := safeArchiveRelativePath(hdr.Name)
+			if err != nil {
+				return File{}, err
+			}
+			linkName, err := safeArchiveLinkName(hdr.Linkname, ft)
+			if err != nil {
+				return File{}, err
+			}
+			return File{Name: name, LinkName: linkName, Mode: fs.FileMode(hdr.Mode), Type: ft}, nil
 		}
 	}
 }
@@ -812,7 +835,11 @@ func (z *ZipArchive) Next() (File, error) {
 	if strings.HasSuffix(f.Name, "/") {
 		typ = TypeDir
 	}
-	return File{Name: f.Name, Mode: f.Mode(), Type: typ}, nil
+	name, err := safeArchiveRelativePath(f.Name)
+	if err != nil {
+		return File{}, err
+	}
+	return File{Name: name, Mode: f.Mode(), Type: typ}, nil
 }
 
 func (z *ZipArchive) ReadAll() ([]byte, error) {
@@ -839,7 +866,11 @@ func (z *SevenZipArchive) Next() (File, error) {
 	if mode.IsDir() {
 		typ = TypeDir
 	}
-	return File{Name: f.Name, Mode: mode, Type: typ}, nil
+	name, err := safeArchiveRelativePath(f.Name)
+	if err != nil {
+		return File{}, err
+	}
+	return File{Name: name, Mode: mode, Type: typ}, nil
 }
 
 func (z *SevenZipArchive) ReadAll() ([]byte, error) {

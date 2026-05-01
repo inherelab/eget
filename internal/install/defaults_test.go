@@ -1,8 +1,10 @@
 package install
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,18 +70,63 @@ func TestArchiveDirectoryExtractRejectsPathTraversal(t *testing.T) {
 	}
 	extractor := NewArchiveExtractor(chooser, NewZipArchive, nil)
 	file, _, err := extractor.Extract(buf.Bytes(), true)
-	if err != nil {
-		t.Fatalf("Extract: %v", err)
-	}
-
-	root := t.TempDir()
-	target := filepath.Join(root, "out", "safe")
-	err = file.Extract(target)
 	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
 		t.Fatalf("expected unsafe archive path error, got %v", err)
 	}
+
+	root := t.TempDir()
+	if file.Extract != nil {
+		t.Fatal("expected no extract function for unsafe archive")
+	}
 	if _, statErr := os.Stat(filepath.Join(root, "evil.txt")); !os.IsNotExist(statErr) {
 		t.Fatalf("expected traversal output to be absent, stat error: %v", statErr)
+	}
+}
+
+func TestTarArchiveNextRejectsPathTraversal(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if err := tw.WriteHeader(&tar.Header{Name: "../evil.txt", Mode: 0o644, Size: int64(len("evil"))}); err != nil {
+		t.Fatalf("write tar header: %v", err)
+	}
+	if _, err := tw.Write([]byte("evil")); err != nil {
+		t.Fatalf("write tar file: %v", err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+
+	ar, err := NewTarArchive(buf.Bytes(), func(r io.Reader) (io.Reader, error) { return r, nil })
+	if err != nil {
+		t.Fatalf("NewTarArchive: %v", err)
+	}
+	_, err = ar.Next()
+	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
+		t.Fatalf("expected unsafe archive path error, got %v", err)
+	}
+}
+
+func TestZipArchiveNextRejectsPathTraversal(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, err := zw.Create("../evil.txt")
+	if err != nil {
+		t.Fatalf("create zip file: %v", err)
+	}
+	if _, err := w.Write([]byte("evil")); err != nil {
+		t.Fatalf("write zip file: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("close zip: %v", err)
+	}
+
+	ar, err := NewZipArchive(buf.Bytes(), nil)
+	if err != nil {
+		t.Fatalf("NewZipArchive: %v", err)
+	}
+	_, err = ar.Next()
+	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
+		t.Fatalf("expected unsafe archive path error, got %v", err)
 	}
 }
 
