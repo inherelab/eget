@@ -223,6 +223,8 @@ eget config set global.target ~/.local/bin
 - `--extract-all`, `--ea`: 提取归档中的全部文件，而不是只选择一个目标文件。
 - `--quiet`: 精简常规输出，适用于脚本或批处理场景。
 
+`install` 和 `download` 还支持 SourceForge 目标的 `--fallback-versions N`。当最新版本目录没有匹配资产时，eget 会最多扫描 `N` 个更旧版本目录，并使用第一个能被当前 `--asset` / `--system` 过滤条件唯一匹配的文件。
+
 > 缓存目录请通过 `config set global.cache_dir ...` 或配置文件中的 `cache_dir` 设置。
 
 `install` 额外支持：

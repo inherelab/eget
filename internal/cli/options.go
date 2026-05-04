@@ -9,17 +9,18 @@ import (
 
 func installOptionsFromInstall(opts *InstallOptions) install.Options {
 	return install.Options{
-		Tag:            opts.Tag,
-		Name:           opts.Name,
-		Source:         opts.Source,
-		Output:         opts.To,
-		OutputExplicit: opts.To != "",
-		System:         opts.System,
-		ExtractFile:    opts.File,
-		All:            opts.All,
-		IsGUI:          opts.GUI,
-		Quiet:          opts.Quiet,
-		Asset:          splitAssetFilters(opts.Asset),
+		Tag:              opts.Tag,
+		Name:             opts.Name,
+		Source:           opts.Source,
+		Output:           opts.To,
+		OutputExplicit:   opts.To != "",
+		System:           opts.System,
+		ExtractFile:      opts.File,
+		All:              opts.All,
+		IsGUI:            opts.GUI,
+		Quiet:            opts.Quiet,
+		FallbackVersions: opts.FallbackVersions,
+		Asset:            splitAssetFilters(opts.Asset),
 	}
 }
 
@@ -58,6 +59,7 @@ func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 		All:    opts.All,
 		Quiet:  opts.Quiet,
 	})
+	base.FallbackVersions = opts.FallbackVersions
 	if hasMultipleFilePatterns(opts.File) {
 		base.All = true
 	}

@@ -223,6 +223,8 @@ The target argument accepted by `install` and `download` can be:
 - `--extract-all`, `--ea`: Extract all files from the archive instead of selecting a single target file.
 - `--quiet`: Reduce normal command output for scripting or batch use.
 
+`install` and `download` also support `--fallback-versions N` for SourceForge targets. When the latest version folder does not contain a matching asset, eget scans up to `N` older version folders and uses the first folder where the current `--asset` / `--system` filters produce a single match.
+
 > Cache behavior is configured via `config set global.cache_dir ...` or the `cache_dir` field in the config file.
 
 `install` additionally supports:

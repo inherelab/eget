@@ -3,6 +3,7 @@ package sourceforge
 import (
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -34,6 +35,31 @@ func LatestVersionFile(files []File) (File, bool) {
 	}
 
 	return latest, found
+}
+
+func sortedVersionDirectories(files []File) []File {
+	versions := make([]File, 0, len(files))
+	for _, file := range files {
+		if file.Type != TypeDirectory {
+			continue
+		}
+		if fileVersion(file) == "" {
+			continue
+		}
+		versions = append(versions, file)
+	}
+	sort.SliceStable(versions, func(i, j int) bool {
+		return compareVersion(fileVersion(versions[i]), fileVersion(versions[j])) > 0
+	})
+	return versions
+}
+
+func fileVersion(file File) string {
+	version := VersionFromText(file.Name)
+	if version == "" && file.FullPath != "" {
+		version = VersionFromText(path.Base(strings.Trim(file.FullPath, "/")))
+	}
+	return version
 }
 
 func compareVersion(left, right string) int {

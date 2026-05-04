@@ -294,6 +294,28 @@ func TestDownloadTargetRunsWithoutRecordingInstalledState(t *testing.T) {
 	}
 }
 
+func TestDownloadTargetForwardsFallbackVersions(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://downloads.sourceforge.net/project/keepass/Translations%202.x/2.59/Ukrainian.zip",
+			ExtractedFiles: []string{"./Ukrainian.zip"},
+		},
+	}
+	svc := Service{Runner: runner}
+
+	_, err := svc.DownloadTarget("sourceforge:keepass/Translations 2.x", install.Options{
+		FallbackVersions: 10,
+		Asset:            []string{"Ukrainian", "zip"},
+	})
+
+	if err != nil {
+		t.Fatalf("download target: %v", err)
+	}
+	if runner.opts.FallbackVersions != 10 {
+		t.Fatalf("expected fallback versions to be forwarded, got %d", runner.opts.FallbackVersions)
+	}
+}
+
 func TestDownloadTargetWithExtractFileRunsExtractionFlow(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

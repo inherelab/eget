@@ -18,6 +18,10 @@ type Finder interface {
 	Find() ([]string, error)
 }
 
+type VersionFallbackFinder interface {
+	FallbackVersionAssets(limit int) ([][]string, error)
+}
+
 type Detector interface {
 	Detect(assets []string) (string, []string, error)
 }

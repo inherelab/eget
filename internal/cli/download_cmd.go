@@ -3,15 +3,16 @@ package cli
 import "github.com/gookit/goutil/cflag/capp"
 
 type DownloadOptions struct {
-	Tag      string
-	System   string
-	To       string
-	File     string
-	Asset    string
-	Source   bool
-	All      bool
-	Quiet    bool
-	Target   string
+	Tag              string
+	System           string
+	To               string
+	File             string
+	Asset            string
+	Source           bool
+	All              bool
+	Quiet            bool
+	FallbackVersions int
+	Target           string
 }
 
 func newDownloadCmd(handler CommandHandler) (*capp.Cmd, func()) {
@@ -34,6 +35,7 @@ func newDownloadCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.BoolVar(&opts.Source, "source", false, "Download source archive")
 	cmd.BoolVar(&opts.All, "extract-all", false, "Extract all files;;ea")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
+	cmd.IntVar(&opts.FallbackVersions, "fallback-versions", 0, "Search older SourceForge version folders when asset is missing")
 	cmd.AddArg("target", "Download target", true, nil)
 	return cmd, func() {
 		*opts = DownloadOptions{}

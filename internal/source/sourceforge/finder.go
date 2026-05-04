@@ -72,6 +72,45 @@ func (f Finder) Find() ([]string, error) {
 	return urls, nil
 }
 
+func (f Finder) FallbackVersionAssets(limit int) ([][]string, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	if strings.TrimSpace(f.Project) == "" {
+		return nil, fmt.Errorf("sourceforge project is required")
+	}
+	if f.Getter == nil {
+		return nil, fmt.Errorf("sourceforge HTTP getter is required")
+	}
+
+	files, err := f.list(strings.Trim(f.Path, "/"))
+	if err != nil {
+		return nil, err
+	}
+	versions := sortedVersionDirectories(files)
+	if len(versions) <= 1 {
+		return nil, nil
+	}
+
+	var groups [][]string
+	attempts := 0
+	for _, version := range versions[1:] {
+		if attempts >= limit {
+			break
+		}
+		attempts++
+		files, err := f.list(version.FullPath)
+		if err != nil {
+			return nil, err
+		}
+		urls := downloadableURLs(files)
+		if len(urls) > 0 {
+			groups = append(groups, urls)
+		}
+	}
+	return groups, nil
+}
+
 func LatestVersion(project, sourcePath string, getter HTTPGetter) (LatestInfo, error) {
 	finder := Finder{Project: project, Path: sourcePath, Getter: getter}
 	files, err := finder.list(strings.Trim(sourcePath, "/"))
@@ -117,7 +156,7 @@ func stableDirectory(files []File) (File, bool) {
 func (f Finder) list(sourcePath string) ([]File, error) {
 	url := "https://sourceforge.net/projects/" + strings.Trim(f.Project, "/") + "/files/"
 	if sourcePath != "" {
-		url += strings.Trim(sourcePath, "/") + "/"
+		url += escapeSourcePath(sourcePath) + "/"
 	}
 
 	verbosef("sourceforge finder request: %s", url)
@@ -154,15 +193,37 @@ func directDownloadURL(file File) string {
 		return file.DownloadURL
 	}
 	parsed, err := url.Parse(file.DownloadURL)
-	if err != nil || parsed.Host != "sourceforge.net" || !strings.HasSuffix(strings.Trim(parsed.Path, "/"), "/download") {
+	if err != nil {
 		return file.DownloadURL
 	}
 
-	project := projectFromDownloadPath(parsed.Path)
-	if project == "" {
-		return file.DownloadURL
+	if parsed.Host == "sourceforge.net" && strings.HasSuffix(strings.Trim(parsed.Path, "/"), "/download") {
+		project := projectFromDownloadPath(parsed.Path)
+		if project != "" {
+			return sourceForgeDownloadURL(project, file.FullPath)
+		}
 	}
-	return "https://downloads.sourceforge.net/project/" + project + "/" + strings.Trim(file.FullPath, "/")
+
+	if parsed.Host == "downloads.sourceforge.net" {
+		project := projectFromDownloadsPath(parsed.Path)
+		if project != "" {
+			return sourceForgeDownloadURL(project, file.FullPath)
+		}
+	}
+
+	return file.DownloadURL
+}
+
+func sourceForgeDownloadURL(project, fullPath string) string {
+	return "https://downloads.sourceforge.net/project/" + url.PathEscape(project) + "/" + escapeSourcePath(fullPath)
+}
+
+func escapeSourcePath(sourcePath string) string {
+	parts := strings.Split(strings.Trim(sourcePath, "/"), "/")
+	for i, part := range parts {
+		parts[i] = url.PathEscape(part)
+	}
+	return strings.Join(parts, "/")
 }
 
 func projectFromDownloadPath(rawPath string) string {
@@ -171,6 +232,14 @@ func projectFromDownloadPath(rawPath string) string {
 		if parts[i] == "projects" {
 			return path.Clean(parts[i+1])
 		}
+	}
+	return ""
+}
+
+func projectFromDownloadsPath(rawPath string) string {
+	parts := strings.Split(strings.Trim(rawPath, "/"), "/")
+	if len(parts) >= 2 && parts[0] == "project" {
+		return path.Clean(parts[1])
 	}
 	return ""
 }

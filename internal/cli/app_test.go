@@ -154,6 +154,48 @@ func TestMain_GUIFlagBindsInstallAndAdd(t *testing.T) {
 	}
 }
 
+func TestMain_FallbackVersionsFlagBindsInstallAndDownload(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"install", []string{"install", "--fallback-versions", "10", "sourceforge:keepass/Translations 2.x"}, "install"},
+		{"download", []string{"download", "--fallback-versions", "10", "sourceforge:keepass/Translations 2.x"}, "download"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := make([]commandCall, 0, 1)
+			handler := func(name string, options any) error {
+				calls = append(calls, commandCall{name: name, options: options})
+				return nil
+			}
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs(tt.args)
+			if err != nil {
+				t.Fatalf("expected %s command to parse, got %v", tt.name, err)
+			}
+			if len(calls) != 1 || calls[0].name != tt.want {
+				t.Fatalf("unexpected routed call: %#v", calls)
+			}
+			switch opts := calls[0].options.(type) {
+			case *InstallOptions:
+				if opts.FallbackVersions != 10 {
+					t.Fatalf("expected install fallback versions 10, got %d", opts.FallbackVersions)
+				}
+			case *DownloadOptions:
+				if opts.FallbackVersions != 10 {
+					t.Fatalf("expected download fallback versions 10, got %d", opts.FallbackVersions)
+				}
+			default:
+				t.Fatalf("unexpected options type %T", calls[0].options)
+			}
+		})
+	}
+}
+
 func TestMain_DownloadRejectsGUIFlag(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

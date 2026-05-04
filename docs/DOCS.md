@@ -213,6 +213,7 @@ CLI > package > repo > global > default
 - `--asset`
 - `--source`
 - `--extract-all` / `--ea`
+- `--fallback-versions`（仅 `install` / `download`，SourceForge 目标在最新版本目录缺少匹配资产时扫描旧版本目录）
 - `--gui`
 - `--quiet`
 

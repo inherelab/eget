@@ -3,18 +3,19 @@ package cli
 import "github.com/gookit/goutil/cflag/capp"
 
 type InstallOptions struct {
-	Tag      string
-	System   string
-	To       string
-	File     string
-	Asset    string
-	Name     string
-	Source   bool
-	All      bool
-	GUI      bool
-	Quiet    bool
-	Add      bool
-	Target   string
+	Tag              string
+	System           string
+	To               string
+	File             string
+	Asset            string
+	Name             string
+	Source           bool
+	All              bool
+	GUI              bool
+	Quiet            bool
+	Add              bool
+	FallbackVersions int
+	Target           string
 }
 
 func newInstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
@@ -40,6 +41,7 @@ func newInstallCmd(handler CommandHandler) (*capp.Cmd, func()) {
 	cmd.BoolVar(&opts.GUI, "gui", false, "Install as GUI application")
 	cmd.BoolVar(&opts.Quiet, "quiet", false, "Quiet output")
 	cmd.BoolVar(&opts.Add, "add", false, "Add installed repo target to managed packages")
+	cmd.IntVar(&opts.FallbackVersions, "fallback-versions", 0, "Search older SourceForge version folders when asset is missing")
 	cmd.AddArg("target", "Installation target", true, nil)
 	return cmd, func() {
 		*opts = InstallOptions{}

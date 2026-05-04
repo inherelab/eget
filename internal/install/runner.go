@@ -93,7 +93,15 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 			return RunResult{}, err
 		}
 	} else if len(candidates) == 0 && err != nil {
-		return RunResult{}, err
+		fallbackURL, fallbackAssets, fallbackErr := r.resolveVersionFallback(finder, detector, opts, err)
+		if fallbackErr != nil {
+			return RunResult{}, fallbackErr
+		}
+		if fallbackURL == "" {
+			return RunResult{}, err
+		}
+		url = fallbackURL
+		assets = fallbackAssets
 	} else if err != nil {
 		return RunResult{}, err
 	}
@@ -217,6 +225,35 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	return result, nil
+}
+
+func (r *InstallRunner) resolveVersionFallback(finder Finder, detector Detector, opts Options, originalErr error) (string, []string, error) {
+	if opts.FallbackVersions <= 0 || !isAssetSelectionMiss(originalErr) {
+		return "", nil, nil
+	}
+	fallback, ok := finder.(VersionFallbackFinder)
+	if !ok {
+		return "", nil, nil
+	}
+	groups, err := fallback.FallbackVersionAssets(opts.FallbackVersions)
+	if err != nil {
+		return "", nil, err
+	}
+	for _, assets := range groups {
+		url, candidates, err := detector.Detect(assets)
+		if len(candidates) == 0 && err == nil {
+			return url, assets, nil
+		}
+	}
+	return "", nil, nil
+}
+
+func isAssetSelectionMiss(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.HasPrefix(msg, "asset `") || msg == "no candidates found"
 }
 
 func selectedFileName(url string, file ExtractedFile) string {

@@ -347,6 +347,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		All:               merged.ExtractAll,
 		Quiet:             merged.Quiet,
 		DownloadOnly:      merged.DownloadOnly,
+		FallbackVersions:  cli.FallbackVersions,
 		UpgradeOnly:       merged.UpgradeOnly,
 		Asset:             append([]string(nil), merged.AssetFilters...),
 		Hash:              merged.ShowHash,

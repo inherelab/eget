@@ -36,6 +36,7 @@ type Options struct {
 	All               bool
 	Quiet             bool
 	DownloadOnly      bool
+	FallbackVersions  int
 	UpgradeOnly       bool
 	Asset             []string
 	Hash              bool
