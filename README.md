@@ -43,7 +43,9 @@ eget <command> --options... arguments...
 **Install from GitHub**:
 
 ```bash
-# install
+# quickly
+eget i ORG/REPO
+# install with tag
 eget install --tag nightly inhere/markview
 # Install and override the executable name
 eget install --name chlog gookit/gitw
@@ -59,7 +61,7 @@ eget install --to ~/.local/bin/fzf junegunn/fzf
 
 ```bash
 # Install a SourceForge project directly
-eget install sourceforge:winmerge --asset x64,PerUser,setup
+eget install --asset x64,PerUser,setup sourceforge:winmerge
 ```
 
 **Install a GitLab/Gitea/Forgejo project**:
@@ -69,7 +71,7 @@ eget install sourceforge:winmerge --asset x64,PerUser,setup
 eget install gitlab:fdroid/fdroidserver
 eget install gitlab:gitlab.gnome.org/GNOME/gtk
 # Install from Gitea/Forgejo-compatible releases
-eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
+eget install --asset linux,amd64 gitea:codeberg.org/forgejo/forgejo
 ```
 
 **Install and record**:
@@ -79,7 +81,7 @@ eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 # Add a SourceForge project as a managed package
-eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,PerUser,setup
+eget add --name winmerge --system windows/amd64 --asset x64,PerUser,setup sourceforge:winmerge
 ```
 
 **Install GUI apps**:

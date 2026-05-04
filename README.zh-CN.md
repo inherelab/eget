@@ -43,6 +43,8 @@ eget <command> --options... arguments...
 **从 GitHub 安装**:
 
 ```bash
+# quickly
+eget i ORG/REPO
 # install
 eget install --tag nightly inhere/markview
 # 安装并指定可执行文件名
@@ -59,7 +61,7 @@ eget install --to ~/.local/bin/fzf junegunn/fzf
 
 ```bash
 # 直接安装 SourceForge 项目
-eget install sourceforge:winmerge --asset x64,PerUser,setup
+eget install --asset x64,PerUser,setup sourceforge:winmerge
 ```
 
 **安装 GitLab/Gitea/Forgejo 项目**:
@@ -69,7 +71,7 @@ eget install sourceforge:winmerge --asset x64,PerUser,setup
 eget install gitlab:fdroid/fdroidserver
 eget install gitlab:gitlab.gnome.org/GNOME/gtk
 # 从 Gitea/Forgejo-compatible releases 安装
-eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
+eget install --asset linux,amd64 gitea:codeberg.org/forgejo/forgejo
 ```
 
 **安装并记录**:
@@ -79,7 +81,7 @@ eget install gitea:codeberg.org/forgejo/forgejo --asset linux,amd64
 eget install --add junegunn/fzf
 eget install --add --name rg BurntSushi/ripgrep
 # 添加 SourceForge 项目为托管包
-eget add sourceforge:winmerge --name winmerge --system windows/amd64 --asset x64,PerUser,setup
+eget add --name winmerge --system windows/amd64 --asset x64,PerUser,setup sourceforge:winmerge
 ```
 
 **安装 GUI 应用**:

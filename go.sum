@@ -76,8 +76,8 @@ github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+
 github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
 github.com/gookit/assert v0.1.1 h1:lh3GcawXe/p+cU7ESTZ5Ui3Sm/x8JWpIis4/1aF0mY0=
 github.com/gookit/assert v0.1.1/go.mod h1:jS5bmIVQZTIwk42uXl4lyj4iaaxx32tqH16CFj0VX2E=
-github.com/gookit/cliui v0.2.3-0.20260501153104-61c601542d3a h1:ZTZfrmACBo7c2hCiHYbY7LnJk9vX/00oCiAzQEXnRHE=
-github.com/gookit/cliui v0.2.3-0.20260501153104-61c601542d3a/go.mod h1:hTUIXTrb0QDaa8i03Asr50CAEyTIzAU5lctLA5xo2og=
+github.com/gookit/cliui v0.2.3 h1:SIoX4PpWVS+855IBCe9L91Nq5hWRiheF3dCAVJcIeog=
+github.com/gookit/cliui v0.2.3/go.mod h1:0Yc4UAvq7hUeJzrfFNcB4f2aAvbFopZ+IRu73h6yM0k=
 github.com/gookit/color v1.6.1 h1:KoTnDxJPRgrL0SoX0f8rCFg2zI0t4E3GZZBMo2nN8LU=
 github.com/gookit/color v1.6.1/go.mod h1:9ACFc7/1IpHGBW8RwuDm/0YEnhg3dwwXpoMsmtyHfjs=
 github.com/gookit/config/v2 v2.2.7 h1:P58/uENzkDp7r7Hp8YSZxOhZ/F5a5Y/AzyhDUkQYa9A=
