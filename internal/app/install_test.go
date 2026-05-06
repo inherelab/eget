@@ -642,9 +642,14 @@ tag = "v1.6.3"
 	if err != nil {
 		t.Fatalf("expand target: %v", err)
 	}
+	globalTarget, err := util.Expand("~/.local/bin")
+	if err != nil {
+		t.Fatalf("expand global target: %v", err)
+	}
 
 	assert.Eq(t, "babarot/gomi", runner.target)
 	assert.Eq(t, expectedTarget, runner.opts.Output)
+	assert.NotEq(t, globalTarget, runner.opts.Output)
 	assert.Eq(t, "v1.6.3", runner.opts.Tag)
 }
 
