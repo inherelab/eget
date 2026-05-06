@@ -610,6 +610,44 @@ asset_filters = ["windows"]
 	}
 }
 
+func TestInstallTargetResolvesManagedPackageRepo(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[global]
+target = "~/.local/bin"
+
+[packages.gomi]
+repo = "babarot/gomi"
+target = "~/managed/bin"
+tag = "v1.6.3"
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/babarot/gomi/releases/download/v1.6.3/gomi.tar.gz",
+			ExtractedFiles: []string{"./gomi"},
+		},
+	}
+	svc := Service{
+		Runner: runner,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	_, err := svc.InstallTarget("babarot/gomi", install.Options{})
+	if err != nil {
+		t.Fatalf("install target: %v", err)
+	}
+
+	expectedTarget, err := util.Expand("~/managed/bin")
+	if err != nil {
+		t.Fatalf("expand target: %v", err)
+	}
+
+	assert.Eq(t, "babarot/gomi", runner.target)
+	assert.Eq(t, expectedTarget, runner.opts.Output)
+	assert.Eq(t, "v1.6.3", runner.opts.Tag)
+}
+
 func TestInstallTargetRejectsManagedPackageWithoutRepo(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [packages.picoclaw]

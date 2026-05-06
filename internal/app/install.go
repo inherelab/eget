@@ -159,11 +159,58 @@ func (s Service) resolveInstallRequest(target string, cli install.Options, prefe
 		return repo, opts, nil
 	}
 
+	if repo, pkg, ok := findPackageByRepo(cfg, target); ok {
+		opts, err := s.resolveInstallOptionsWithConfig(cfg, repo, pkg, cli, preferCacheDir)
+		if err != nil {
+			return "", install.Options{}, err
+		}
+		return repo, opts, nil
+	}
+
 	opts, err := s.resolveInstallOptionsWithConfig(cfg, target, cfgpkg.Section{}, cli, preferCacheDir)
 	if err != nil {
 		return "", install.Options{}, err
 	}
 	return target, opts, nil
+}
+
+func findPackageByRepo(cfg *cfgpkg.File, target string) (string, cfgpkg.Section, bool) {
+	if cfg == nil {
+		return "", cfgpkg.Section{}, false
+	}
+
+	matchedRepo := ""
+	matchedPkg := cfgpkg.Section{}
+	matchCount := 0
+	normalizedTarget, normalizeErr := install.NormalizeRepoTarget(target)
+
+	for _, pkg := range cfg.Packages {
+		repo := util.DerefString(pkg.Repo)
+		if repo == "" {
+			continue
+		}
+		if repo == target {
+			matchCount++
+			matchedRepo = repo
+			matchedPkg = pkg
+			continue
+		}
+		if normalizeErr != nil {
+			continue
+		}
+		normalizedRepo, err := install.NormalizeRepoTarget(repo)
+		if err != nil || normalizedRepo != normalizedTarget {
+			continue
+		}
+		matchCount++
+		matchedRepo = repo
+		matchedPkg = pkg
+	}
+
+	if matchCount != 1 {
+		return "", cfgpkg.Section{}, false
+	}
+	return matchedRepo, matchedPkg, true
 }
 
 func (s Service) DownloadTarget(target string, opts install.Options) (RunResult, error) {
