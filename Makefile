@@ -42,6 +42,9 @@ run: build
 
 DIST_DIR := dist
 DESCRIPTION := "Easy install and download tools from GitHub, SourceForge and more"
+WINDOWS_RESOURCE := $(MAIN_DIR)/resource_windows_amd64.syso
+WINDOWS_VERSIONINFO := $(DIST_DIR)/versioninfo.json
+GOVERSIONINFO := go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
 
 ## build-all: cross-compile for all platforms
 build-all: clean-dist dump-info build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows latest-yaml
@@ -102,7 +105,17 @@ build-darwin-arm64:
 build-windows:
 	@echo "🪟 windows/amd64..."
 	@mkdir -p $(DIST_DIR)
-	@GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-windows-amd64.exe $(MAIN_DIR)
+	@set -e; trap 'rm -f $(WINDOWS_RESOURCE) $(WINDOWS_VERSIONINFO)' EXIT; \
+	printf '{}\n' > $(WINDOWS_VERSIONINFO); \
+	version_nums=$$(printf '%s\n' "$(VERSION)" | sed -E 's/^v?([0-9]+)\.([0-9]+)\.([0-9]+).*/\1 \2 \3/; t; s/.*/0 0 0/'); \
+	set -- $$version_nums; \
+	$(GOVERSIONINFO) -64 -o $(WINDOWS_RESOURCE) \
+		-ver-major $$1 -ver-minor $$2 -ver-patch $$3 -ver-build 0 \
+		-product-ver-major $$1 -product-ver-minor $$2 -product-ver-patch $$3 -product-ver-build 0 \
+		-file-version "$(VERSION)" -product-version "$(VERSION)" \
+		-product-name "$(APP)" -internal-name "$(APP)" -original-name "$(APP).exe" \
+		-description $(DESCRIPTION) $(WINDOWS_VERSIONINFO); \
+	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-windows-amd64.exe $(MAIN_DIR)
 	upx -6 --no-progress $(DIST_DIR)/$(APP)-windows-amd64.exe
 	@echo "   → $(DIST_DIR)/$(APP)-windows-amd64.exe"
 
@@ -121,6 +134,7 @@ release: build-all ## Create release archives for all platforms TODO 还未启�
 ## clean: remove build artifacts
 clean:
 	@rm -f $(BINARY)
+	@rm -f $(WINDOWS_RESOURCE) $(WINDOWS_VERSIONINFO)
 	@rm -rf $(DIST_DIR)
 	@echo "🧹 Cleaned"
 
