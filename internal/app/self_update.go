@@ -77,7 +77,7 @@ func (s SelfUpdateService) Update(opts SelfUpdateOptions) (SelfUpdateResult, err
 	installOpts.Output = output
 	installOpts.OutputExplicit = false
 	installOpts.DownloadOnly = false
-	installOpts.ExtractFile = ""
+	installOpts.ExtractFile = selfUpdateArchiveFileName(goos, goarch)
 	installOpts.Asset = nil
 	installOpts.CacheName = "eget"
 	installOpts.CacheVersion = result.LatestVersion
@@ -90,6 +90,7 @@ func (s SelfUpdateService) Update(opts SelfUpdateOptions) (SelfUpdateResult, err
 		installOpts.Asset = nil
 		installOpts.Tag = ""
 		installOpts.DownloadOnly = true
+		installOpts.ExtractFile = ""
 	}
 
 	downloaded, err := s.Installer.DownloadTarget(downloadTarget, installOpts)
@@ -271,6 +272,10 @@ func selfUpdateDownloadName(goos string) string {
 		return "eget.exe"
 	}
 	return "eget"
+}
+
+func selfUpdateArchiveFileName(goos, goarch string) string {
+	return "eget-" + goos + "-" + goarch + selfUpdateSourceAssetExt(goos)
 }
 
 func selfUpdateExecutableName(goos string) string {

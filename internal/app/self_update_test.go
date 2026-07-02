@@ -105,7 +105,7 @@ func TestSelfUpdateDownloadsExpectedPlatformAsset(t *testing.T) {
 	assert.NoErr(t, err)
 	assert.Eq(t, SelfUpdateRepo, installer.target)
 	assert.Eq(t, "linux/amd64", installer.opts.System)
-	assert.Eq(t, "", installer.opts.ExtractFile)
+	assert.Eq(t, "eget-linux-amd64", installer.opts.ExtractFile)
 	assert.False(t, installer.opts.DownloadOnly)
 	assert.Eq(t, "eget", installer.opts.Name)
 	assert.Eq(t, 0, len(installer.opts.Asset))
@@ -233,7 +233,7 @@ func TestSelfUpdateDownloadsWindowsExecutableAsset(t *testing.T) {
 	assert.Eq(t, "windows/amd64", installer.opts.System)
 	assert.Eq(t, "eget.exe", installer.opts.Name)
 	assert.False(t, installer.opts.DownloadOnly)
-	assert.Eq(t, "", installer.opts.ExtractFile)
+	assert.Eq(t, "eget-windows-amd64.exe", installer.opts.ExtractFile)
 }
 
 func TestSelfUpdateReplacesExecutable(t *testing.T) {
