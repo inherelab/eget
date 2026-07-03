@@ -96,6 +96,21 @@ func TestSafeArchiveRelativePathNormalizesBackslashes(t *testing.T) {
 	}
 }
 
+func TestSafeArchiveRelativePathStripsAbsoluteMemberRoot(t *testing.T) {
+	got, err := safeArchiveRelativePath(`/home/runner/work/app/bin/tool`)
+	if err != nil {
+		t.Fatalf("safe archive path: %v", err)
+	}
+	assert.Eq(t, filepath.Join("home", "runner", "work", "app", "bin", "tool"), got)
+
+	root := t.TempDir()
+	out, err := safeArchiveOutputPath(root, `/home/runner/work/app/bin/tool`)
+	if err != nil {
+		t.Fatalf("safe archive output path: %v", err)
+	}
+	assert.Eq(t, filepath.Join(root, "home", "runner", "work", "app", "bin", "tool"), out)
+}
+
 func TestArchiveExtractorExtractAllToPreservesEmptyDirsAndTimestamps(t *testing.T) {
 	pluginTime := time.Date(2024, 1, 2, 3, 4, 4, 0, time.UTC)
 	fileTime := time.Date(2024, 2, 3, 4, 5, 6, 0, time.UTC)
@@ -410,6 +425,36 @@ func TestArchiveExtractorExtractAllToWithOptionsStripsComponents(t *testing.T) {
 	}
 }
 
+func TestArchiveExtractorExtractAllToWithOptionsStripsAbsoluteEntryRoot(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	name := "/home/runner/work/AionUi/AionUi/resources/app/bin/aionui"
+	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len("app"))}); err != nil {
+		t.Fatalf("write tar header: %v", err)
+	}
+	if _, err := tw.Write([]byte("app")); err != nil {
+		t.Fatalf("write tar file: %v", err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+
+	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
+	root := t.TempDir()
+	filesOut, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 5})
+	if err != nil {
+		t.Fatalf("extract all with strip: %v", err)
+	}
+	assert.Eq(t, []string{filepath.Join(root, "resources", "app", "bin", "aionui")}, filesOut)
+
+	data, err := os.ReadFile(filepath.Join(root, "resources", "app", "bin", "aionui"))
+	assert.NoErr(t, err)
+	assert.Eq(t, "app", string(data))
+	if _, err := os.Stat(filepath.Join(string(os.PathSeparator), "home", "runner", "work", "AionUi", "AionUi", "resources", "app", "bin", "aionui")); err == nil {
+		t.Fatal("absolute archive path was written outside the extraction root")
+	}
+}
+
 func TestArchiveExtractorExtractAllToWithOptionsAllowsSafeRelativeHardlinkTarget(t *testing.T) {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
@@ -434,6 +479,23 @@ func TestArchiveExtractorExtractAllToWithOptionsAllowsSafeRelativeHardlinkTarget
 	data, err := os.ReadFile(filepath.Join(root, "legal", "java.desktop", "LICENSE"))
 	assert.NoErr(t, err)
 	assert.Eq(t, "license", string(data))
+}
+
+func TestArchiveExtractorExtractAllToWithOptionsRejectsAbsoluteHardlinkTarget(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if err := tw.WriteHeader(&tar.Header{Name: "pkg/bin/tool", Typeflag: tar.TypeLink, Linkname: "/etc/passwd", Mode: 0o644}); err != nil {
+		t.Fatalf("write tar link header: %v", err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+
+	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
+	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
+	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
+		t.Fatalf("expected unsafe archive path error, got %v", err)
+	}
 }
 
 func TestArchiveExtractorExtractAllToWithOptionsRejectsEscapingRelativeHardlinkTarget(t *testing.T) {

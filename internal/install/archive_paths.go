@@ -26,7 +26,10 @@ func archivePathForCompare(name string) string {
 }
 
 func safeArchiveRelativePath(name string) (string, error) {
-	name = archivePathForCompare(name)
+	name, err := archiveMemberPathForWrite(name)
+	if err != nil {
+		return "", err
+	}
 	cleanName := filepath.Clean(filepath.FromSlash(name))
 	if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(os.PathSeparator)) || cleanName == ".." || filepath.VolumeName(cleanName) != "" {
 		return "", fmt.Errorf("unsafe archive path %q", name)
@@ -38,12 +41,28 @@ func safeArchiveOutputPath(output, name string) (string, error) {
 	if output == "" {
 		output = "."
 	}
-	name = archivePathForCompare(name)
-	cleanName := filepath.Clean(filepath.FromSlash(name))
-	if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(os.PathSeparator)) || cleanName == ".." || filepath.VolumeName(cleanName) != "" {
-		return "", fmt.Errorf("unsafe archive path %q", name)
+	cleanName, err := safeArchiveRelativePath(name)
+	if err != nil {
+		return "", err
 	}
 	return filepath.Join(output, cleanName), nil
+}
+
+func archiveMemberPathForWrite(name string) (string, error) {
+	name = strings.ReplaceAll(name, `\`, "/")
+	if archivePathHasWindowsVolume(name) || strings.HasPrefix(name, "//") {
+		return "", fmt.Errorf("unsafe archive path %q", archivePathForCompare(name))
+	}
+	name = strings.TrimLeft(name, "/")
+	name = path.Clean(name)
+	if name == "." || name == ".." || strings.HasPrefix(name, "../") || archivePathHasWindowsVolume(name) {
+		return "", fmt.Errorf("unsafe archive path %q", name)
+	}
+	return name, nil
+}
+
+func archivePathHasWindowsVolume(name string) bool {
+	return len(name) >= 2 && name[1] == ':' && (name[0] >= 'A' && name[0] <= 'Z' || name[0] >= 'a' && name[0] <= 'z')
 }
 
 func validateArchiveLinkTarget(name string) error {
@@ -59,7 +78,11 @@ func safeArchiveLinkName(name string, typ FileType) (string, error) {
 }
 
 func safeArchiveLinkTarget(name string) (string, error) {
-	name = archivePathForCompare(name)
+	name = strings.ReplaceAll(name, `\`, "/")
+	if strings.HasPrefix(name, "/") || archivePathHasWindowsVolume(name) {
+		return "", fmt.Errorf("unsafe archive path %q", archivePathForCompare(name))
+	}
+	name = path.Clean(name)
 	cleanName := filepath.Clean(filepath.FromSlash(name))
 	if cleanName == "." || filepath.IsAbs(cleanName) || filepath.VolumeName(cleanName) != "" {
 		return "", fmt.Errorf("unsafe archive path %q", name)
