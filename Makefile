@@ -44,6 +44,7 @@ DIST_DIR := dist
 DESCRIPTION := "Easy install and download tools from GitHub, SourceForge and more"
 WINDOWS_RESOURCE := $(MAIN_DIR)/resource_windows_amd64.syso
 WINDOWS_VERSIONINFO := $(DIST_DIR)/versioninfo.json
+WINDOWS_MANIFEST := $(MAIN_DIR)/eget.exe.manifest
 GOVERSIONINFO := go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
 
 ## build-all: cross-compile for all platforms
@@ -109,7 +110,7 @@ build-windows:
 	printf '{}\n' > $(WINDOWS_VERSIONINFO); \
 	version_nums=$$(printf '%s\n' "$(VERSION)" | sed -E 's/^v?([0-9]+)\.([0-9]+)\.([0-9]+).*/\1 \2 \3/; t; s/.*/0 0 0/'); \
 	set -- $$version_nums; \
-	$(GOVERSIONINFO) -64 -o $(WINDOWS_RESOURCE) \
+	$(GOVERSIONINFO) -64 -o $(WINDOWS_RESOURCE) -manifest $(WINDOWS_MANIFEST) \
 		-ver-major $$1 -ver-minor $$2 -ver-patch $$3 -ver-build 0 \
 		-product-ver-major $$1 -product-ver-minor $$2 -product-ver-patch $$3 -product-ver-build 0 \
 		-file-version "$(VERSION)" -product-version "$(VERSION)" \
