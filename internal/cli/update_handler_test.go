@@ -165,17 +165,12 @@ func TestHandleUpdatePrintsAlreadyUpToDateTarget(t *testing.T) {
 	assert.Contains(t, got, "v1.2.3")
 }
 
-func TestHandleUpdateRejectsUnimplementedDryRunAndInteractive(t *testing.T) {
+func TestHandleUpdateRejectsUnimplementedDryRun(t *testing.T) {
 	svc := &cliService{}
 
 	err := svc.handleUpdate(&UpdateOptions{DryRun: true, Targets: []string{"junegunn/fzf"}})
 	if err == nil || !strings.Contains(err.Error(), "update --dry-run is not implemented") {
 		t.Fatalf("expected dry-run unsupported error, got %v", err)
-	}
-
-	err = svc.handleUpdate(&UpdateOptions{Interactive: true, Targets: []string{"junegunn/fzf"}})
-	if err == nil || !strings.Contains(err.Error(), "update --interactive is not implemented") {
-		t.Fatalf("expected interactive unsupported error, got %v", err)
 	}
 }
 
@@ -195,6 +190,15 @@ func TestHandleUpdateSelfRejectsAll(t *testing.T) {
 
 	assert.Err(t, err)
 	assert.Contains(t, err.Error(), "update --self cannot be used with --all")
+}
+
+func TestHandleUpdateSelfRejectsInteractive(t *testing.T) {
+	svc := &cliService{}
+
+	err := svc.handleUpdate(&UpdateOptions{Self: true, Interactive: true})
+
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "update --self cannot be used with --interactive")
 }
 
 func TestHandleUpdateSelfRunsSelfUpdateService(t *testing.T) {
@@ -374,6 +378,91 @@ func TestHandleUpdateAllSeparatesMultiplePackageOutput(t *testing.T) {
 	got := ccolor.ClearCode(out.String())
 	assert.Eq(t, 1, countSeparatorLines(got))
 	assert.Eq(t, []string{"fzf", "rg"}, installer.targets)
+}
+
+func TestHandleUpdateInteractiveSelectsOutdatedPackages(t *testing.T) {
+	installer := &fakeUpdateInstallerForCLI{}
+	svc := &cliService{
+		updService: app.UpdateService{
+			Install: installer,
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+				cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"junegunn/fzf":       {Repo: "junegunn/fzf", Tag: "v0.50.0"},
+					"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+				}}, nil
+			},
+			LatestInfo: func(target app.LatestCheckTarget) (app.LatestInfo, error) {
+				switch target.Repo {
+				case "junegunn/fzf":
+					return app.LatestInfo{Tag: "v0.51.0"}, nil
+				case "BurntSushi/ripgrep":
+					return app.LatestInfo{Tag: "v14.0.0"}, nil
+				default:
+					t.Fatalf("unexpected latest tag check for %s", target.Repo)
+					return app.LatestInfo{}, nil
+				}
+			},
+		},
+	}
+
+	origStdin := os.Stdin
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create stdin pipe: %v", err)
+	}
+	os.Stdin = reader
+	defer func() {
+		os.Stdin = origStdin
+		_ = reader.Close()
+	}()
+	if _, err := writer.WriteString("2\n"); err != nil {
+		t.Fatalf("write stdin: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdin writer: %v", err)
+	}
+
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+	origStderr := os.Stderr
+	errReader, errWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create stderr pipe: %v", err)
+	}
+	os.Stderr = errWriter
+	defer func() {
+		os.Stderr = origStderr
+		_ = errReader.Close()
+		_ = errWriter.Close()
+	}()
+
+	err = svc.handleUpdate(&UpdateOptions{Interactive: true, BatchConcurrency: -1})
+	if err != nil {
+		t.Fatalf("handle interactive update: %v", err)
+	}
+	if err := errWriter.Close(); err != nil {
+		t.Fatalf("close stderr writer: %v", err)
+	}
+	rendered, err := io.ReadAll(errReader)
+	if err != nil {
+		t.Fatalf("read stderr: %v", err)
+	}
+	errOut.Write(rendered)
+
+	assert.Eq(t, []string{"rg"}, installer.targets)
+	gotPrompt := ccolor.ClearCode(errOut.String())
+	assert.Contains(t, gotPrompt, "fzf  v0.50.0 -> v0.51.0")
+	assert.Contains(t, gotPrompt, "rg  v13.0.0 -> v14.0.0")
+	assert.NotContains(t, gotPrompt, "junegunn/fzf")
+	assert.NotContains(t, gotPrompt, "BurntSushi/ripgrep")
 }
 
 func countSeparatorLines(text string) int {

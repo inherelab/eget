@@ -22,6 +22,10 @@ func Select(title, filterPrompt string, choices []string) (int, error) {
 	return runSelectIndex(os.Stdin, os.Stderr, readline.New(), title, filterPrompt, choices)
 }
 
+func MultiSelect(title, filterPrompt string, choices []string) ([]int, error) {
+	return runMultiSelectIndexes(os.Stdin, os.Stderr, readline.New(), title, filterPrompt, choices)
+}
+
 func runSelectIndex(in io.Reader, out io.Writer, be backend.Backend, title, filterPrompt string, choices []string) (int, error) {
 	items := make([]interactui.Item, 0, len(choices))
 	for i, choice := range choices {
@@ -50,6 +54,45 @@ func runSelectIndex(in io.Reader, out io.Writer, be backend.Backend, title, filt
 	}
 	picked, err := strconv.Atoi(result.Key)
 	return picked - 1, err
+}
+
+func runMultiSelectIndexes(in io.Reader, out io.Writer, be backend.Backend, title, filterPrompt string, choices []string) ([]int, error) {
+	items := make([]interactui.Item, 0, len(choices))
+	for i, choice := range choices {
+		key := strconv.Itoa(i + 1)
+		items = append(items, interactui.Item{
+			Key:   key,
+			Label: choice,
+			Value: i,
+		})
+	}
+
+	selectUI := interactui.NewMultiSelect(fmt.Sprintf("%s (%d)", title, len(items)), items)
+	selectUI.Filterable = true
+	selectUI.FilterPrompt = filterPrompt
+	selectUI.PageSize = 12
+
+	result, err := selectUI.RunWithIO(context.Background(), be, selectInputReader(in), out)
+	if err != nil {
+		return nil, err
+	}
+	indexes := make([]int, 0, len(result.Values))
+	for _, value := range result.Values {
+		if index, ok := value.(int); ok {
+			indexes = append(indexes, index)
+		}
+	}
+	if len(indexes) == len(result.Values) {
+		return indexes, nil
+	}
+	for _, key := range result.Keys {
+		picked, err := strconv.Atoi(key)
+		if err != nil {
+			return nil, err
+		}
+		indexes = append(indexes, picked-1)
+	}
+	return indexes, nil
 }
 
 func selectInputReader(in io.Reader) io.Reader {

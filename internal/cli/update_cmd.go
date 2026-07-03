@@ -29,7 +29,7 @@ func newUpdateCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.All, "all", "A", false, "Update all managed packages")
 		c.BoolOpt(&opts.Check, "check", "", false, "Check and list outdated installed packages")
 		c.BoolOpt(&opts.DryRun, "dry-run", "", false, "Preview updates without changes")
-		c.BoolOpt(&opts.Interactive, "interactive", "", false, "Interactively choose packages")
+		c.BoolOpt(&opts.Interactive, "interactive", "i", false, "Interactively choose packages")
 		c.BoolOpt(&opts.Self, "self", "", false, "Update eget itself")
 		c.StrOpt(&opts.SelfSource, "self-source", "", "", "Self update source base URL or latest.yaml URL")
 		c.StrOpt(&opts.Tag, "tag", "", "", "Release tag")

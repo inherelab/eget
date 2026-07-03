@@ -3,8 +3,10 @@ package prompts
 import (
 	"io"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/gookit/cliui/interact/backend/readline"
 	"github.com/gookit/goutil/x/assert"
 )
 
@@ -89,4 +91,18 @@ func TestPromptIndexRendersInteractiveSelect(t *testing.T) {
 	assert.Contains(t, got, "Select package resource (2)")
 	assert.Contains(t, got, "1) first.zip")
 	assert.Contains(t, got, "2) second.zip")
+}
+
+func TestRunMultiSelectIndexesConsumesChoices(t *testing.T) {
+	picked, err := runMultiSelectIndexes(
+		strings.NewReader("1,3\n"),
+		io.Discard,
+		readline.New(),
+		"Select packages",
+		"Filter packages",
+		[]string{"fzf  v0.50.0 -> v0.51.0", "rg  v13.0.0 -> v14.0.0", "fd  v9.0.0 -> v10.0.0"},
+	)
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []int{0, 2}, picked)
 }

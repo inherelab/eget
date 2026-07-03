@@ -9,6 +9,7 @@ import (
 	"github.com/gookit/goutil/cliutil"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
+	"github.com/inherelab/eget/internal/cli/prompts"
 )
 
 func (s *cliService) handleUpdate(opts *UpdateOptions) error {
@@ -21,6 +22,9 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		}
 		if opts.BatchConcurrency > 0 {
 			return fmt.Errorf("--batch can only be used with --all")
+		}
+		if opts.Interactive {
+			return fmt.Errorf("update --self cannot be used with --interactive")
 		}
 		if s.selfUpdateService == nil {
 			return fmt.Errorf("self update service is required")
@@ -51,33 +55,15 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 	if opts.DryRun {
 		return fmt.Errorf("update --dry-run is not implemented")
 	}
-	if opts.Interactive {
-		return fmt.Errorf("update --interactive is not implemented")
-	}
 	installOpts := s.applyGlobalFlags(installOptionsFromUpdate(opts))
-	if opts.All {
-		ccolor.Infoln("🚀 Checking outdated packages")
-		s.printOutdatedProxyNotice()
-		reporter := newOutdatedProgressReporter(s.stderrWriter(), !appVerbose())
-		cacheNotices := &apiCacheNoticeCounter{}
-		restoreNotices := suppressOutdatedNetworkNotices(cacheNotices)
-		defer restoreNotices()
-		prevOnDone := s.updService.OnCheckDone
-		s.updService.OnCheckDone = reporter.OnCheckDone
-		defer func() {
-			s.updService.OnCheckDone = prevOnDone
-		}()
-
-		items, failures, checked, err := s.updService.ListUpdateCandidates()
-		reporter.Finish()
+	if opts.All || opts.Interactive {
+		var targets []string
+		if opts.Interactive && !opts.All {
+			targets = opts.Targets
+		}
+		items, err := s.updateCandidatesForPrompt(targets)
 		if err != nil {
 			return err
-		}
-		s.printAPICacheSummary(cacheNotices.Count())
-		ccolor.Successf("✅ Checked %d packages\n", checked)
-
-		for _, failure := range failures {
-			ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
 		}
 		if len(items) == 0 {
 			ccolor.Cyanln("🎉 No outdated packages found")
@@ -90,6 +76,18 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 			rows = append(rows, []any{item.Name, item.Repo, item.InstalledTag, item.LatestTag})
 		}
 		ccolor.Print(cliutil.FormatTable(cols, rows, cliutil.MinimalStyle))
+
+		if opts.Interactive {
+			selected, err := selectInteractiveUpdateCandidates(items)
+			if err != nil {
+				return err
+			}
+			if len(selected) == 0 {
+				ccolor.Cyanln("No packages selected")
+				return nil
+			}
+			items = selected
+		}
 
 		ccolor.Magentaf("\n🪄🚀 Updating %d packages:\n", len(items))
 		if opts.BatchConcurrency < 0 {
@@ -129,6 +127,61 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		return fmt.Errorf("%d update failed", len(failures))
 	}
 	return nil
+}
+
+func (s *cliService) updateCandidatesForPrompt(targets []string) ([]app.OutdatedItem, error) {
+	ccolor.Infoln("🚀 Checking outdated packages")
+	s.printOutdatedProxyNotice()
+	reporter := newOutdatedProgressReporter(s.stderrWriter(), !appVerbose())
+	cacheNotices := &apiCacheNoticeCounter{}
+	restoreNotices := suppressOutdatedNetworkNotices(cacheNotices)
+	defer restoreNotices()
+	prevOnDone := s.updService.OnCheckDone
+	s.updService.OnCheckDone = reporter.OnCheckDone
+	defer func() {
+		s.updService.OnCheckDone = prevOnDone
+	}()
+
+	var (
+		items    []app.OutdatedItem
+		failures []app.OutdatedCheckFailure
+		checked  int
+		err      error
+	)
+	if len(targets) > 0 {
+		items, failures, checked, err = s.updService.ListUpdateCandidatesForTargets(targets)
+	} else {
+		items, failures, checked, err = s.updService.ListUpdateCandidates()
+	}
+	reporter.Finish()
+	if err != nil {
+		return nil, err
+	}
+	s.printAPICacheSummary(cacheNotices.Count())
+	ccolor.Successf("✅ Checked %d packages\n", checked)
+
+	for _, failure := range failures {
+		ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
+	}
+	return items, nil
+}
+
+func selectInteractiveUpdateCandidates(items []app.OutdatedItem) ([]app.OutdatedItem, error) {
+	choices := make([]string, 0, len(items))
+	for _, item := range items {
+		choices = append(choices, fmt.Sprintf("%s  %s -> %s", item.Name, item.InstalledTag, item.LatestTag))
+	}
+	indexes, err := prompts.MultiSelect("Select packages to update", "Filter packages", choices)
+	if err != nil {
+		return nil, err
+	}
+	selected := make([]app.OutdatedItem, 0, len(indexes))
+	for _, index := range indexes {
+		if index >= 0 && index < len(items) {
+			selected = append(selected, items[index])
+		}
+	}
+	return selected, nil
 }
 
 func printUpdateSeparator(index int) {
