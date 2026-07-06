@@ -5,7 +5,6 @@ import (
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
-	"github.com/inherelab/eget/internal/util"
 )
 
 func (s UpdateService) ListUpdateCandidates() ([]OutdatedItem, []OutdatedCheckFailure, int, error) {
@@ -16,15 +15,6 @@ func (s UpdateService) ListUpdateCandidates() ([]OutdatedItem, []OutdatedCheckFa
 	cfg, err := s.loadConfig()
 	if err != nil {
 		return nil, nil, 0, err
-	}
-
-	managedNames := make(map[string]bool, len(cfg.Packages))
-	managedRepos := make(map[string]bool, len(cfg.Packages))
-	for name, pkg := range cfg.Packages {
-		managedNames[name] = true
-		if repo := util.DerefString(pkg.Repo); repo != "" {
-			managedRepos[repo] = true
-		}
 	}
 
 	listService := ListService{
@@ -39,9 +29,7 @@ func (s UpdateService) ListUpdateCandidates() ([]OutdatedItem, []OutdatedCheckFa
 		return nil, nil, 0, err
 	}
 
-	outdated, failures, checked := checkOutdatedItems(items, s.LatestInfo, func(item ListItem) bool {
-		return managedNames[item.Name] || managedRepos[item.Repo]
-	}, batchConcurrencyFromConfig(cfg, install.Options{}), s.OnCheckDone)
+	outdated, failures, checked := checkOutdatedItems(items, s.LatestInfo, nil, batchConcurrencyFromConfig(cfg, install.Options{}), s.OnCheckDone)
 	return outdated, failures, checked, nil
 }
 

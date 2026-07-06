@@ -143,7 +143,7 @@ The core implementation lives in `internal/sdk`:
 
 `list` defaults to installed packages. `list --all` merges managed package definitions and installed records. `list --no-installed` filters that merged view down to configured packages that have no installed-store entry.
 
-`update` checks latest version information before installing. `update --check` is equivalent to the outdated-check path; `update --all` updates managed packages with newer versions.
+`update` checks latest version information before installing. `update --check` is equivalent to the outdated-check path; `update --all` updates installed packages with newer versions, including installed-only records that are not present in `[packages]`.
 
 `update --self` is a special update path. It does not read or write the normal installed package store. By default, it resolves the current executable with `os.Executable()`, downloads the matching raw executable asset from `inherelab/eget` into a temporary self-update path, and replaces the current executable. Windows uses a deferred helper script because a running `.exe` cannot be overwritten.
 

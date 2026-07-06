@@ -93,6 +93,44 @@ func TestUpdateAllPackagesInstallsOnlyOutdatedInstalledPackages(t *testing.T) {
 	assert.Eq(t, "BurntSushi/ripgrep", results[0].Target)
 }
 
+func TestUpdateAllPackagesUpdatesInstalledOnlyPackage(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"microsoft/apm": {
+					Repo:   "microsoft/apm",
+					Target: "microsoft/apm",
+					Tag:    "v0.23.1",
+					Options: map[string]any{
+						"asset": []string{"x86_64", "linux", "gz"},
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "microsoft/apm", target.Repo)
+			return LatestInfo{Tag: "v0.24.0"}, nil
+		},
+	}
+
+	results, err := svc.UpdateAllPackages(install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"microsoft/apm"}, installer.targets)
+	assert.Eq(t, 1, len(results))
+	assert.Eq(t, "apm", results[0].Name)
+	assert.Eq(t, "microsoft/apm", results[0].Target)
+	assert.Eq(t, []string{"x86_64", "linux", "gz"}, installer.options[0].Asset)
+	assert.Eq(t, install.OperationUpdate, installer.options[0].Operation)
+	assert.Eq(t, "v0.23.1", installer.options[0].CurrentVersion)
+	assert.Eq(t, "v0.24.0", installer.options[0].TargetVersion)
+}
+
 func TestUpdateAllPackagesIgnoresConfiguredPackageNames(t *testing.T) {
 	installer := &fakeInstallService{}
 	svc := UpdateService{

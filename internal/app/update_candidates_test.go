@@ -43,6 +43,32 @@ func TestListUpdateCandidatesIgnoresConfiguredPackageNames(t *testing.T) {
 	assert.Eq(t, "rg", items[0].Name)
 }
 
+func TestListUpdateCandidatesIncludesInstalledOnlyEntries(t *testing.T) {
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"microsoft/apm": {Repo: "microsoft/apm", Tag: "v0.23.1"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "microsoft/apm", target.Repo)
+			return LatestInfo{Tag: "v0.24.0"}, nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidates()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "apm", items[0].Name)
+	assert.Eq(t, "v0.24.0", items[0].LatestTag)
+}
+
 func TestListUpdateCandidatesForTargetsChecksOnlyRequestedPackages(t *testing.T) {
 	checkedRepos := make([]string, 0, 2)
 	var checkedMu sync.Mutex
