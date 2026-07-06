@@ -3,6 +3,7 @@ package install
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/gookit/goutil/x/ccolor"
@@ -146,8 +147,9 @@ func assetSelectionSignature(name string) string {
 	tokens := platformTokens(name)
 	kept := make([]string, 0, len(tokens))
 	seen := make(map[string]bool, len(tokens))
+	edges := assetSelectionVersionEdges(name)
 	for _, token := range tokens {
-		if token == "" || versionTokenPattern.MatchString(token) {
+		if token == "" || isAssetSelectionVersionToken(token, edges) {
 			continue
 		}
 		if seen[token] {
@@ -157,6 +159,48 @@ func assetSelectionSignature(name string) string {
 		kept = append(kept, token)
 	}
 	return strings.Join(kept, "\x00")
+}
+
+type assetVersionEdges struct {
+	start map[string]bool
+	end   map[string]bool
+}
+
+var assetVersionPattern = regexp.MustCompile(`v?\d+(?:[._]\d+)+`)
+
+func assetSelectionVersionEdges(name string) assetVersionEdges {
+	edges := assetVersionEdges{
+		start: map[string]bool{},
+		end:   map[string]bool{},
+	}
+	for _, match := range assetVersionPattern.FindAllString(strings.ToLower(name), -1) {
+		parts := strings.FieldsFunc(match, func(r rune) bool {
+			return r == '.' || r == '_'
+		})
+		if len(parts) == 0 {
+			continue
+		}
+		edges.start[parts[0]] = true
+		edges.end[parts[len(parts)-1]] = true
+	}
+	return edges
+}
+
+func isAssetSelectionVersionToken(token string, edges assetVersionEdges) bool {
+	if versionTokenPattern.MatchString(token) {
+		return true
+	}
+	for first := range edges.start {
+		if strings.HasSuffix(token, "_"+first) {
+			return true
+		}
+	}
+	for last := range edges.end {
+		if strings.HasPrefix(token, last+"_") {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizedAssetNameHint(name string) string {

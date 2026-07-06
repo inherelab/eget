@@ -200,6 +200,33 @@ proxy_url = "${PROXY_URL}"
 	assert.Eq(t, "https://example.com/tools/eget/", os.Getenv("EGET_SELF_UPDATE_SOURCE"))
 }
 
+func TestNewCLIServiceIndexesInstalledAssetByRepoAndTarget(t *testing.T) {
+	tmp := t.TempDir()
+	xdgHome := filepath.Join(tmp, ".config")
+	configDir := filepath.Join(xdgHome, "eget")
+	writeCLIFile(t, filepath.Join(configDir, "installed.toml"), `
+[installed.dbx]
+repo = "t8y2/dbx"
+target = "t8y2/dbx"
+asset = "DBX_0.5.42_x64-setup.exe"
+url = "https://github.com/t8y2/dbx/releases/download/v0.5.42/DBX_0.5.42_x64-setup.exe"
+`)
+	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
+	t.Setenv("XDG_CONFIG_HOME", xdgHome)
+
+	svc, err := newCLIService()
+	assert.NoErr(t, err)
+	runner, ok := svc.appService.Runner.(*install.InstallRunner)
+	assert.True(t, ok)
+
+	assets, urls, err := runner.InstalledLoad()
+	assert.NoErr(t, err)
+	assert.Eq(t, "DBX_0.5.42_x64-setup.exe", assets["dbx"])
+	assert.Eq(t, "DBX_0.5.42_x64-setup.exe", assets["t8y2/dbx"])
+	assert.Eq(t, "https://github.com/t8y2/dbx/releases/download/v0.5.42/DBX_0.5.42_x64-setup.exe", urls["t8y2/dbx"])
+}
+
 func TestConfigureVerboseUpdatesVerboseLoggers(t *testing.T) {
 	var out bytes.Buffer
 	configureVerbose(true, &out)

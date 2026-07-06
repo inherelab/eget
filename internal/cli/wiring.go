@@ -56,11 +56,26 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		assets := make(map[string]string, len(cfg.Installed))
-		urls := make(map[string]string, len(cfg.Installed))
+		assets := make(map[string]string, len(cfg.Installed)*3)
+		urls := make(map[string]string, len(cfg.Installed)*3)
 		for repo, entry := range cfg.Installed {
-			assets[repo] = entry.Asset
-			urls[repo] = entry.URL
+			key := storepkg.NormalizeRepoName(repo)
+			assets[key] = entry.Asset
+			urls[key] = entry.URL
+		}
+		for _, entry := range cfg.Installed {
+			for _, key := range []string{entry.Repo, entry.Target} {
+				key = storepkg.NormalizeRepoName(key)
+				if key == "" {
+					continue
+				}
+				if _, ok := assets[key]; !ok {
+					assets[key] = entry.Asset
+				}
+				if _, ok := urls[key]; !ok {
+					urls[key] = entry.URL
+				}
+			}
 		}
 		return assets, urls, nil
 	}

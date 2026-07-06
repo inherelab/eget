@@ -85,6 +85,46 @@ func TestResolveCandidateAutoSelectsPreviousAssetPattern(t *testing.T) {
 	assert.Eq(t, "https://github.com/upx/upx/releases/download/v5.2.0/upx-5.2.0-win64.zip", got)
 }
 
+func TestResolveCandidateAutoSelectsPreviousInstallerVariant(t *testing.T) {
+	runner := &InstallRunner{Stderr: io.Discard}
+	runner.InstalledLoad = func() (map[string]string, map[string]string, error) {
+		return map[string]string{"t8y2/dbx": "DBX_0.5.42_x64-setup.exe"}, nil, nil
+	}
+	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {
+		t.Fatalf("expected previous installer pattern to avoid prompt, got choices %#v", choices)
+		return 0, nil
+	}
+
+	got, err := runner.resolveCandidate("t8y2/dbx", []string{
+		"https://github.com/t8y2/dbx/releases/download/v0.5.45/DBX_0.5.45_x64-setup.exe",
+		"https://github.com/t8y2/dbx/releases/download/v0.5.45/DBX_0.5.45_x64-webview2-offline-setup.exe",
+		"https://github.com/t8y2/dbx/releases/download/v0.5.45/DBX_0.5.45_x64_en-US.msi",
+	}, Options{System: "windows/amd64"}, "v0.5.45")
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "https://github.com/t8y2/dbx/releases/download/v0.5.45/DBX_0.5.45_x64-setup.exe", got)
+}
+
+func TestResolveCandidateKeepsPromptWhenPreviousVariantDiffersByNumberedFeature(t *testing.T) {
+	runner := &InstallRunner{Stderr: io.Discard}
+	runner.InstalledLoad = func() (map[string]string, map[string]string, error) {
+		return map[string]string{"owner/tool": "tool-1.0.0-cuda_11-linux-x86_64.tar.gz"}, nil, nil
+	}
+	prompted := false
+	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {
+		prompted = true
+		return 0, nil
+	}
+
+	_, err := runner.resolveCandidate("owner/tool", []string{
+		"https://example.com/tool-1.1.0-cuda_12-linux-x86_64.tar.gz",
+		"https://example.com/tool-1.1.0-cpu-linux-x86_64.tar.gz",
+	}, Options{System: "linux/amd64"}, "v1.1.0")
+
+	assert.NoErr(t, err)
+	assert.True(t, prompted)
+}
+
 func TestResolveCandidateKeepsPromptForNonToolchainWindowsVariants(t *testing.T) {
 	runner := &InstallRunner{Stderr: io.Discard}
 	prompted := false
