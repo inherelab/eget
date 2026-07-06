@@ -74,6 +74,9 @@ func safeArchiveLinkName(name string, typ FileType) (string, error) {
 	if typ != TypeLink && typ != TypeSymlink || name == "" {
 		return name, nil
 	}
+	if typ == TypeSymlink {
+		return strings.ReplaceAll(name, `\`, "/"), nil
+	}
 	return safeArchiveLinkTarget(name)
 }
 
@@ -100,6 +103,63 @@ func safeArchiveRelativeLinkOutputPath(output, linkOutputPath, linkTarget string
 		return "", fmt.Errorf("unsafe archive path %q", linkTarget)
 	}
 	return target, nil
+}
+
+func archiveSymlinkTargetForOutput(output, linkOutputPath, sourceArchiveName, linkTarget string, stripComponents int) (string, bool) {
+	linkTarget = strings.ReplaceAll(linkTarget, `\`, "/")
+	if target, err := safeArchiveLinkTarget(linkTarget); err == nil {
+		if _, err := safeArchiveRelativeLinkOutputPath(output, linkOutputPath, target); err == nil {
+			return target, true
+		}
+		return "", false
+	}
+	if !strings.HasPrefix(linkTarget, "/") || archivePathHasWindowsVolume(linkTarget) {
+		return "", false
+	}
+
+	sourceDir := archivePathParts(path.Dir(archivePathForCompare(sourceArchiveName)))
+	targetParts := archivePathParts(strings.TrimLeft(linkTarget, "/"))
+	var best []string
+	bestMatch := 0
+	for sourceStart := range sourceDir {
+		for targetStart := range targetParts {
+			match := 0
+			for sourceStart+match < len(sourceDir) &&
+				targetStart+match < len(targetParts) &&
+				sourceDir[sourceStart+match] == targetParts[targetStart+match] {
+				match++
+			}
+			if match >= 2 && match > bestMatch {
+				bestMatch = match
+				best = append(append([]string{}, sourceDir[:sourceStart]...), targetParts[targetStart:]...)
+			}
+		}
+	}
+	if len(best) == 0 {
+		return "", false
+	}
+
+	stripped, ok, err := stripArchivePath(strings.Join(best, "/"), stripComponents)
+	if err != nil || !ok {
+		return "", false
+	}
+	targetOutput, err := safeArchiveOutputPath(output, stripped)
+	if err != nil || filepath.Clean(targetOutput) == filepath.Clean(linkOutputPath) {
+		return "", false
+	}
+	rel, err := filepath.Rel(filepath.Dir(linkOutputPath), targetOutput)
+	if err != nil || rel == "." || rel == "" {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
+}
+
+func archivePathParts(name string) []string {
+	name = strings.Trim(archivePathForCompare(name), "/")
+	if name == "." || name == "" {
+		return nil
+	}
+	return strings.Split(name, "/")
 }
 
 func safeArchiveHardlinkOutputPath(output, sourceArchiveName, linkTarget string, stripComponents int) (string, error) {

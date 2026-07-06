@@ -481,6 +481,73 @@ func TestArchiveExtractorExtractAllToWithOptionsAllowsSafeRelativeHardlinkTarget
 	assert.Eq(t, "license", string(data))
 }
 
+func TestArchiveExtractorExtractAllToWithOptionsRewritesAbsoluteSymlinkTarget(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if err := tw.WriteHeader(&tar.Header{Name: "pkg/bin/tool", Mode: 0o755, Size: int64(len("tool"))}); err != nil {
+		t.Fatalf("write tar file header: %v", err)
+	}
+	if _, err := tw.Write([]byte("tool")); err != nil {
+		t.Fatalf("write tar file: %v", err)
+	}
+	if err := tw.WriteHeader(&tar.Header{Name: "pkg/bin/corepack", Typeflag: tar.TypeSymlink, Linkname: "/home/runner/work/app/pkg/bin/tool", Mode: 0o777}); err != nil {
+		t.Fatalf("write tar symlink header: %v", err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+
+	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
+	root := t.TempDir()
+	files, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 1})
+	if err != nil {
+		t.Fatalf("extract all with unsafe symlink: %v", err)
+	}
+	assert.Eq(t, []string{filepath.Join(root, "bin", "tool")}, files)
+	linkTarget, err := os.Readlink(filepath.Join(root, "bin", "corepack"))
+	if err != nil {
+		t.Fatalf("read rewritten symlink: %v", err)
+	}
+	assert.Eq(t, "tool", filepath.ToSlash(linkTarget))
+}
+
+func TestArchiveExtractorExtractAllToWithOptionsSkipsUnmappedAbsoluteSymlinkTarget(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if err := tw.WriteHeader(&tar.Header{Name: "pkg/bin/tool", Mode: 0o755, Size: int64(len("tool"))}); err != nil {
+		t.Fatalf("write tar file header: %v", err)
+	}
+	if _, err := tw.Write([]byte("tool")); err != nil {
+		t.Fatalf("write tar file: %v", err)
+	}
+	if err := tw.WriteHeader(&tar.Header{Name: "pkg/bin/env", Typeflag: tar.TypeSymlink, Linkname: "/usr/bin/env", Mode: 0o777}); err != nil {
+		t.Fatalf("write tar symlink header: %v", err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+
+	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
+	root := t.TempDir()
+	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 1})
+	assert.NoErr(t, err)
+	if _, err := os.Lstat(filepath.Join(root, "bin", "env")); !os.IsNotExist(err) {
+		t.Fatalf("expected unmapped absolute symlink to be skipped, stat err=%v", err)
+	}
+}
+
+func TestArchiveSymlinkTargetForOutputRewritesAionUiBuildPath(t *testing.T) {
+	output := t.TempDir()
+	linkOutput := filepath.Join(output, "bundled-aioncore/linux-x64/managed-resources/node/node-v24.11.0-linux-x64/bin/corepack")
+	sourceArchiveName := "aionui-web/bundled-aioncore/linux-x64/managed-resources/node/node-v24.11.0-linux-x64/bin/corepack"
+	linkTarget := "/home/runner/work/AionUi/AionUi/resources/bundled-aioncore/linux-x64/managed-resources/node/node-v24.11.0-linux-x64/lib/node_modules/corepack/dist/corepack.js"
+
+	got, ok := archiveSymlinkTargetForOutput(output, linkOutput, sourceArchiveName, linkTarget, 1)
+
+	assert.True(t, ok)
+	assert.Eq(t, "../lib/node_modules/corepack/dist/corepack.js", got)
+}
+
 func TestArchiveExtractorExtractAllToWithOptionsRejectsAbsoluteHardlinkTarget(t *testing.T) {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
