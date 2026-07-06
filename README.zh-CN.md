@@ -28,11 +28,11 @@
 - 使用 release 安装脚本
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/inherelab/eget/main/.github/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/inherelab/eget/master/.github/install.sh | sh
 ```
 
 ```powershell
-iwr https://raw.githubusercontent.com/inherelab/eget/main/.github/install.ps1 -UseB | iex
+iwr https://raw.githubusercontent.com/inherelab/eget/master/.github/install.ps1 -UseB | iex
 ```
 
 - 从 Releases 下载安装 [https://github.com/inherelab/eget/releases](https://github.com/inherelab/eget/releases)
