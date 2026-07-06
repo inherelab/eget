@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
@@ -111,6 +112,20 @@ func TestMain_GlobalVerboseFlagAppearsInAppHelp(t *testing.T) {
 	assert.Contains(t, help, "--no-proxy")
 	assert.Contains(t, help, "--verbose")
 	assert.Contains(t, help, "-v")
+}
+
+func TestCommonCommandsIncludeHelpExamples(t *testing.T) {
+	app := newApp(nil, io.Discard, io.Discard)
+	for _, name := range []string{"install", "download", "add", "update", "list", "show", "uninstall"} {
+		t.Run(name, func(t *testing.T) {
+			cmd := app.inner.GetCommand(name)
+			if cmd == nil {
+				t.Fatalf("expected command %q", name)
+			}
+			assert.Contains(t, cmd.Help, "<info>Examples</>")
+			assert.Contains(t, cmd.Help, "eget "+name)
+		})
+	}
 }
 
 func TestMain_GlobalVerboseFlagResetsBetweenRuns(t *testing.T) {

@@ -137,9 +137,58 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 }
 
 func (a *App) add(cmd *gcli.Command, reset func()) {
+	if cmd.Help == "" {
+		cmd.Help = commonCommandHelp(cmd.Name)
+	}
 	a.inner.Add(cmd)
 	a.commands = append(a.commands, cmd)
 	a.resetters = append(a.resetters, reset)
+}
+
+func commonCommandHelp(name string) string {
+	switch name {
+	case "install":
+		return `<info>Examples</>:
+  eget install sharkdp/fd
+  eget install t8y2/dbx --gui --install-mode installer
+  eget install iOfficeAI/AionUi --asset "x86_64,linux,gz" --extract-all --strip-components 1 --to ~/Downloads/AionUi
+  eget install inhere/markview --add --name markview`
+	case "download":
+		return `<info>Examples</>:
+  eget download sharkdp/fd
+  eget download gookit/gitw --tag v0.3.6 --asset "linux,amd64,tar.gz"
+  eget download sourceforge:keepass/Translations --fallback-versions 10 --asset German.zip --to ./downloads`
+	case "add":
+		return `<info>Examples</>:
+  eget add sharkdp/fd
+  eget add t8y2/dbx --name dbx --gui
+  eget add iOfficeAI/AionUi --asset "x86_64,linux,gz" --extract-all --strip-components 1 --to ~/Downloads/AionUi`
+	case "update":
+		return `<info>Examples</>:
+  eget update sshc
+  eget update --check
+  eget update --all
+  eget update --all --dry-run
+  eget update --self`
+	case "list":
+		return `<info>Examples</>:
+  eget list
+  eget list --all
+  eget list --outdated
+  eget list --gui
+  eget list --info sshc`
+	case "show":
+		return `<info>Examples</>:
+  eget show sshc
+  eget show sharkdp/fd`
+	case "uninstall":
+		return `<info>Examples</>:
+  eget uninstall sshc markview
+  eget uninstall sshc --yes
+  eget uninstall sshc --purge`
+	default:
+		return ""
+	}
 }
 
 func (a *App) RunWithArgs(args []string) error {
