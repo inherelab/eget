@@ -601,6 +601,37 @@ func TestArchiveExtractorExtractAllToWithOptionsRejectsAllSkippedEntries(t *test
 	}
 }
 
+func TestArchiveExtractorExtractAllSkipsTarRootDirectoryEntry(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if err := tw.WriteHeader(&tar.Header{Name: "./", Typeflag: tar.TypeDir, Mode: 0o755}); err != nil {
+		t.Fatalf("write tar root dir header: %v", err)
+	}
+	body := "app"
+	if err := tw.WriteHeader(&tar.Header{Name: "UniGetUI/UniGetUI", Mode: 0o755, Size: int64(len(body))}); err != nil {
+		t.Fatalf("write tar file header: %v", err)
+	}
+	if _, err := tw.Write([]byte(body)); err != nil {
+		t.Fatalf("write tar file: %v", err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+
+	output := t.TempDir()
+	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
+	extracted, err := extractor.ExtractAllTo(buf.Bytes(), output)
+	if err != nil {
+		t.Fatalf("extract all: %v", err)
+	}
+
+	want := filepath.Join(output, "UniGetUI", "UniGetUI")
+	assert.Eq(t, []string{want}, extracted)
+	data, err := os.ReadFile(want)
+	assert.NoErr(t, err)
+	assert.Eq(t, body, string(data))
+}
+
 func TestTarArchiveNextRejectsPathTraversal(t *testing.T) {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)

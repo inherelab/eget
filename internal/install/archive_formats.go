@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"strings"
 	"time"
 	"unicode"
@@ -63,6 +64,9 @@ func (t *TarArchive) Next() (File, error) {
 		}
 		ft := tarft(hdr.Typeflag)
 		if ft != TypeOther {
+			if ft == TypeDir && archiveRootDirectoryEntry(hdr.Name) {
+				continue
+			}
 			name, err := safeArchiveRelativePath(hdr.Name)
 			if err != nil {
 				return File{}, err
@@ -97,20 +101,26 @@ func NewSevenZipArchive(data []byte, d DecompFn) (Archive, error) {
 }
 
 func (z *ZipArchive) Next() (File, error) {
-	z.idx++
-	if z.idx < 0 || z.idx >= len(z.r.File) {
-		return File{}, io.EOF
+	for {
+		z.idx++
+		if z.idx < 0 || z.idx >= len(z.r.File) {
+			return File{}, io.EOF
+		}
+		f := z.r.File[z.idx]
+		typ := TypeNormal
+		if strings.HasSuffix(f.Name, "/") || strings.HasSuffix(f.Name, `\`) || f.FileInfo().IsDir() {
+			typ = TypeDir
+		}
+		rawName := zipFileName(f)
+		if typ == TypeDir && archiveRootDirectoryEntry(rawName) {
+			continue
+		}
+		name, err := safeArchiveRelativePath(rawName)
+		if err != nil {
+			return File{}, err
+		}
+		return File{Name: name, Mode: f.Mode(), ModTime: zipModifiedTime(f), Type: typ}, nil
 	}
-	f := z.r.File[z.idx]
-	typ := TypeNormal
-	if strings.HasSuffix(f.Name, "/") || strings.HasSuffix(f.Name, `\`) || f.FileInfo().IsDir() {
-		typ = TypeDir
-	}
-	name, err := safeArchiveRelativePath(zipFileName(f))
-	if err != nil {
-		return File{}, err
-	}
-	return File{Name: name, Mode: f.Mode(), ModTime: zipModifiedTime(f), Type: typ}, nil
 }
 
 func zipModifiedTime(f *zip.File) time.Time {
@@ -188,21 +198,26 @@ func (z *ZipArchive) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (z *SevenZipArchive) Next() (File, error) {
-	z.idx++
-	if z.idx < 0 || z.idx >= len(z.r.File) {
-		return File{}, io.EOF
+	for {
+		z.idx++
+		if z.idx < 0 || z.idx >= len(z.r.File) {
+			return File{}, io.EOF
+		}
+		f := z.r.File[z.idx]
+		mode := f.Mode()
+		typ := TypeNormal
+		if mode.IsDir() {
+			typ = TypeDir
+		}
+		if typ == TypeDir && archiveRootDirectoryEntry(f.Name) {
+			continue
+		}
+		name, err := safeArchiveRelativePath(f.Name)
+		if err != nil {
+			return File{}, err
+		}
+		return File{Name: name, Mode: mode, ModTime: sevenZipModTime(f), Type: typ}, nil
 	}
-	f := z.r.File[z.idx]
-	mode := f.Mode()
-	typ := TypeNormal
-	if mode.IsDir() {
-		typ = TypeDir
-	}
-	name, err := safeArchiveRelativePath(f.Name)
-	if err != nil {
-		return File{}, err
-	}
-	return File{Name: name, Mode: mode, ModTime: sevenZipModTime(f), Type: typ}, nil
 }
 
 func (z *SevenZipArchive) ReadAll() ([]byte, error) {
@@ -252,6 +267,11 @@ func zipFileName(f *zip.File) string {
 		}
 	}
 	return bestName
+}
+
+func archiveRootDirectoryEntry(name string) bool {
+	name = strings.ReplaceAll(name, `\`, "/")
+	return path.Clean(strings.Trim(name, "/")) == "."
 }
 
 func legacyZipNameScore(name string) int {
