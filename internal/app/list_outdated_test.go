@@ -252,6 +252,69 @@ func TestListOutdatedPackagesPassesConfiguredPrereleaseOption(t *testing.T) {
 	assert.Eq(t, 1, checked)
 }
 
+func TestListOutdatedPackagesPreservesExplicitTagChannel(t *testing.T) {
+	tests := []struct {
+		name          string
+		loadConfig    func() (*cfgpkg.File, error)
+		loadInstalled func() (*storepkg.Config, error)
+	}{
+		{
+			name: "installed option tag",
+			loadConfig: func() (*cfgpkg.File, error) {
+				return cfgpkg.NewFile(), nil
+			},
+			loadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"pkgforge/aeris": {
+						Repo: "pkgforge/aeris",
+						Tag:  "nightly",
+						Options: map[string]any{
+							"tag": "nightly",
+						},
+					},
+				}}, nil
+			},
+		},
+		{
+			name: "configured tag",
+			loadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["aeris"] = cfgpkg.Section{
+					Repo: util.StringPtr("pkgforge/aeris"),
+					Tag:  util.StringPtr("nightly"),
+				}
+				return cfg, nil
+			},
+			loadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"pkgforge/aeris": {Repo: "pkgforge/aeris", Tag: "nightly"},
+				}}, nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := ListService{
+				LoadConfig:    tt.loadConfig,
+				LoadInstalled: tt.loadInstalled,
+				LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+					assert.Eq(t, "pkgforge/aeris", target.Repo)
+					assert.Eq(t, "nightly", target.Tag)
+					return LatestInfo{Tag: "nightly"}, nil
+				},
+			}
+
+			items, failures, checked, err := svc.ListOutdatedPackages()
+
+			assert.NoErr(t, err)
+			assert.Eq(t, 0, len(failures))
+			assert.Eq(t, 1, checked)
+			assert.Eq(t, 0, len(items))
+		})
+	}
+}
+
 func TestListOutdatedPackagesChecksForgeRepo(t *testing.T) {
 	svc := ListService{
 		LoadConfig: func() (*cfgpkg.File, error) {

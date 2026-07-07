@@ -178,6 +178,37 @@ func TestListUpdateCandidatesPassesSourcePathToLatestChecker(t *testing.T) {
 	assert.Eq(t, "2.16.44", items[0].LatestTag)
 }
 
+func TestListUpdateCandidatesForTargetsPreservesInstalledTagChannel(t *testing.T) {
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"pkgforge/aeris": {
+					Repo: "pkgforge/aeris",
+					Tag:  "nightly",
+					Options: map[string]any{
+						"tag": "nightly",
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "pkgforge/aeris", target.Repo)
+			assert.Eq(t, "nightly", target.Tag)
+			return LatestInfo{Tag: "nightly"}, nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidatesForTargets([]string{"aeris"})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(items))
+}
+
 func TestListUpdateCandidatesChecksForgeRepo(t *testing.T) {
 	svc := UpdateService{
 		LoadConfig: func() (*cfgpkg.File, error) {

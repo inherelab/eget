@@ -62,6 +62,7 @@ type LatestCheckTarget struct {
 	Repo       string
 	SourcePath string
 	Package    cfgpkg.Section
+	Tag        string
 	Prerelease bool
 }
 
@@ -150,6 +151,11 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 			}
 			if entry.InstallMode != "" {
 				item.InstallMode = entry.InstallMode
+			}
+			if item.Tag == "" {
+				if tag, ok := stringOption(entry.Options, "tag"); ok {
+					item.Tag = tag
+				}
 			}
 			if prerelease, ok := boolOption(entry.Options, "prerelease"); ok {
 				item.Prerelease = prerelease
@@ -407,6 +413,7 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 		Repo:       item.Repo,
 		SourcePath: item.SourcePath,
 		Package:    item.Package,
+		Tag:        item.Tag,
 		Prerelease: item.Prerelease,
 	})
 	if err != nil {

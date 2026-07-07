@@ -141,6 +141,24 @@ func (c *GitHubClient) LatestRelease(repo string, includePrerelease bool) (Relea
 	}, nil
 }
 
+func (c *GitHubClient) ReleaseInfo(repo, tag string) (string, time.Time, error) {
+	var payload struct {
+		Tag         string    `json:"tag_name"`
+		CreatedAt   time.Time `json:"created_at"`
+		PublishedAt time.Time `json:"published_at"`
+	}
+	if err := c.fetchJSON(fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, url.PathEscape(tag)), "release tag check", &payload); err != nil {
+		return "", time.Time{}, err
+	}
+	if payload.Tag == "" {
+		return "", time.Time{}, fmt.Errorf("release tag is empty")
+	}
+	if payload.PublishedAt.IsZero() {
+		payload.PublishedAt = payload.CreatedAt
+	}
+	return payload.Tag, payload.PublishedAt, nil
+}
+
 func (c *GitHubClient) LatestReleaseInfo(repo string, includePrereleaseOpt ...bool) (string, time.Time, error) {
 	if len(includePrereleaseOpt) > 0 && includePrereleaseOpt[0] {
 		release, err := c.LatestRelease(repo, true)

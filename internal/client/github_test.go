@@ -143,6 +143,21 @@ func TestGitHubClientLatestReleaseInfoCanIncludePrerelease(t *testing.T) {
 	assert.Eq(t, time.Date(2026, 4, 21, 14, 10, 17, 0, time.UTC), publishedAt)
 }
 
+func TestGitHubClientReleaseInfoUsesTagEndpoint(t *testing.T) {
+	var requestedURL string
+	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {
+		requestedURL = rawURL
+		return jsonResponse(http.StatusOK, "200 OK", `{"tag_name":"nightly","published_at":"2026-04-21T14:10:17Z"}`), nil
+	})
+
+	tag, publishedAt, err := client.ReleaseInfo("pkgforge/aeris", "nightly")
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "https://api.github.com/repos/pkgforge/aeris/releases/tags/nightly", requestedURL)
+	assert.Eq(t, "nightly", tag)
+	assert.Eq(t, time.Date(2026, 4, 21, 14, 10, 17, 0, time.UTC), publishedAt)
+}
+
 func TestGitHubClientGetUsesSharedGetter(t *testing.T) {
 	var requestedURL string
 	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {

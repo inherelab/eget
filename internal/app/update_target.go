@@ -71,6 +71,11 @@ func enrichListItemFromInstalledEntry(item *ListItem, entry storepkg.Entry) {
 			item.SourcePath = sfTarget.Path
 		}
 	}
+	if item.Tag == "" {
+		if tag, ok := stringOption(entry.Options, "tag"); ok {
+			item.Tag = tag
+		}
+	}
 	if prerelease, ok := boolOption(entry.Options, "prerelease"); ok {
 		item.Prerelease = prerelease
 	}
