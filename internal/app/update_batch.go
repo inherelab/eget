@@ -1,7 +1,8 @@
 package app
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -36,13 +37,15 @@ func (s UpdateService) UpdateCandidates(candidates []OutdatedItem, cli install.O
 	}
 
 	results := make([]UpdateResult, 0, len(candidates))
+	var failures []error
 	for index, item := range candidates {
 		if s.OnUpdateStart != nil {
 			s.OnUpdateStart(index, len(candidates), item.Name)
 		}
 		result, err := s.UpdatePackage(item.Name, cli)
 		if err != nil {
-			return nil, err
+			failures = append(failures, fmt.Errorf("%s: %w", item.Name, err))
+			continue
 		}
 		results = append(results, UpdateResult{
 			Name:   item.Name,
@@ -50,7 +53,7 @@ func (s UpdateService) UpdateCandidates(candidates []OutdatedItem, cli install.O
 			Result: result,
 		})
 	}
-	return results, nil
+	return results, updateCandidatesError(failures)
 }
 
 func isAppInstallService(installer Installer) bool {
@@ -68,10 +71,10 @@ func (s UpdateService) updateCandidatesConcurrent(candidates []OutdatedItem, cli
 		item  OutdatedItem
 	}
 	results := make([]UpdateResult, len(candidates))
+	ok := make([]bool, len(candidates))
+	var failures []error
+	var mu sync.Mutex
 	jobs := make(chan job)
-	errCh := make(chan error, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	var wg sync.WaitGroup
 	for i := 0; i < batch; i++ {
@@ -79,36 +82,39 @@ func (s UpdateService) updateCandidatesConcurrent(candidates []OutdatedItem, cli
 		go func() {
 			defer wg.Done()
 			for work := range jobs {
-				select {
-				case <-ctx.Done():
-					continue
-				default:
-				}
 				result, err := s.UpdatePackage(work.item.Name, cli)
 				if err != nil {
-					sendFirstError(errCh, err, cancel)
+					mu.Lock()
+					failures = append(failures, fmt.Errorf("%s: %w", work.item.Name, err))
+					mu.Unlock()
 					continue
 				}
+				mu.Lock()
 				results[work.index] = UpdateResult{Name: work.item.Name, Target: work.item.Repo, Result: result}
+				ok[work.index] = true
+				mu.Unlock()
 			}
 		}()
 	}
 
-sendLoop:
 	for index, item := range candidates {
-		select {
-		case <-ctx.Done():
-			break sendLoop
-		case jobs <- job{index: index, item: item}:
-		}
+		jobs <- job{index: index, item: item}
 	}
 	close(jobs)
 	wg.Wait()
 
-	select {
-	case err := <-errCh:
-		return nil, err
-	default:
+	out := make([]UpdateResult, 0, len(candidates)-len(failures))
+	for i, result := range results {
+		if ok[i] {
+			out = append(out, result)
+		}
 	}
-	return results, nil
+	return out, updateCandidatesError(failures)
+}
+
+func updateCandidatesError(failures []error) error {
+	if len(failures) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%d update failed: %w", len(failures), errors.Join(failures...))
 }

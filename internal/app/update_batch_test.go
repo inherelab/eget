@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -129,6 +130,72 @@ func TestUpdateAllPackagesUpdatesInstalledOnlyPackage(t *testing.T) {
 	assert.Eq(t, install.OperationUpdate, installer.options[0].Operation)
 	assert.Eq(t, "v0.23.1", installer.options[0].CurrentVersion)
 	assert.Eq(t, "v0.24.0", installer.options[0].TargetVersion)
+}
+
+func TestUpdateAllPackagesContinuesAfterPackageFailure(t *testing.T) {
+	installer := &fakeInstallService{
+		errs: map[string]error{"aeris": errors.New("asset `\\.xz$` not found")},
+	}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["aeris"] = cfgpkg.Section{Repo: util.StringPtr("pkgforge/aeris")}
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			cfg.Packages["uv"] = cfgpkg.Section{Repo: util.StringPtr("astral-sh/uv")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"pkgforge/aeris":     {Repo: "pkgforge/aeris", Tag: "nightly"},
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+				"astral-sh/uv":       {Repo: "astral-sh/uv", Tag: "v0.7.0"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			return LatestInfo{Tag: "v99.0.0"}, nil
+		},
+	}
+
+	results, err := svc.UpdateAllPackages(install.Options{BatchConcurrency: 1, BatchConcurrencySet: true})
+
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "1 update failed")
+	assert.Eq(t, []string{"aeris", "rg", "uv"}, installer.targets)
+	assert.Eq(t, 2, len(results))
+}
+
+func TestUpdateAllPackagesConcurrentContinuesAfterPackageFailure(t *testing.T) {
+	installer := &fakeInstallService{
+		errs: map[string]error{"aeris": errors.New("asset `\\.xz$` not found")},
+	}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["aeris"] = cfgpkg.Section{Repo: util.StringPtr("pkgforge/aeris")}
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			cfg.Packages["uv"] = cfgpkg.Section{Repo: util.StringPtr("astral-sh/uv")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"pkgforge/aeris":     {Repo: "pkgforge/aeris", Tag: "nightly"},
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+				"astral-sh/uv":       {Repo: "astral-sh/uv", Tag: "v0.7.0"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			return LatestInfo{Tag: "v99.0.0"}, nil
+		},
+	}
+
+	results, err := svc.UpdateAllPackages(install.Options{BatchConcurrency: 2})
+
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "1 update failed")
+	assert.Eq(t, []string{"aeris", "rg", "uv"}, sortedStrings(installer.targets))
+	assert.Eq(t, 2, len(results))
 }
 
 func TestUpdateAllPackagesIgnoresConfiguredPackageNames(t *testing.T) {

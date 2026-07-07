@@ -12,6 +12,7 @@ type fakeInstallService struct {
 	options   []install.Options
 	result    RunResult
 	err       error
+	errs      map[string]error
 	active    int
 	maxActive int
 	block     chan struct{}
@@ -35,6 +36,11 @@ func (f *fakeInstallService) InstallTarget(target string, opts install.Options, 
 	f.mu.Lock()
 	f.active--
 	f.mu.Unlock()
+	if f.errs != nil {
+		if err := f.errs[target]; err != nil {
+			return RunResult{}, err
+		}
+	}
 	return f.result, f.err
 }
 
