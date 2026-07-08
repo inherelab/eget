@@ -148,6 +148,21 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 		var err error
 		if target.Tag != "" {
 			tag, publishedAt, err = githubClient.ReleaseInfo(repo, target.Tag)
+			if err == nil && target.Asset != "" {
+				if asset, ok, assetErr := githubReleaseAsset(githubClient, repo, target.Tag, target.Asset); assetErr != nil {
+					err = assetErr
+				} else if ok {
+					return app.LatestInfo{
+						Tag:            tag,
+						PublishedAt:    publishedAt,
+						AssetID:        asset.ID,
+						AssetName:      asset.Name,
+						AssetSize:      asset.Size,
+						AssetUpdatedAt: asset.UpdatedAt,
+						AssetDigest:    asset.Digest,
+					}, nil
+				}
+			}
 		} else {
 			tag, publishedAt, err = githubClient.LatestReleaseInfo(repo, target.Prerelease)
 		}
@@ -237,6 +252,19 @@ func urlTemplateConfigFromSection(section cfgpkg.Section) urltemplate.Config {
 		LatestJSONPath: util.DerefString(section.LatestJSONPath),
 		VersionRegex:   util.DerefString(section.VersionRegex),
 	}
+}
+
+func githubReleaseAsset(githubClient *client.GitHubClient, repo, tag, assetName string) (client.Asset, bool, error) {
+	assets, err := githubClient.ReleaseAssets(repo, tag)
+	if err != nil {
+		return client.Asset{}, false, err
+	}
+	for _, asset := range assets {
+		if asset.Name == assetName {
+			return asset, true, nil
+		}
+	}
+	return client.Asset{}, false, nil
 }
 
 func configureVerbose(verbose bool, stderr io.Writer) {

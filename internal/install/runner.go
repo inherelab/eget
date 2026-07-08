@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/source/urltemplate"
@@ -14,6 +15,10 @@ type RunResult struct {
 	URL            string
 	Tool           string
 	Asset          string
+	AssetID        int64
+	AssetSize      int64
+	AssetUpdatedAt time.Time
+	AssetDigest    string
 	ExtractedFiles []string
 	IsGUI          bool
 	InstallMode    string
@@ -27,6 +32,10 @@ type Runner interface {
 
 type versionedFinder interface {
 	ReleaseVersion() string
+}
+
+type assetMetadataFinder interface {
+	AssetMetadata(url string) (id, size int64, updatedAt time.Time, digest string, ok bool)
 }
 
 type PromptFunc func(title, filterPrompt string, choices []string) (int, error)
@@ -116,6 +125,14 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		return RunResult{}, err
 	}
 	verbosef("selected asset url: %s", url)
+	assetID, assetSize, assetUpdatedAt, assetDigest, _ := assetMetadata(finder, url)
+	withAssetMetadata := func(result RunResult) RunResult {
+		result.AssetID = assetID
+		result.AssetSize = assetSize
+		result.AssetUpdatedAt = assetUpdatedAt
+		result.AssetDigest = assetDigest
+		return result
+	}
 
 	if _, err := fmt.Fprintf(output, "📦 Asset %s\n", url); err != nil {
 		return RunResult{}, err
@@ -148,7 +165,11 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	if opts.DownloadOnly && opts.ExtractFile == "" && !opts.All {
-		return r.extractDownloadedBody(url, tool, downloaded, opts, output)
+		result, err := r.extractDownloadedBody(url, tool, downloaded, opts, output)
+		if err != nil {
+			return RunResult{}, err
+		}
+		return withAssetMetadata(result), nil
 	}
 
 	if opts.URLTemplate.InstallAction == InstallActionRunAsset {
@@ -160,16 +181,31 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		if err := r.runAsset(assetPath, opts.URLTemplate.InstallArgs); err != nil {
 			return RunResult{}, err
 		}
-		return RunResult{
+		return withAssetMetadata(RunResult{
 			URL:         url,
 			Tool:        tool,
 			Asset:       path.Base(url),
 			InstallMode: InstallModeRunAsset,
 			Version:     opts.URLTemplate.ResolvedVersion,
-		}, nil
+		}), nil
 	}
 
-	return r.extractDownloadedBody(url, tool, downloaded, opts, output)
+	result, err := r.extractDownloadedBody(url, tool, downloaded, opts, output)
+	if err != nil {
+		return RunResult{}, err
+	}
+	return withAssetMetadata(result), nil
+}
+
+func assetMetadata(finder Finder, url string) (id, size int64, updatedAt time.Time, digest string, ok bool) {
+	if finder == nil || url == "" {
+		return 0, 0, time.Time{}, "", false
+	}
+	metaFinder, ok := finder.(assetMetadataFinder)
+	if !ok {
+		return 0, 0, time.Time{}, "", false
+	}
+	return metaFinder.AssetMetadata(url)
 }
 
 func operationDisplayName(operation string) string {

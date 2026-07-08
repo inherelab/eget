@@ -18,22 +18,26 @@ type InstalledLoader interface {
 }
 
 type ListItem struct {
-	Name         string
-	Repo         string
-	SourcePath   string
-	Package      cfgpkg.Section
-	Target       string
-	Tag          string
-	Version      string
-	InstalledTag string
-	Installed    bool
-	InstalledAt  time.Time
-	Asset        string
-	URL          string
-	IsGUI        bool
-	InstallMode  string
-	Prerelease   bool
-	IgnoreUpdate bool
+	Name           string
+	Repo           string
+	SourcePath     string
+	Package        cfgpkg.Section
+	Target         string
+	Tag            string
+	Version        string
+	InstalledTag   string
+	Installed      bool
+	InstalledAt    time.Time
+	Asset          string
+	AssetID        int64
+	AssetSize      int64
+	AssetUpdatedAt time.Time
+	AssetDigest    string
+	URL            string
+	IsGUI          bool
+	InstallMode    string
+	Prerelease     bool
+	IgnoreUpdate   bool
 }
 
 type OutdatedItem struct {
@@ -53,8 +57,13 @@ type OutdatedCheckFailure struct {
 }
 
 type LatestInfo struct {
-	Tag         string
-	PublishedAt time.Time
+	Tag            string
+	PublishedAt    time.Time
+	AssetID        int64
+	AssetName      string
+	AssetSize      int64
+	AssetUpdatedAt time.Time
+	AssetDigest    string
 }
 
 type LatestCheckTarget struct {
@@ -63,6 +72,7 @@ type LatestCheckTarget struct {
 	SourcePath string
 	Package    cfgpkg.Section
 	Tag        string
+	Asset      string
 	Prerelease bool
 }
 
@@ -145,6 +155,10 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 			item.InstalledTag = entry.Tag
 			item.InstalledAt = entry.InstalledAt
 			item.Asset = entry.Asset
+			item.AssetID = entry.AssetID
+			item.AssetSize = entry.AssetSize
+			item.AssetUpdatedAt = entry.AssetUpdatedAt
+			item.AssetDigest = entry.AssetDigest
 			item.URL = entry.URL
 			if entry.IsGUI {
 				item.IsGUI = true
@@ -414,6 +428,7 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 		SourcePath: item.SourcePath,
 		Package:    item.Package,
 		Tag:        item.Tag,
+		Asset:      item.Asset,
 		Prerelease: item.Prerelease,
 	})
 	if err != nil {
@@ -424,7 +439,10 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 		}
 		return outdatedCheckResult{failure: &failure}
 	}
-	if latest.Tag == "" || latest.Tag == item.InstalledTag {
+	if latest.Tag == "" {
+		return outdatedCheckResult{}
+	}
+	if latest.Tag == item.InstalledTag && !explicitTagAssetChanged(item, latest) {
 		return outdatedCheckResult{}
 	}
 
@@ -438,6 +456,25 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 		PublishedAt:  latest.PublishedAt,
 	}
 	return outdatedCheckResult{outdated: &outdated}
+}
+
+func explicitTagAssetChanged(item ListItem, latest LatestInfo) bool {
+	if item.Tag == "" || item.Asset == "" || latest.AssetName == "" || latest.AssetName != item.Asset {
+		return false
+	}
+	if item.AssetDigest != "" && latest.AssetDigest != "" && item.AssetDigest != latest.AssetDigest {
+		return true
+	}
+	if item.AssetID != 0 && latest.AssetID != 0 && item.AssetID != latest.AssetID {
+		return true
+	}
+	if item.AssetSize != 0 && latest.AssetSize != 0 && item.AssetSize != latest.AssetSize {
+		return true
+	}
+	if !item.AssetUpdatedAt.IsZero() && !latest.AssetUpdatedAt.IsZero() && !item.AssetUpdatedAt.Equal(latest.AssetUpdatedAt) {
+		return true
+	}
+	return false
 }
 
 func repoName(repo string) string {

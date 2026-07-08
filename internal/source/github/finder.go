@@ -31,10 +31,17 @@ type Finder interface {
 	Find() ([]string, error)
 }
 
+type releaseAsset struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Size        int64     `json:"size"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Digest      string    `json:"digest"`
+	DownloadURL string    `json:"browser_download_url"`
+}
+
 type Release struct {
-	Assets []struct {
-		DownloadURL string `json:"browser_download_url"`
-	} `json:"assets"`
+	Assets []releaseAsset `json:"assets"`
 
 	Prerelease bool      `json:"prerelease"`
 	Tag        string    `json:"tag_name"`
@@ -70,6 +77,7 @@ type AssetFinder struct {
 	MinTime    time.Time
 	Getter     HTTPGetter
 	tag        string
+	assets     map[string]releaseAsset
 }
 
 var ErrNoUpgrade = errors.New("requested release is not more recent than current version")
@@ -130,10 +138,8 @@ func (f *AssetFinder) Find() ([]string, error) {
 		return nil, ErrNoUpgrade
 	}
 
-	assets := make([]string, 0, len(release.Assets))
-	for _, a := range release.Assets {
-		assets = append(assets, a.DownloadURL)
-	}
+	f.storeReleaseAssets(release.Assets)
+	assets := releaseAssetURLs(release.Assets)
 	verbosef("github finder assets: %d", len(assets))
 
 	return assets, nil
@@ -182,11 +188,8 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 				continue
 			}
 			if strings.Contains(r.Tag, tag) && !r.CreatedAt.Before(f.MinTime) {
-				assets := make([]string, 0, len(r.Assets))
-				for _, a := range r.Assets {
-					assets = append(assets, a.DownloadURL)
-				}
-				return assets, nil
+				f.storeReleaseAssets(r.Assets)
+				return releaseAssetURLs(r.Assets), nil
 			}
 		}
 
@@ -226,6 +229,34 @@ func (f *AssetFinder) getLatestTag() (string, error) {
 	}
 
 	return releases[0].Tag, nil
+}
+
+func releaseAssetURLs(items []releaseAsset) []string {
+	assets := make([]string, 0, len(items))
+	for _, a := range items {
+		assets = append(assets, a.DownloadURL)
+	}
+	return assets
+}
+
+func (f *AssetFinder) storeReleaseAssets(items []releaseAsset) {
+	f.assets = make(map[string]releaseAsset, len(items))
+	for _, item := range items {
+		if item.DownloadURL != "" {
+			f.assets[item.DownloadURL] = item
+		}
+	}
+}
+
+func (f *AssetFinder) AssetMetadata(url string) (id, size int64, updatedAt time.Time, digest string, ok bool) {
+	if f == nil || f.assets == nil {
+		return 0, 0, time.Time{}, "", false
+	}
+	asset, ok := f.assets[url]
+	if !ok {
+		return 0, 0, time.Time{}, "", false
+	}
+	return asset.ID, asset.Size, asset.UpdatedAt, asset.Digest, true
 }
 
 type SourceFinder struct {

@@ -16,6 +16,10 @@ func TestInstallTargetRunsInstallFlowAndRecordsInstalledState(t *testing.T) {
 		result: RunResult{
 			URL:            "https://github.com/junegunn/fzf/releases/download/v1.0.0/fzf.tar.gz",
 			Tool:           "fzf",
+			AssetID:        100,
+			AssetSize:      12,
+			AssetUpdatedAt: now.Add(-30 * time.Minute),
+			AssetDigest:    "sha256:abc",
 			ExtractedFiles: []string{"./fzf"},
 		},
 	}
@@ -78,6 +82,10 @@ func TestInstallTargetRunsInstallFlowAndRecordsInstalledState(t *testing.T) {
 	if store.entry.Tag != "v1.0.0" {
 		t.Fatalf("expected tag v1.0.0, got %q", store.entry.Tag)
 	}
+	assert.Eq(t, int64(100), store.entry.AssetID)
+	assert.Eq(t, int64(12), store.entry.AssetSize)
+	assert.Eq(t, now.Add(-30*time.Minute), store.entry.AssetUpdatedAt)
+	assert.Eq(t, "sha256:abc", store.entry.AssetDigest)
 	if store.entry.InstalledAt != now {
 		t.Fatalf("expected installed at %v, got %v", now, store.entry.InstalledAt)
 	}

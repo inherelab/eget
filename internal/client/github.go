@@ -33,10 +33,12 @@ type Release struct {
 }
 
 type Asset struct {
+	ID            int64     `json:"id,omitempty"`
 	Name          string    `json:"name"`
 	Size          int64     `json:"size,omitempty"`
 	DownloadCount int       `json:"download_count,omitempty"`
 	UpdatedAt     time.Time `json:"updated_at,omitempty"`
+	Digest        string    `json:"digest,omitempty"`
 	URL           string    `json:"url,omitempty"`
 }
 
@@ -224,23 +226,27 @@ func (c *GitHubClient) ListReleases(repo string, limit int, includePrerelease bo
 func (c *GitHubClient) ReleaseAssets(repo, tag string) ([]Asset, error) {
 	var payload struct {
 		Assets []struct {
+			ID            int64  `json:"id"`
 			Name          string `json:"name"`
 			Size          int64  `json:"size"`
 			DownloadCount int    `json:"download_count"`
 			UpdatedAt     string `json:"updated_at"`
+			Digest        string `json:"digest"`
 			URL           string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
-	if err := c.fetchJSON(fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, tag), "query", &payload); err != nil {
+	if err := c.fetchJSON(fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, url.PathEscape(tag)), "query", &payload); err != nil {
 		return nil, err
 	}
 	items := make([]Asset, 0, len(payload.Assets))
 	for _, item := range payload.Assets {
 		items = append(items, Asset{
+			ID:            item.ID,
 			Name:          item.Name,
 			Size:          item.Size,
 			DownloadCount: item.DownloadCount,
 			UpdatedAt:     parseRFC3339Time(item.UpdatedAt),
+			Digest:        item.Digest,
 			URL:           item.URL,
 		})
 	}

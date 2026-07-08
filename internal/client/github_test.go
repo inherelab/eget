@@ -73,7 +73,7 @@ func TestGitHubClientLatestRelease(t *testing.T) {
 
 func TestGitHubClientReleaseAssets(t *testing.T) {
 	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {
-		body := `{"assets":[{"name":"tool-linux-amd64.tar.gz","size":12,"download_count":3,"updated_at":"2026-04-22T10:00:00Z","browser_download_url":"https://example.com/tool"}]}`
+		body := `{"assets":[{"id":100,"name":"tool-linux-amd64.tar.gz","size":12,"download_count":3,"updated_at":"2026-04-22T10:00:00Z","digest":"sha256:abc","browser_download_url":"https://example.com/tool"}]}`
 		return jsonResponse(http.StatusOK, "200 OK", body), nil
 	})
 
@@ -84,6 +84,9 @@ func TestGitHubClientReleaseAssets(t *testing.T) {
 	if len(got) != 1 || got[0].Name != "tool-linux-amd64.tar.gz" {
 		t.Fatalf("unexpected assets: %#v", got)
 	}
+	assert.Eq(t, int64(100), got[0].ID)
+	assert.Eq(t, int64(12), got[0].Size)
+	assert.Eq(t, "sha256:abc", got[0].Digest)
 }
 
 func TestGitHubClientLatestReleaseInfo(t *testing.T) {

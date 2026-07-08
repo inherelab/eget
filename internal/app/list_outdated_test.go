@@ -315,6 +315,54 @@ func TestListOutdatedPackagesPreservesExplicitTagChannel(t *testing.T) {
 	}
 }
 
+func TestListOutdatedPackagesDetectsExplicitTagAssetChange(t *testing.T) {
+	oldTime := time.Date(2026, 4, 21, 10, 0, 0, 0, time.UTC)
+	newTime := time.Date(2026, 4, 22, 10, 0, 0, 0, time.UTC)
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"pkgforge/aeris": {
+					Repo:           "pkgforge/aeris",
+					Tag:            "nightly",
+					Asset:          "aeris-linux-x86_64.tar.xz",
+					AssetID:        100,
+					AssetSize:      12,
+					AssetUpdatedAt: oldTime,
+					AssetDigest:    "sha256:old",
+					Options: map[string]any{
+						"tag": "nightly",
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "pkgforge/aeris", target.Repo)
+			assert.Eq(t, "nightly", target.Tag)
+			assert.Eq(t, "aeris-linux-x86_64.tar.xz", target.Asset)
+			return LatestInfo{
+				Tag:            "nightly",
+				AssetID:        101,
+				AssetName:      "aeris-linux-x86_64.tar.xz",
+				AssetSize:      13,
+				AssetUpdatedAt: newTime,
+				AssetDigest:    "sha256:new",
+			}, nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListOutdatedPackages()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "nightly", items[0].InstalledTag)
+	assert.Eq(t, "nightly", items[0].LatestTag)
+}
+
 func TestListOutdatedPackagesChecksForgeRepo(t *testing.T) {
 	svc := ListService{
 		LoadConfig: func() (*cfgpkg.File, error) {

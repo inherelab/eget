@@ -36,7 +36,7 @@ func jsonResponse(statusCode int, body string) *http.Response {
 func TestAssetFinderFind(t *testing.T) {
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/inhere/markview/releases/latest": jsonResponse(http.StatusOK, `{"tag_name":"v1.2.3","assets":[{"browser_download_url":"https://example.com/tool.tar.gz"}],"created_at":"2026-04-18T00:00:00Z"}`),
+			"https://api.github.com/repos/inhere/markview/releases/latest": jsonResponse(http.StatusOK, `{"tag_name":"v1.2.3","assets":[{"id":100,"size":12,"updated_at":"2026-04-22T10:00:00Z","digest":"sha256:abc","browser_download_url":"https://example.com/tool.tar.gz"}],"created_at":"2026-04-18T00:00:00Z"}`),
 		},
 	}
 	finder := NewAssetFinder("inhere/markview", "latest", false, time.Time{})
@@ -51,6 +51,16 @@ func TestAssetFinderFind(t *testing.T) {
 	}
 	if finder.ReleaseVersion() != "v1.2.3" {
 		t.Fatalf("ReleaseVersion() = %q", finder.ReleaseVersion())
+	}
+	id, size, updatedAt, digest, ok := finder.AssetMetadata("https://example.com/tool.tar.gz")
+	if !ok {
+		t.Fatal("expected selected asset metadata")
+	}
+	if id != 100 || size != 12 || digest != "sha256:abc" {
+		t.Fatalf("unexpected asset metadata id=%d size=%d digest=%q", id, size, digest)
+	}
+	if !updatedAt.Equal(time.Date(2026, 4, 22, 10, 0, 0, 0, time.UTC)) {
+		t.Fatalf("unexpected asset updated_at: %s", updatedAt)
 	}
 }
 

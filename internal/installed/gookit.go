@@ -58,6 +58,18 @@ func entryToMap(entry Entry) map[string]any {
 	if !entry.UpdatedAt.IsZero() {
 		data["updated_at"] = compactStoreTime(entry.UpdatedAt)
 	}
+	if entry.AssetID != 0 {
+		data["asset_id"] = entry.AssetID
+	}
+	if entry.AssetSize != 0 {
+		data["asset_size"] = entry.AssetSize
+	}
+	if !entry.AssetUpdatedAt.IsZero() {
+		data["asset_updated_at"] = compactStoreTime(entry.AssetUpdatedAt)
+	}
+	if entry.AssetDigest != "" {
+		data["asset_digest"] = entry.AssetDigest
+	}
 	if entry.Tool != "" {
 		data["tool"] = entry.Tool
 	}

@@ -9,6 +9,10 @@ type Entry struct {
 	UpdatedAt      time.Time      `toml:"updated_at,omitempty" mapstructure:"updated_at"`
 	URL            string         `toml:"url" mapstructure:"url"`
 	Asset          string         `toml:"asset" mapstructure:"asset"`
+	AssetID        int64          `toml:"asset_id,omitempty" mapstructure:"asset_id"`
+	AssetSize      int64          `toml:"asset_size,omitempty" mapstructure:"asset_size"`
+	AssetUpdatedAt time.Time      `toml:"asset_updated_at,omitempty" mapstructure:"asset_updated_at"`
+	AssetDigest    string         `toml:"asset_digest,omitempty" mapstructure:"asset_digest"`
 	Desc           string         `toml:"desc,omitempty" mapstructure:"desc"`
 	Homepage       string         `toml:"homepage,omitempty" mapstructure:"homepage"`
 	RepoURL        string         `toml:"repo_url,omitempty" mapstructure:"repo_url"`

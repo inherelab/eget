@@ -100,6 +100,10 @@ func TestStoreSaveRoundTripWithExtendedFields(t *testing.T) {
 				InstalledAt:    time.Unix(1710000000, 0).UTC(),
 				URL:            "https://github.com/gookit/gitw/releases/download/v0.3.6/chlog-windows-amd64.exe",
 				Asset:          "chlog-windows-amd64.exe",
+				AssetID:        100,
+				AssetSize:      12,
+				AssetUpdatedAt: time.Unix(1710000100, 0).UTC(),
+				AssetDigest:    "sha256:abc",
 				Tool:           "chlog",
 				ExtractedFiles: []string{"chlog.exe"},
 				Options: map[string]interface{}{
@@ -134,6 +138,10 @@ func TestStoreSaveRoundTripWithExtendedFields(t *testing.T) {
 	assert.Eq(t, "Git release changelog generator", entry.Desc)
 	assert.Eq(t, "https://gookit.github.io/gitw", entry.Homepage)
 	assert.Eq(t, "https://github.com/gookit/gitw", entry.RepoURL)
+	assert.Eq(t, int64(100), entry.AssetID)
+	assert.Eq(t, int64(12), entry.AssetSize)
+	assert.Eq(t, time.Unix(1710000100, 0).UTC(), entry.AssetUpdatedAt)
+	assert.Eq(t, "sha256:abc", entry.AssetDigest)
 	if entry.Options["system"] != "windows/amd64" {
 		t.Fatalf("expected options to round-trip, got %#v", entry.Options)
 	}
