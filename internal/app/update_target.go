@@ -73,8 +73,10 @@ func enrichListItemFromInstalledEntry(item *ListItem, entry storepkg.Entry) {
 	}
 	if item.Tag == "" {
 		if tag, ok := stringOption(entry.Options, "tag"); ok {
-			item.Tag = tag
+			item.Tag = trackingTag(tag)
 		}
+	} else {
+		item.Tag = trackingTag(item.Tag)
 	}
 	if prerelease, ok := boolOption(entry.Options, "prerelease"); ok {
 		item.Prerelease = prerelease

@@ -17,7 +17,9 @@ func optionsFromInstalledEntry(entry storepkg.Entry) install.Options {
 	if entry.Options == nil {
 		return opts
 	}
-	opts.Tag, _ = stringOption(entry.Options, "tag")
+	if tag, ok := stringOption(entry.Options, "tag"); ok {
+		opts.Tag = trackingTag(tag)
+	}
 	opts.System, _ = stringOption(entry.Options, "system")
 	opts.SourcePath, _ = stringOption(entry.Options, "source_path")
 	opts.Output, _ = stringOption(entry.Options, "output", "target")

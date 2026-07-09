@@ -262,6 +262,76 @@ func TestUpdatePackageRestoresPrereleaseOptionFromInstalledEntry(t *testing.T) {
 	assert.True(t, installer.options[0].Prerelease)
 }
 
+func TestUpdatePackageClearsInstalledVersionTagWhenUpdatingToNewLatest(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"AandStep/ResultV": {
+					Repo: "AandStep/ResultV",
+					Tag:  "v3.2.5",
+					Options: map[string]any{
+						"tag":   "v3.2.5",
+						"asset": []string{"AppImage"},
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "AandStep/ResultV", target.Repo)
+			assert.Eq(t, "", target.Tag)
+			return LatestInfo{Tag: "v3.2.6"}, nil
+		},
+	}
+
+	_, err := svc.UpdatePackage("ResultV", install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"AandStep/ResultV"}, installer.targets)
+	assert.Eq(t, "", installer.options[0].Tag)
+	assert.Eq(t, []string{"AppImage"}, installer.options[0].Asset)
+	assert.Eq(t, "v3.2.5", installer.options[0].CurrentVersion)
+	assert.Eq(t, "v3.2.6", installer.options[0].TargetVersion)
+}
+
+func TestUpdatePackageKeepsInstalledChannelTag(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"pkgforge/aeris": {
+					Repo:      "pkgforge/aeris",
+					Tag:       "nightly",
+					Asset:     "aeris.tar.xz",
+					AssetSize: 12,
+					Options: map[string]any{
+						"tag": "nightly",
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "pkgforge/aeris", target.Repo)
+			assert.Eq(t, "nightly", target.Tag)
+			return LatestInfo{Tag: "nightly", AssetName: "aeris.tar.xz", AssetSize: 13}, nil
+		},
+	}
+
+	_, err := svc.UpdatePackage("aeris", install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"pkgforge/aeris"}, installer.targets)
+	assert.Eq(t, "nightly", installer.options[0].Tag)
+}
+
 func TestUpdatePackageRejectsUnknownPlainWords(t *testing.T) {
 	installer := &fakeInstallService{}
 	svc := UpdateService{
@@ -348,4 +418,51 @@ asset_filters = ["linux"]
 	if len(runner.opts.Asset) != 1 || runner.opts.Asset[0] != "linux" {
 		t.Fatalf("expected package asset filters to be merged by installer, got %#v", runner.opts.Asset)
 	}
+}
+
+func TestUpdatePackageWithAppInstallerIgnoresManagedVersionTag(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[packages.ResultV]
+repo = "AandStep/ResultV"
+tag = "v3.2.5"
+asset_filters = ["AppImage"]
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/AandStep/ResultV/releases/download/v3.2.6/ResultV-3.2.6-x86_64.AppImage",
+			Tool:           "ResultV",
+			ExtractedFiles: []string{"./ResultV.AppImage"},
+		},
+	}
+	installSvc := Service{
+		Runner: runner,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+	updateSvc := UpdateService{
+		Install: installSvc,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"AandStep/ResultV": {Repo: "AandStep/ResultV", Tag: "v3.2.5"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "AandStep/ResultV", target.Repo)
+			assert.Eq(t, "", target.Tag)
+			return LatestInfo{Tag: "v3.2.6"}, nil
+		},
+	}
+
+	_, err := updateSvc.UpdatePackage("ResultV", install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "AandStep/ResultV", runner.target)
+	assert.Eq(t, "", runner.opts.Tag)
+	assert.Eq(t, []string{"AppImage"}, runner.opts.Asset)
+	assert.Eq(t, "v3.2.5", runner.opts.CurrentVersion)
+	assert.Eq(t, "v3.2.6", runner.opts.TargetVersion)
 }

@@ -223,6 +223,9 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		DisableSSL:       boolOpt(cli.DisableSSL),
 		ChunkConcurrency: intOpt(cli.ChunkConcurrency, cli.ChunkConcurrencySet),
 	})
+	if shouldIgnoreUpdateVersionTag(cli, merged.Tag) {
+		merged.Tag = ""
+	}
 
 	targetDir, err := expandPath(merged.Target)
 	if err != nil {
@@ -339,4 +342,8 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		},
 		DisableSSL: merged.DisableSSL,
 	}, nil
+}
+
+func shouldIgnoreUpdateVersionTag(cli install.Options, tag string) bool {
+	return cli.Operation == install.OperationUpdate && cli.Tag == "" && isVersionTag(tag)
 }

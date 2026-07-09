@@ -315,6 +315,39 @@ func TestListOutdatedPackagesPreservesExplicitTagChannel(t *testing.T) {
 	}
 }
 
+func TestListOutdatedPackagesTreatsVersionTagAsLatestTracking(t *testing.T) {
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"AandStep/ResultV": {
+					Repo: "AandStep/ResultV",
+					Tag:  "v3.2.5",
+					Options: map[string]any{
+						"tag": "v3.2.5",
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "AandStep/ResultV", target.Repo)
+			assert.Eq(t, "", target.Tag)
+			return LatestInfo{Tag: "v3.2.6"}, nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListOutdatedPackages()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "v3.2.5", items[0].InstalledTag)
+	assert.Eq(t, "v3.2.6", items[0].LatestTag)
+}
+
 func TestListOutdatedPackagesDetectsExplicitTagAssetChange(t *testing.T) {
 	oldTime := time.Date(2026, 4, 21, 10, 0, 0, 0, time.UTC)
 	newTime := time.Date(2026, 4, 22, 10, 0, 0, 0, time.UTC)
