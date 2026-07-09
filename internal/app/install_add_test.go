@@ -64,6 +64,24 @@ func TestInstallTargetWithAddRecordsManagedPackage(t *testing.T) {
 	}
 }
 
+func TestInstallTargetWithAddRecordsTagPolicy(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/AandStep/ResultV/releases/download/v3.2.5/ResultV.AppImage",
+			Tool:           "ResultV",
+			ExtractedFiles: []string{"./ResultV.AppImage"},
+		},
+	}
+	config := &fakeConfigRecorder{}
+	svc := Service{Runner: runner, Config: config}
+	opts := install.Options{Tag: "v3.2.5", TagPolicy: "tag"}
+
+	_, err := svc.InstallTarget("AandStep/ResultV", opts, InstallExtras{AddToConfig: true, PackageOpts: opts})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "tag", config.opts.TagPolicy)
+}
+
 func TestInstallTargetWithAddRecordsForgePackage(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

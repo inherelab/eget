@@ -13,8 +13,13 @@ import (
 )
 
 func installOptionsFromInstall(opts *InstallOptions) install.Options {
+	tagPolicy := ""
+	if opts.TrackTag {
+		tagPolicy = "tag"
+	}
 	return install.Options{
 		Tag:                 opts.Tag,
+		TagPolicy:           tagPolicy,
 		Prerelease:          opts.Prerelease,
 		Name:                opts.Name,
 		Source:              opts.Source,

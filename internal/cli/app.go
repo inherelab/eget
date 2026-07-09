@@ -260,7 +260,7 @@ var commandAliases = map[string]string{
 
 var commandFlagSpecs = map[string]flagSpec{
 	"install": {
-		bools:  setOf("source", "prerelease", "p", "extract-all", "ea", "all", "gui", "quiet", "add"),
+		bools:  setOf("source", "prerelease", "p", "track-tag", "extract-all", "ea", "all", "gui", "quiet", "add"),
 		values: setOf("tag", "system", "to", "file", "asset", "a", "rename", "name", "install-mode", "strip-components", "fallback-versions", "chunk", "batch"),
 	},
 	"download": {

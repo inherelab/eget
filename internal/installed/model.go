@@ -21,6 +21,7 @@ type Entry struct {
 	Options        map[string]any `toml:"options" mapstructure:"options"`
 	Version        string         `toml:"version,omitempty" mapstructure:"version"`
 	Tag            string         `toml:"tag,omitempty" mapstructure:"tag"`
+	TagPolicy      string         `toml:"tag_policy,omitempty" mapstructure:"tag_policy"`
 	ReleaseDate    time.Time      `toml:"release_date,omitempty" mapstructure:"release_date"`
 	IsGUI          bool           `toml:"is_gui,omitempty" mapstructure:"is_gui"`
 	InstallMode    string         `toml:"install_mode,omitempty" mapstructure:"install_mode"`

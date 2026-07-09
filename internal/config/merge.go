@@ -26,6 +26,7 @@ func MergeInstallOptions(global, repo, pkg Section, cli CLIOverrides) Merged {
 	merged.Sys7zPath = firstString(pkg.Sys7zPath, repo.Sys7zPath, global.Sys7zPath)
 	merged.System = firstString(cli.System, pkg.System, repo.System, global.System)
 	merged.Tag = firstString(cli.Tag, pkg.Tag, repo.Tag, global.Tag)
+	merged.TagPolicy = firstString(cli.TagPolicy, pkg.TagPolicy, repo.TagPolicy, global.TagPolicy)
 	merged.Target = firstString(cli.Target, pkg.Target, repo.Target, global.Target)
 	merged.Verify = firstString(cli.Verify, pkg.Verify, repo.Verify, global.Verify)
 	merged.URLTemplate = firstString(pkg.URLTemplate, repo.URLTemplate, global.URLTemplate)

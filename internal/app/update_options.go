@@ -14,12 +14,13 @@ import (
 
 func optionsFromInstalledEntry(entry storepkg.Entry) install.Options {
 	opts := install.Options{}
-	if entry.Options == nil {
-		return opts
+	policy := installedTagPolicy(entry)
+	tag := entry.Tag
+	if optionTag, ok := stringOption(entry.Options, "tag"); ok {
+		tag = optionTag
 	}
-	if tag, ok := stringOption(entry.Options, "tag"); ok {
-		opts.Tag = trackingTag(tag)
-	}
+	opts.Tag = trackingTagWithPolicy(tag, policy)
+	opts.TagPolicy = policy
 	opts.System, _ = stringOption(entry.Options, "system")
 	opts.SourcePath, _ = stringOption(entry.Options, "source_path")
 	opts.Output, _ = stringOption(entry.Options, "output", "target")

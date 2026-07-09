@@ -98,6 +98,7 @@ func (s Service) installResolvedTarget(runTarget, recordTarget string, opts inst
 		ExtractedFiles: append([]string(nil), result.ExtractedFiles...),
 		Options:        extractOptionsMap(opts, result.IsGUI || opts.IsGUI),
 		Tag:            tag,
+		TagPolicy:      tagPolicyForInstall(opts.Tag, opts.TagPolicy),
 		Version:        sourceVersion(tag, isSourceForge || isForge || isTemplate),
 		ReleaseDate:    releaseDate,
 		IsGUI:          result.IsGUI || opts.IsGUI,
@@ -194,6 +195,9 @@ func extractOptionsMap(opts install.Options, isGUI bool) map[string]interface{} 
 	recorded := make(map[string]interface{})
 	if opts.Tag != "" {
 		recorded["tag"] = opts.Tag
+	}
+	if policy := tagPolicyForInstall(opts.Tag, opts.TagPolicy); policy != "" {
+		recorded["tag_policy"] = policy
 	}
 	if opts.System != "" {
 		recorded["system"] = opts.System

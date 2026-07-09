@@ -21,3 +21,18 @@ func TestTrackingTagIgnoresVersionTags(t *testing.T) {
 		})
 	}
 }
+
+func TestTrackingTagPolicyOverridesHeuristic(t *testing.T) {
+	tests := map[string]string{
+		"latest": "",
+		"tag":    "v3.2.5",
+		"":       "",
+		"bad":    "",
+	}
+
+	for policy, expected := range tests {
+		t.Run(policy, func(t *testing.T) {
+			assert.Eq(t, expected, trackingTagWithPolicy("v3.2.5", policy))
+		})
+	}
+}

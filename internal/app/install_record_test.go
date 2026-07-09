@@ -136,6 +136,42 @@ func TestInstallTargetRecordsTagFromReleaseURLBeforeLatestFallback(t *testing.T)
 	assert.Eq(t, 0, releaseInfoCalls)
 }
 
+func TestInstallTargetRecordsTagPolicy(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/AandStep/ResultV/releases/download/v3.2.5/ResultV.AppImage",
+			Tool:           "ResultV",
+			ExtractedFiles: []string{"./ResultV.AppImage"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{Runner: runner, Store: store}
+
+	_, err := svc.InstallTarget("AandStep/ResultV", install.Options{Tag: "v3.2.5"})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "latest", store.entry.TagPolicy)
+	assert.Eq(t, "latest", store.entry.Options["tag_policy"])
+}
+
+func TestInstallTargetRecordsTrackTagPolicy(t *testing.T) {
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/AandStep/ResultV/releases/download/v3.2.5/ResultV.AppImage",
+			Tool:           "ResultV",
+			ExtractedFiles: []string{"./ResultV.AppImage"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{Runner: runner, Store: store}
+
+	_, err := svc.InstallTarget("AandStep/ResultV", install.Options{Tag: "v3.2.5", TagPolicy: "tag"})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "tag", store.entry.TagPolicy)
+	assert.Eq(t, "tag", store.entry.Options["tag_policy"])
+}
+
 func TestInstallTargetRecordsSourceForgeVersionFromURL(t *testing.T) {
 	runner := &fakeRunner{
 		result: RunResult{

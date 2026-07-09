@@ -489,3 +489,21 @@ func TestMain_InstallBindsFlagsAfterTarget(t *testing.T) {
 	assert.Eq(t, []string{"inhere/markview"}, opts.Targets)
 	assert.Eq(t, "nightly", opts.Tag)
 }
+
+func TestMain_InstallTrackTagFlagParses(t *testing.T) {
+	calls := make([]commandCall, 0, 1)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"install", "AandStep/ResultV", "--tag", "v3.2.5", "--track-tag"})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, len(calls))
+	opts, ok := calls[0].options.(*InstallOptions)
+	assert.True(t, ok)
+	assert.True(t, opts.TrackTag)
+}

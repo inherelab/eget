@@ -342,6 +342,9 @@ func sectionFromInstallOptions(repo, name string, opts install.Options) cfgpkg.S
 	if opts.Tag != "" {
 		section.Tag = util.StringPtr(opts.Tag)
 	}
+	if policy := tagPolicyForInstall(opts.Tag, opts.TagPolicy); policy != "" {
+		section.TagPolicy = util.StringPtr(policy)
+	}
 	if opts.Verify != "" {
 		section.Verify = util.StringPtr(opts.Verify)
 	}

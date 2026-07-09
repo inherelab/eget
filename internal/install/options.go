@@ -15,6 +15,7 @@ import (
 
 type Options struct {
 	Tag                 string
+	TagPolicy           string
 	Prerelease          bool
 	Operation           string
 	CurrentVersion      string

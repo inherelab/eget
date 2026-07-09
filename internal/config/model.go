@@ -27,6 +27,7 @@ type Section struct {
 	SDKExtMap            map[string]string `toml:"sdk_ext_map,omitempty" mapstructure:"sdk_ext_map"`
 	System               *string           `toml:"system" mapstructure:"system"`
 	Tag                  *string           `toml:"tag" mapstructure:"tag"`
+	TagPolicy            *string           `toml:"tag_policy" mapstructure:"tag_policy"`
 	Target               *string           `toml:"target" mapstructure:"target"`
 	UpgradeOnly          *bool             `toml:"upgrade_only" mapstructure:"upgrade_only"`
 	Verify               *string           `toml:"verify_sha256" mapstructure:"verify_sha256"`
@@ -126,6 +127,7 @@ type Merged struct {
 	Sys7zPath           string
 	System              string
 	Tag                 string
+	TagPolicy           string
 	Target              string
 	UpgradeOnly         bool
 	Verify              string
@@ -168,6 +170,7 @@ type CLIOverrides struct {
 	SourcePath       *string
 	System           *string
 	Tag              *string
+	TagPolicy        *string
 	Target           *string
 	InstallMode      *string
 	UpgradeOnly      *bool

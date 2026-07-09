@@ -88,6 +88,9 @@ func entryToMap(entry Entry) map[string]any {
 	if entry.Tag != "" {
 		data["tag"] = entry.Tag
 	}
+	if entry.TagPolicy != "" {
+		data["tag_policy"] = entry.TagPolicy
+	}
 	if entry.IsGUI {
 		data["is_gui"] = true
 	}

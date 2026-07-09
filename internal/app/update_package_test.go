@@ -332,6 +332,42 @@ func TestUpdatePackageKeepsInstalledChannelTag(t *testing.T) {
 	assert.Eq(t, "nightly", installer.options[0].Tag)
 }
 
+func TestUpdatePackageKeepsInstalledVersionTagWithPolicy(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"AandStep/ResultV": {
+					Repo:      "AandStep/ResultV",
+					Tag:       "v3.2.5",
+					TagPolicy: "tag",
+					Asset:     "ResultV.AppImage",
+					AssetSize: 12,
+					Options: map[string]any{
+						"tag":        "v3.2.5",
+						"tag_policy": "tag",
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "AandStep/ResultV", target.Repo)
+			assert.Eq(t, "v3.2.5", target.Tag)
+			return LatestInfo{Tag: "v3.2.5", AssetName: "ResultV.AppImage", AssetSize: 13}, nil
+		},
+	}
+
+	_, err := svc.UpdatePackage("ResultV", install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"AandStep/ResultV"}, installer.targets)
+	assert.Eq(t, "v3.2.5", installer.options[0].Tag)
+}
+
 func TestUpdatePackageRejectsUnknownPlainWords(t *testing.T) {
 	installer := &fakeInstallService{}
 	svc := UpdateService{
@@ -465,4 +501,50 @@ asset_filters = ["AppImage"]
 	assert.Eq(t, []string{"AppImage"}, runner.opts.Asset)
 	assert.Eq(t, "v3.2.5", runner.opts.CurrentVersion)
 	assert.Eq(t, "v3.2.6", runner.opts.TargetVersion)
+}
+
+func TestUpdatePackageWithAppInstallerKeepsManagedVersionTagPolicy(t *testing.T) {
+	cfg := mustLoadFromString(t, `
+[packages.ResultV]
+repo = "AandStep/ResultV"
+tag = "v3.2.5"
+tag_policy = "tag"
+asset_filters = ["AppImage"]
+`)
+	runner := &fakeRunner{
+		result: RunResult{
+			URL:            "https://github.com/AandStep/ResultV/releases/download/v3.2.5/ResultV.AppImage",
+			Tool:           "ResultV",
+			ExtractedFiles: []string{"./ResultV.AppImage"},
+		},
+	}
+	installSvc := Service{
+		Runner: runner,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+	updateSvc := UpdateService{
+		Install: installSvc,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"AandStep/ResultV": {Repo: "AandStep/ResultV", Tag: "v3.2.5", Asset: "ResultV.AppImage", AssetSize: 12},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.Eq(t, "AandStep/ResultV", target.Repo)
+			assert.Eq(t, "v3.2.5", target.Tag)
+			return LatestInfo{Tag: "v3.2.5", AssetName: "ResultV.AppImage", AssetSize: 13}, nil
+		},
+	}
+
+	_, err := updateSvc.UpdatePackage("ResultV", install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "AandStep/ResultV", runner.target)
+	assert.Eq(t, "v3.2.5", runner.opts.Tag)
+	assert.Eq(t, "tag", runner.opts.TagPolicy)
 }

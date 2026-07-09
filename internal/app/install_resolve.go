@@ -217,13 +217,14 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		SourcePath:       stringOpt(cli.SourcePath),
 		System:           stringOpt(cli.System),
 		Tag:              stringOpt(cli.Tag),
+		TagPolicy:        stringOpt(cli.TagPolicy),
 		Target:           stringOpt(cli.Output),
 		UpgradeOnly:      boolOpt(cli.UpgradeOnly),
 		Verify:           stringOpt(cli.Verify),
 		DisableSSL:       boolOpt(cli.DisableSSL),
 		ChunkConcurrency: intOpt(cli.ChunkConcurrency, cli.ChunkConcurrencySet),
 	})
-	if shouldIgnoreUpdateVersionTag(cli, merged.Tag) {
+	if shouldIgnoreUpdateVersionTag(cli, merged.Tag, merged.TagPolicy) {
 		merged.Tag = ""
 	}
 
@@ -280,6 +281,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 
 	return install.Options{
 		Tag:                 merged.Tag,
+		TagPolicy:           merged.TagPolicy,
 		Prerelease:          merged.Prerelease,
 		Operation:           cli.Operation,
 		CurrentVersion:      cli.CurrentVersion,
@@ -344,6 +346,6 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 	}, nil
 }
 
-func shouldIgnoreUpdateVersionTag(cli install.Options, tag string) bool {
-	return cli.Operation == install.OperationUpdate && cli.Tag == "" && isVersionTag(tag)
+func shouldIgnoreUpdateVersionTag(cli install.Options, tag, policy string) bool {
+	return cli.Operation == install.OperationUpdate && cli.Tag == "" && policy == "" && isVersionTag(tag)
 }
