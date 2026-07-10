@@ -71,8 +71,8 @@ func TestConfigInit(t *testing.T) {
 	if cfg.ApiCache.Enable == nil || *cfg.ApiCache.Enable {
 		t.Fatalf("expected default api_cache.enable=false, got %#v", cfg.ApiCache.Enable)
 	}
-	if cfg.ApiCache.CacheTime == nil || *cfg.ApiCache.CacheTime != 300 {
-		t.Fatalf("expected default api_cache.cache_time=300, got %#v", cfg.ApiCache.CacheTime)
+	if cfg.ApiCache.CacheTime == nil || *cfg.ApiCache.CacheTime != 1800 {
+		t.Fatalf("expected default api_cache.cache_time=1800, got %#v", cfg.ApiCache.CacheTime)
 	}
 	if cfg.Ghproxy.HostURL == nil || *cfg.Ghproxy.HostURL != "" {
 		t.Fatalf("expected default ghproxy.host_url, got %#v", cfg.Ghproxy.HostURL)

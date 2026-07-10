@@ -19,7 +19,7 @@ exclude = []
 # 配置 provider 元数据请求缓存策略
 [api_cache]
 enable = false # 是否启用
-cache_time = 300 # unit: s
+cache_time = 1800 # unit: s
 
 # https://github.akams.cn/ 这里可以看到很多代理地址
 [ghproxy]

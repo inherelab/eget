@@ -146,7 +146,7 @@ app 级 `--no-proxy` 选项会在单次运行中禁用配置代理。`NO_PROXY=1
 ```toml
 [api_cache]
 enable = false
-cache_time = 300
+cache_time = 1800
 ```
 
 字段说明：

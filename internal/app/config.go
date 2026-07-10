@@ -157,7 +157,7 @@ func (s ConfigService) ConfigInit() (string, error) {
 	empty := ""
 	sys7zPath := ""
 	apiCacheEnable := false
-	apiCacheTime := 300
+	apiCacheTime := 1800
 	ghproxyHostURL := ""
 	chunkConcurrency := 0
 	batchConcurrency := 0

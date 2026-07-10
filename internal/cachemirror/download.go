@@ -15,7 +15,11 @@ type DownloadResult struct {
 	Size int64
 }
 
-func DownloadToFile(ctx context.Context, opts Options, key, target string) (DownloadResult, error) {
+type progressFinisher interface {
+	Finish(...string)
+}
+
+func DownloadToFile(ctx context.Context, opts Options, key, target string, getbars ...func(size int64) io.Writer) (DownloadResult, error) {
 	opts = NormalizeOptions(opts)
 	if !opts.Active() {
 		return DownloadResult{}, nil
@@ -55,7 +59,8 @@ func DownloadToFile(ctx context.Context, opts Options, key, target string) (Down
 	if err != nil {
 		return DownloadResult{}, err
 	}
-	size, copyErr := io.Copy(out, resp.Body)
+	bar := downloadProgressWriter(resp.ContentLength, getbars...)
+	size, copyErr := io.Copy(io.MultiWriter(out, bar), resp.Body)
 	closeErr := out.Close()
 	if copyErr != nil {
 		_ = os.Remove(partPath)
@@ -69,5 +74,19 @@ func DownloadToFile(ctx context.Context, opts Options, key, target string) (Down
 		_ = os.Remove(partPath)
 		return DownloadResult{}, err
 	}
+	if finisher, ok := bar.(progressFinisher); ok {
+		finisher.Finish()
+	}
 	return DownloadResult{Hit: true, Size: size}, nil
+}
+
+func downloadProgressWriter(size int64, getbars ...func(size int64) io.Writer) io.Writer {
+	if len(getbars) == 0 || getbars[0] == nil {
+		return io.Discard
+	}
+	bar := getbars[0](size)
+	if bar == nil {
+		return io.Discard
+	}
+	return bar
 }

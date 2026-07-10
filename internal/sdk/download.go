@@ -125,7 +125,7 @@ func downloadArchiveFromMirror(ctx context.Context, finalPath string, req Downlo
 		ctx = context.Background()
 	}
 	key := cachemirror.KeyForRelPath(rel)
-	result, err := cachemirror.DownloadToFile(ctx, req.CacheMirror, key, finalPath)
+	result, err := cachemirror.DownloadToFile(ctx, req.CacheMirror, key, finalPath, req.Progress)
 	if err != nil {
 		if req.CacheMirror.Fallback {
 			return false, cachemirror.DownloadResult{}, nil

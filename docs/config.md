@@ -146,7 +146,7 @@ Example:
 ```toml
 [api_cache]
 enable = false
-cache_time = 300
+cache_time = 1800
 ```
 
 Fields:

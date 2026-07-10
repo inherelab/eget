@@ -1,6 +1,7 @@
 package cachemirror
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -30,6 +31,24 @@ func TestDownloadToFileWritesMirrorHit(t *testing.T) {
 	data, err := os.ReadFile(target)
 	assert.NoErr(t, err)
 	assert.Eq(t, "archive", string(data))
+}
+
+func TestDownloadToFileWritesProgress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "7")
+		_, _ = w.Write([]byte("archive"))
+	}))
+	defer server.Close()
+
+	var progress bytes.Buffer
+	result, err := DownloadToFile(context.Background(), Options{Enable: true, URL: server.URL}, "path-md5:abc", filepath.Join(t.TempDir(), "tool.zip"), func(size int64) io.Writer {
+		assert.Eq(t, int64(7), size)
+		return &progress
+	})
+
+	assert.NoErr(t, err)
+	assert.True(t, result.Hit)
+	assert.Eq(t, "archive", progress.String())
 }
 
 func TestDownloadToFileReturnsMissOn404(t *testing.T) {
