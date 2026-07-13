@@ -84,6 +84,12 @@ func TestCacheFilePathWithMetaKeepsAssetNameAndUsesMetaVersion(t *testing.T) {
 	assert.True(t, strings.HasSuffix(base, ".tar.gz"))
 }
 
+func TestCacheFilePathWithMetaPrefersVersionOverIPAddress(t *testing.T) {
+	got := CacheFilePathWithMeta(t.TempDir(), "http://172.20.0.6:5000/tools/cscli/cscli-windows-amd64.exe", CacheMeta{Version: "0.5.2"})
+
+	assert.Eq(t, "cscli-windows-amd64-0.5.2-b913cc7a.exe", filepath.Base(got))
+}
+
 func TestCacheFilePathSanitizesVersionWithPathSeparators(t *testing.T) {
 	got := CacheFilePath(t.TempDir(), "https://github.com/example/tool/releases/download/release%2Fv2.5.0/tool.tar.gz")
 	base := filepath.Base(got)

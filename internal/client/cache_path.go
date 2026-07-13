@@ -94,14 +94,14 @@ func cacheVersion(rawURL string, u *url.URL, fileName, fallback string) string {
 			}
 		}
 	}
+	if fallback != "" {
+		return trimVersionPrefix(fallback)
+	}
 	if version := versionFromText(fileName); version != "" {
 		return trimVersionPrefix(version)
 	}
 	if version := versionFromText(rawURL); version != "" {
 		return trimVersionPrefix(version)
-	}
-	if fallback != "" {
-		return trimVersionPrefix(fallback)
 	}
 	return "unknown"
 }
