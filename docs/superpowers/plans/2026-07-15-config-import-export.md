@@ -137,7 +137,7 @@ git commit -m "feat: add config migration primitives"
 - Modify: `internal/app/config.go`
 - Test: `internal/app/config_test.go`
 
-- [ ] **Step 1: 写导出与导入规则失败测试**
+- [x] **Step 1: 写导出与导入规则失败测试**
 
 在 `internal/app/config_test.go` 用 `t.Run()` 覆盖：
 
@@ -156,13 +156,13 @@ func TestConfigImport(t *testing.T) {
 
 测试使用真实临时 TOML 文件与 `cfgpkg.LoadFile`，不模拟解析器或保存器。
 
-- [ ] **Step 2: 运行测试确认 RED**
+- [x] **Step 2: 运行测试确认 RED**
 
 Run: `go test ./internal/app -run 'TestConfigExport|TestConfigImport'`
 
 Expected: FAIL，提示 `ConfigExport`、`ConfigImport` 尚不存在。
 
-- [ ] **Step 3: 实现最小业务 API**
+- [x] **Step 3: 实现最小业务 API**
 
 新增：
 
@@ -173,13 +173,13 @@ func (s ConfigService) ConfigImport(sourcePath string) (string, error)
 
 `ConfigExport` 调用现有 `load()` 后转交 `cfgpkg.DumpExport`。`ConfigImport` 先完整 `cfgpkg.LoadFile(sourcePath)`；仅当 `incoming.Meta.HasGlobal == false` 时加载当前配置并复制 `current.Global`，随后调用 `cfgpkg.SaveAtomic(s.configPath(), incoming)`。来源包含 `[global]` 时不读取目标内容，所有其它顶层 section 按来源文件整体替换。
 
-- [ ] **Step 4: 运行应用层测试确认 GREEN**
+- [x] **Step 4: 运行应用层测试确认 GREEN**
 
 Run: `go test ./internal/app -run 'TestConfigExport|TestConfigImport|TestConfigListGetAndSet|TestConfigInit'`
 
 Expected: PASS。
 
-- [ ] **Step 5: 更新计划并提交应用层阶段**
+- [x] **Step 5: 更新计划并提交应用层阶段**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 

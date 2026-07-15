@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,6 +9,102 @@ import (
 	"github.com/gookit/goutil/x/assert"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 )
+
+func TestConfigExport(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "eget.toml")
+	writeConfigFile(t, path, "[global]\ntarget = '/machine/bin'\n\n[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+	svc := ConfigService{ConfigPath: path, Load: func() (*cfgpkg.File, error) {
+		return cfgpkg.LoadFile(path)
+	}}
+
+	t.Run("omits global by default", func(t *testing.T) {
+		var out bytes.Buffer
+		assert.NoErr(t, svc.ConfigExport(&out, false))
+		assert.NotContains(t, out.String(), "[global]")
+		assert.Contains(t, out.String(), "[packages.fzf]")
+	})
+
+	t.Run("includes global when requested", func(t *testing.T) {
+		var out bytes.Buffer
+		assert.NoErr(t, svc.ConfigExport(&out, true))
+		assert.Contains(t, out.String(), "[global]")
+		assert.Contains(t, out.String(), "/machine/bin")
+	})
+}
+
+func TestConfigImport(t *testing.T) {
+	t.Run("imports portable config when target does not exist", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "portable.toml")
+		writeRawConfigFile(t, sourcePath, "[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+
+		_, err := (ConfigService{ConfigPath: targetPath}).ConfigImport(sourcePath)
+
+		assert.NoErr(t, err)
+		loaded, loadErr := cfgpkg.LoadFile(targetPath)
+		assert.NoErr(t, loadErr)
+		assert.Eq(t, "junegunn/fzf", *loaded.Packages["fzf"].Repo)
+	})
+
+	t.Run("retains current global when source omits it", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "portable.toml")
+		writeConfigFile(t, targetPath, "[global]\ntarget = '/current/bin'\n\n[packages.old]\nrepo = 'owner/old'\n")
+		writeRawConfigFile(t, sourcePath, "[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+		current, currentErr := cfgpkg.LoadFile(targetPath)
+		assert.NoErr(t, currentErr)
+		assert.Eq(t, "/current/bin", *current.Global.Target)
+		incoming, incomingErr := cfgpkg.LoadFile(sourcePath)
+		assert.NoErr(t, incomingErr)
+		assert.False(t, incoming.Meta.HasGlobal)
+
+		gotPath, err := (ConfigService{ConfigPath: targetPath}).ConfigImport(sourcePath)
+
+		assert.NoErr(t, err)
+		assert.Eq(t, targetPath, gotPath)
+		loaded, loadErr := cfgpkg.LoadFile(targetPath)
+		assert.NoErr(t, loadErr)
+		assert.Eq(t, "/current/bin", *loaded.Global.Target)
+		_, hasOld := loaded.Packages["old"]
+		assert.False(t, hasOld)
+		assert.Eq(t, "junegunn/fzf", *loaded.Packages["fzf"].Repo)
+	})
+
+	t.Run("replaces current global when source includes it", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "complete.toml")
+		writeConfigFile(t, targetPath, "[global]\ntarget = '/current/bin'\n")
+		writeRawConfigFile(t, sourcePath, "[global]\ntarget = '/imported/bin'\n\n[packages.rg]\nrepo = 'BurntSushi/ripgrep'\n")
+
+		_, err := (ConfigService{ConfigPath: targetPath}).ConfigImport(sourcePath)
+
+		assert.NoErr(t, err)
+		loaded, loadErr := cfgpkg.LoadFile(targetPath)
+		assert.NoErr(t, loadErr)
+		assert.Eq(t, "/imported/bin", *loaded.Global.Target)
+	})
+
+	t.Run("malformed source keeps target unchanged", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "broken.toml")
+		original := "[global]\ntarget = '/current/bin'\n"
+		writeConfigFile(t, targetPath, original)
+		writeRawConfigFile(t, sourcePath, "[global\ntarget =")
+		before, beforeErr := os.ReadFile(targetPath)
+		assert.NoErr(t, beforeErr)
+
+		_, err := (ConfigService{ConfigPath: targetPath}).ConfigImport(sourcePath)
+
+		assert.Err(t, err)
+		body, readErr := os.ReadFile(targetPath)
+		assert.NoErr(t, readErr)
+		assert.Eq(t, string(before), string(body))
+	})
+}
 
 func TestConfigInfo(t *testing.T) {
 	tmp := t.TempDir()
@@ -246,6 +343,11 @@ func writeConfigFile(t *testing.T, path, content string) {
 	if err := cfgpkg.Save(path, mustLoadFromString(t, content)); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
+}
+
+func writeRawConfigFile(t *testing.T, path, content string) {
+	t.Helper()
+	assert.NoErr(t, os.WriteFile(path, []byte(content), 0o644))
 }
 
 func mustLoadFromString(t *testing.T, content string) *cfgpkg.File {

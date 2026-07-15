@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -182,6 +183,39 @@ func (s ConfigService) ConfigInit() (string, error) {
 
 func (s ConfigService) ConfigList() (*cfgpkg.File, error) {
 	return s.load()
+}
+
+// ConfigExport writes the current configuration as portable TOML.
+func (s ConfigService) ConfigExport(out io.Writer, withGlobal bool) error {
+	cfg, err := s.load()
+	if err != nil {
+		return err
+	}
+	return cfgpkg.DumpExport(out, cfg, withGlobal)
+}
+
+// ConfigImport validates and replaces the writable configuration file.
+func (s ConfigService) ConfigImport(sourcePath string) (string, error) {
+	incoming, err := cfgpkg.LoadFile(sourcePath)
+	if err != nil {
+		return "", err
+	}
+	targetPath, err := s.configFilePath()
+	if err != nil {
+		return "", err
+	}
+	if !incoming.Meta.HasGlobal {
+		current, loadErr := cfgpkg.LoadFile(targetPath)
+		if loadErr == nil {
+			incoming.Global = current.Global
+		} else if !os.IsNotExist(loadErr) {
+			return "", loadErr
+		}
+	}
+	if err := cfgpkg.SaveAtomic(targetPath, incoming); err != nil {
+		return "", err
+	}
+	return targetPath, nil
 }
 
 func (s ConfigService) ConfigGet(key string) (any, error) {
