@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,6 +92,94 @@ func TestHandleConfigDoctorPrintsLocalPaths(t *testing.T) {
 	assert.Contains(t, got, "EGET_SELF_UPDATE_SOURCE: https://example.com/tools/eget/")
 	assert.NotContains(t, got, "secret")
 	assert.NotContains(t, got, "env-secret")
+}
+
+func TestHandleConfigExportStdoutIsPureTOML(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "eget.toml")
+	writeCLIFile(t, configPath, "[global]\ntarget = '/machine/bin'\n\n[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+	svc := &cliService{cfgService: app.ConfigService{
+		ConfigPath: configPath,
+		Load:       func() (*cfgpkg.File, error) { return cfgpkg.LoadFile(configPath) },
+	}}
+
+	origStdout := os.Stdout
+	reader, writer, err := os.Pipe()
+	assert.NoErr(t, err)
+	os.Stdout = writer
+	defer func() { os.Stdout = origStdout }()
+
+	err = svc.handleConfig(&ConfigOptions{Action: "export"})
+	assert.NoErr(t, err)
+	assert.NoErr(t, writer.Close())
+	body, readErr := io.ReadAll(reader)
+	assert.NoErr(t, readErr)
+	assert.NoErr(t, reader.Close())
+	assert.NotContains(t, string(body), "[global]")
+	assert.Contains(t, string(body), "[packages.fzf]")
+}
+
+func TestHandleConfigExportWritesFile(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "eget.toml")
+	exportPath := filepath.Join(dir, "portable.toml")
+	writeCLIFile(t, configPath, "[global]\ntarget = '/machine/bin'\n\n[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+	svc := &cliService{cfgService: app.ConfigService{
+		ConfigPath: configPath,
+		Load:       func() (*cfgpkg.File, error) { return cfgpkg.LoadFile(configPath) },
+	}}
+
+	assert.NoErr(t, svc.handleConfig(&ConfigOptions{Action: "export", File: exportPath, WithGlobal: true}))
+	body, err := os.ReadFile(exportPath)
+	assert.NoErr(t, err)
+	assert.Contains(t, string(body), "[global]")
+}
+
+func TestHandleConfigImportCanCancelOrForce(t *testing.T) {
+	t.Run("cancel keeps target unchanged", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "portable.toml")
+		writeCLIFile(t, targetPath, "[global]\ntarget = '/current/bin'\n")
+		writeCLIFile(t, sourcePath, "[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+		before, err := os.ReadFile(targetPath)
+		assert.NoErr(t, err)
+		svc := &cliService{cfgService: app.ConfigService{ConfigPath: targetPath}}
+		withTestStdin(t, "n\n", func() {
+			err = svc.handleConfig(&ConfigOptions{Action: "import", File: sourcePath})
+		})
+		assert.Err(t, err)
+		after, readErr := os.ReadFile(targetPath)
+		assert.NoErr(t, readErr)
+		assert.Eq(t, before, after)
+	})
+
+	t.Run("force replaces without confirmation", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "complete.toml")
+		writeCLIFile(t, targetPath, "[global]\ntarget = '/current/bin'\n")
+		writeCLIFile(t, sourcePath, "[global]\ntarget = '/imported/bin'\n")
+		svc := &cliService{cfgService: app.ConfigService{ConfigPath: targetPath}}
+
+		assert.NoErr(t, svc.handleConfig(&ConfigOptions{Action: "import", File: sourcePath, Force: true}))
+		loaded, err := cfgpkg.LoadFile(targetPath)
+		assert.NoErr(t, err)
+		assert.Eq(t, "/imported/bin", *loaded.Global.Target)
+	})
+}
+
+func withTestStdin(t *testing.T, input string, fn func()) {
+	t.Helper()
+	original := os.Stdin
+	reader, writer, err := os.Pipe()
+	assert.NoErr(t, err)
+	os.Stdin = reader
+	defer func() { os.Stdin = original }()
+	_, err = writer.WriteString(input)
+	assert.NoErr(t, err)
+	assert.NoErr(t, writer.Close())
+	fn()
+	assert.NoErr(t, reader.Close())
 }
 
 func TestHandleConfigDoctorKeepsConfigDirIndependentFromExplicitConfigFile(t *testing.T) {

@@ -346,6 +346,8 @@ var commandFlagSpecs = map[string]flagSpec{
 			"ls":     {},
 			"doctor": {},
 			"path":   {bools: setOf("check")},
+			"export": {bools: setOf("with-global")},
+			"import": {bools: setOf("force", "f")},
 			"get":    {},
 			"set":    {},
 		},

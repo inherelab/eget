@@ -21,7 +21,9 @@
 - 修改 `internal/app/config.go`：实现导出和导入业务语义。
 - 修改 `internal/app/config_test.go`：覆盖默认导出、完整导出、保留/替换 global、非法来源和保存失败。
 - 修改 `internal/cli/config_cmd.go`：注册 `export [FILE]`、`import FILE`、`--with-global`、`--force`。
+- 修改 `internal/cli/app.go`：允许顶层参数预处理器接受两个新子命令的 flag。
 - 修改 `internal/cli/config_handler.go`：连接 stdout/文件导出、覆盖确认和导入结果提示。
+- 修改 `internal/cli/app_config_test.go`：覆盖真实 gcli 路由和 flag 绑定。
 - 修改 `internal/cli/config_handler_test.go`：覆盖纯 TOML stdout、文件导出、确认取消与 force。
 - 修改 `docs/config.md`、`docs/config.zh-CN.md`：记录命令和迁移语义。
 - 修改 `AGENTS.md`：实时维护正在进行工作；功能完成后移除配置导入导出条目。
@@ -193,21 +195,23 @@ git commit -m "feat: implement config import and export"
 ### Task 3: CLI 命令、确认和输出
 
 **Files:**
+- Modify: `internal/cli/app.go`
+- Test: `internal/cli/app_config_test.go`
 - Modify: `internal/cli/config_cmd.go`
 - Modify: `internal/cli/config_handler.go`
 - Test: `internal/cli/config_handler_test.go`
 
-- [ ] **Step 1: 写命令绑定和 handler 失败测试**
+- [x] **Step 1: 写命令绑定和 handler 失败测试**
 
 新增测试验证：`export` 接受零或一个 FILE 且绑定 `--with-global`；`import` 必须有一个 FILE 且绑定 `--force`；无 FILE 导出时 stdout 只有可解析 TOML；FILE 导出写文件并只在终端输出成功提示；目标存在且未 `--force` 时拒绝确认会取消且文件不变；`--force` 不读取 stdin。
 
-- [ ] **Step 2: 运行 CLI 测试确认 RED**
+- [x] **Step 2: 运行 CLI 测试确认 RED**
 
 Run: `go test ./internal/cli -run 'TestConfig.*Export|TestConfig.*Import|TestHandleConfig.*Export|TestHandleConfig.*Import'`
 
 Expected: FAIL，提示子命令、字段或 action 分支不存在。
 
-- [ ] **Step 3: 注册命令与选项**
+- [x] **Step 3: 注册命令与选项**
 
 扩展 `ConfigOptions`：
 
@@ -219,17 +223,17 @@ Force      bool
 
 新增 `newConfigExportCmd` 和 `newConfigImportCmd`，使用 `AddArg` 限制参数数量，并用 `BoolOpt` 注册 `--with-global`、`--force`；同步更新 config help 和 examples。
 
-- [ ] **Step 4: 实现 handler 分支**
+- [x] **Step 4: 实现 handler 分支**
 
 `export` 无 FILE 时直接 `ConfigExport(os.Stdout, opts.WithGlobal)`，不能调用 ccolor；有 FILE 时用 `os.Create`/关闭错误检查写出并显示成功提示。`import` 在目标存在且未 force 时复用确认提示，确认后调用 `ConfigImport`；成功提示输出目标路径。
 
-- [ ] **Step 5: 运行 CLI 测试确认 GREEN**
+- [x] **Step 5: 运行 CLI 测试确认 GREEN**
 
 Run: `go test ./internal/cli -run 'TestConfig|TestHandleConfig'`
 
 Expected: PASS。
 
-- [ ] **Step 6: 更新计划并提交 CLI 阶段**
+- [x] **Step 6: 更新计划并提交 CLI 阶段**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 

@@ -64,6 +64,24 @@ func TestMain_ConfigSubcommandsRouteToConfigCommand(t *testing.T) {
 			wantCalls: 1,
 		},
 		{
+			name:      "export stdout",
+			args:      []string{"config", "export", "--with-global"},
+			want:      ConfigOptions{Action: "export", WithGlobal: true},
+			wantCalls: 1,
+		},
+		{
+			name:      "export file",
+			args:      []string{"config", "export", "portable.toml"},
+			want:      ConfigOptions{Action: "export", File: "portable.toml"},
+			wantCalls: 1,
+		},
+		{
+			name:      "import force",
+			args:      []string{"config", "import", "portable.toml", "--force"},
+			want:      ConfigOptions{Action: "import", File: "portable.toml", Force: true},
+			wantCalls: 1,
+		},
+		{
 			name:      "top alias",
 			args:      []string{"cfg", "list"},
 			want:      ConfigOptions{Action: "list"},
@@ -84,6 +102,9 @@ func TestMain_ConfigSubcommandsRouteToConfigCommand(t *testing.T) {
 			err := newApp(handler, &stdout, &stderr).RunWithArgs(tt.args)
 			assert.NoErr(t, err)
 			assert.Eq(t, tt.wantCalls, len(calls))
+			if len(calls) == 0 {
+				return
+			}
 			assert.Eq(t, "config", calls[0].name)
 
 			opts, ok := calls[0].options.(*ConfigOptions)
@@ -93,6 +114,9 @@ func TestMain_ConfigSubcommandsRouteToConfigCommand(t *testing.T) {
 			assert.Eq(t, tt.want.Value, opts.Value)
 			assert.Eq(t, tt.want.Target, opts.Target)
 			assert.Eq(t, tt.want.Check, opts.Check)
+			assert.Eq(t, tt.want.File, opts.File)
+			assert.Eq(t, tt.want.WithGlobal, opts.WithGlobal)
+			assert.Eq(t, tt.want.Force, opts.Force)
 		})
 	}
 }

@@ -9,11 +9,14 @@ import (
 const supportedConfigPathTargets = "config_file, config_dir, env_file, bin_dir, cache_dir, sdk_dir, pkg_store_file, sdk_store_file"
 
 type ConfigOptions struct {
-	Action string
-	Key    string
-	Value  string
-	Target string
-	Check  bool
+	Action     string
+	Key        string
+	Value      string
+	Target     string
+	File       string
+	Check      bool
+	WithGlobal bool
+	Force      bool
 }
 
 func newConfigCmd(handler CommandHandler) (*gcli.Command, func()) {
@@ -24,6 +27,8 @@ func newConfigCmd(handler CommandHandler) (*gcli.Command, func()) {
   list | ls           Print current config values and file status
   doctor              Print local paths and environment diagnostics
   path [--check] [target]
+  export [--with-global] [FILE]
+  import [--force] FILE
 
 <info>Examples</>:
   eget config init
@@ -31,6 +36,8 @@ func newConfigCmd(handler CommandHandler) (*gcli.Command, func()) {
   eget config doctor
   eget cfg path cache_dir
   eget cfg path --check sdk_store_file
+  eget config export portable.toml
+  eget config import --force portable.toml
   eget config get global.target
   eget config set global.target ~/.local/bin`
 
@@ -39,12 +46,56 @@ func newConfigCmd(handler CommandHandler) (*gcli.Command, func()) {
 		newConfigActionCmd("list", []string{"ls"}, opts, handler),
 		newConfigActionCmd("doctor", nil, opts, handler),
 		newConfigPathCmd(opts, handler),
+		newConfigExportCmd(opts, handler),
+		newConfigImportCmd(opts, handler),
 		newConfigGetCmd(opts, handler),
 		newConfigSetCmd(opts, handler),
 	}
 	return cmd, func() {
 		*opts = ConfigOptions{}
 	}
+}
+
+func newConfigExportCmd(opts *ConfigOptions, handler CommandHandler) *gcli.Command {
+	cmd := gcli.NewCommand("export", "Export configuration as TOML")
+	cmd.Config = func(c *gcli.Command) {
+		c.BoolOpt(&opts.WithGlobal, "with-global", "", false, "Include the machine-specific global section")
+		c.AddArg("file", "Output file, defaults to stdout", false)
+	}
+	cmd.Func = func(c *gcli.Command, args []string) error {
+		opts.Action = "export"
+		opts.File = c.Arg("file").String()
+		if err := validateNoFlagArgs(append([]string{opts.File}, args...)); err != nil {
+			return err
+		}
+		if len(args) > 0 {
+			return fmt.Errorf("too many arguments: %v", args)
+		}
+		snapshot := *opts
+		return handler("config", &snapshot)
+	}
+	return cmd
+}
+
+func newConfigImportCmd(opts *ConfigOptions, handler CommandHandler) *gcli.Command {
+	cmd := gcli.NewCommand("import", "Import configuration from TOML")
+	cmd.Config = func(c *gcli.Command) {
+		c.BoolOpt(&opts.Force, "force", "f", false, "Replace existing configuration without confirmation")
+		c.AddArg("file", "TOML file to import", true)
+	}
+	cmd.Func = func(c *gcli.Command, args []string) error {
+		opts.Action = "import"
+		opts.File = c.Arg("file").String()
+		if err := validateNoFlagArgs(append([]string{opts.File}, args...)); err != nil {
+			return err
+		}
+		if len(args) > 0 {
+			return fmt.Errorf("too many arguments: %v", args)
+		}
+		snapshot := *opts
+		return handler("config", &snapshot)
+	}
+	return cmd
 }
 
 func newConfigActionCmd(action string, aliases []string, opts *ConfigOptions, handler CommandHandler) *gcli.Command {

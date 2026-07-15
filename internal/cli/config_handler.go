@@ -82,6 +82,44 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		return nil
 	case "doctor":
 		return s.handleConfigDoctor()
+	case "export":
+		if opts.File == "" {
+			return s.cfgService.ConfigExport(os.Stdout, opts.WithGlobal)
+		}
+		out, err := os.Create(opts.File)
+		if err != nil {
+			return err
+		}
+		exportErr := s.cfgService.ConfigExport(out, opts.WithGlobal)
+		closeErr := out.Close()
+		if exportErr != nil {
+			return exportErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		ccolor.Successf("✓ Exported config: %s\n", opts.File)
+		return nil
+	case "import":
+		info, err := s.cfgService.ConfigInfo()
+		if err != nil {
+			return err
+		}
+		if info.Exists && !opts.Force {
+			confirmed, err := prompts.ConfirmOverwrite(info.Path)
+			if err != nil {
+				return err
+			}
+			if !confirmed {
+				return fmt.Errorf("config import cancelled")
+			}
+		}
+		path, err := s.cfgService.ConfigImport(opts.File)
+		if err != nil {
+			return err
+		}
+		ccolor.Successf("✓ Imported config: %s\n", path)
+		return nil
 	case "path":
 		info, err := s.cfgService.ConfigPathInfo(opts.Target)
 		if err != nil {
