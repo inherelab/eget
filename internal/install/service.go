@@ -423,7 +423,7 @@ func (s *Service) resolveTemplateChecksum(opts *Options) (string, error) {
 
 func (s *Service) SelectExtractor(url, tool string, opts *Options) (any, error) {
 	filename := assetFilename(url)
-	if opts.DownloadOnly && opts.ExtractFile == "" && !opts.All {
+	if opts.InstallMode == InstallModeInstaller || (opts.DownloadOnly && opts.ExtractFile == "" && !opts.All) {
 		if s.DownloadOnlyExtractorFactory == nil {
 			return nil, fmt.Errorf("download-only extractor factory is required")
 		}

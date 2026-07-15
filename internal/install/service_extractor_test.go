@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/gookit/goutil/x/assert"
 )
 
 func TestSelectExtractor(t *testing.T) {
@@ -49,6 +51,24 @@ func TestSelectExtractor(t *testing.T) {
 	if got := extractor.(*fakeExtractor).name; got != "tool.tar.gz|tool|binary:tool" {
 		t.Fatalf("SelectExtractor(binary) = %q", got)
 	}
+}
+
+func TestSelectExtractorUsesRawFileForInstallerMode(t *testing.T) {
+	svc := NewService()
+	svc.DownloadOnlyExtractorFactory = func(name string) any {
+		return &fakeExtractor{name: "raw:" + name}
+	}
+	svc.BinaryChooserFactory = func(tool string) any {
+		return &fakeChooser{name: tool}
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		return &fakeExtractor{name: "archive:" + filename}
+	}
+
+	extractor, err := svc.SelectExtractor("https://example.com/PowerShell-7.6.3-win-x64.msi", "PowerShell", &Options{InstallMode: InstallModeInstaller})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "raw:PowerShell-7.6.3-win-x64.msi", extractor.(*fakeExtractor).name)
 }
 
 func TestSelectExtractorUsesSystem7zForSevenZipWhenAvailable(t *testing.T) {
