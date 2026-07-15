@@ -170,10 +170,11 @@ Expected: FAIL，提示 `ConfigExport`、`ConfigImport` 尚不存在。
 
 ```go
 func (s ConfigService) ConfigExport(out io.Writer, withGlobal bool) error
+func (s ConfigService) ConfigImportCheck(sourcePath string) error
 func (s ConfigService) ConfigImport(sourcePath string) (string, error)
 ```
 
-`ConfigExport` 调用现有 `load()` 后转交 `cfgpkg.DumpExport`。`ConfigImport` 先完整 `cfgpkg.LoadFile(sourcePath)`；仅当 `incoming.Meta.HasGlobal == false` 时加载当前配置并复制 `current.Global`，随后调用 `cfgpkg.SaveAtomic(s.configPath(), incoming)`。来源包含 `[global]` 时不读取目标内容，所有其它顶层 section 按来源文件整体替换。
+`ConfigExport` 调用现有 `load()` 后转交 `cfgpkg.DumpExport`。`ConfigImportCheck` 与 `ConfigImport` 复用私有 preflight：拒绝 source/target 同文件、完整解析来源，并仅在 `incoming.Meta.HasGlobal == false` 时加载当前配置和复制 `current.Global`。正式导入随后调用 `cfgpkg.SaveAtomic`；来源包含 `[global]` 时不解析目标内容，所有其它顶层 section 按来源文件整体替换。
 
 - [x] **Step 4: 运行应用层测试确认 GREEN**
 
@@ -225,7 +226,7 @@ Force      bool
 
 - [x] **Step 4: 实现 handler 分支**
 
-`export` 无 FILE 时直接 `ConfigExport(os.Stdout, opts.WithGlobal)`，不能调用 ccolor；有 FILE 时用 `os.Create`/关闭错误检查写出并显示成功提示。`import` 在目标存在且未 force 时复用确认提示，确认后调用 `ConfigImport`；成功提示输出目标路径。
+`export` 无 FILE 时直接 `ConfigExport(os.Stdout, opts.WithGlobal)`，不能调用 ccolor；有 FILE 时先拒绝与活动配置相同的文件，再完整序列化到 buffer，成功后写出并显示提示。`import` 先调用 `ConfigImportCheck`，再在目标存在且未 force 时复用确认提示，确认后调用 `ConfigImport`；成功提示输出目标路径。
 
 - [x] **Step 5: 运行 CLI 测试确认 GREEN**
 
@@ -252,7 +253,7 @@ git commit -m "feat: add config import and export commands"
 - Modify: `AGENTS.md`
 - Modify: `docs/superpowers/plans/2026-07-15-config-import-export.md`
 
-- [ ] **Step 1: 更新中英文配置文档**
+- [x] **Step 1: 更新中英文配置文档**
 
 记录以下命令和精确语义：
 
@@ -265,7 +266,7 @@ eget config import --force FILE
 
 说明 stdout 是纯 TOML；默认排除 `[global]`；导入不含 `[global]` 时保留目标 global、包含时替换；其它顶层 section 整体替换；导入会重新序列化并丢失原注释/排版。
 
-- [ ] **Step 2: 运行格式化和聚焦测试**
+- [x] **Step 2: 运行格式化和聚焦测试**
 
 Run: `gofmt -w internal/config/model.go internal/config/gookit.go internal/config/atomic.go internal/config/replace_unix.go internal/config/replace_windows.go internal/config/gookit_test.go internal/app/config.go internal/app/config_test.go internal/cli/config_cmd.go internal/cli/config_handler.go internal/cli/config_handler_test.go`
 
@@ -273,17 +274,17 @@ Run: `go test ./internal/config ./internal/app ./internal/cli`
 
 Expected: PASS。
 
-- [ ] **Step 3: 运行 MVP 全量验证**
+- [x] **Step 3: 运行 MVP 全量验证**
 
 Run: `go test ./...`
 
 Expected: PASS，无失败 package。
 
-- [ ] **Step 4: 计划自检与工作项清理**
+- [x] **Step 4: 计划自检与工作项清理**
 
 逐项检查设计文档要求均有对应测试；在 PowerShell 运行 `$bad = @('TB'+'D', 'TO'+'DO', 'implement '+'later', '类似'+'上面', 'similar '+'to'); Select-String -Path docs/superpowers/plans/2026-07-15-config-import-export.md -Pattern $bad`，Expected: 无输出。确认方法名始终为 `DumpExport`、`SaveAtomic`、`ConfigExport`、`ConfigImport`。勾选全部步骤，并从 `AGENTS.md` 的正在进行工作中移除“配置导入导出设计与实施”，保留 Cache Server 设计项。
 
-- [ ] **Step 5: 最终影响检查并提交文档收尾**
+- [x] **Step 5: 最终影响检查并提交文档收尾**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 
@@ -294,7 +295,7 @@ git add docs/config.md docs/config.zh-CN.md AGENTS.md docs/superpowers/plans/202
 git commit -m "docs: document config migration"
 ```
 
-- [ ] **Step 6: 确认最终工作树**
+- [x] **Step 6: 确认最终工作树**
 
 Run: `git status --short`
 

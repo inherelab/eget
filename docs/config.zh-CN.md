@@ -62,6 +62,29 @@ url = "${PROXY_URL}"
 
 不要把 `.env` 提交到版本库。
 
+## 配置导入导出
+
+在旧机器导出可迁移配置：
+
+```bash
+eget config export portable.toml
+```
+
+默认不会导出整个 `[global]`，因为它通常包含目标目录、缓存目录、代理和 token 等机器相关配置。确实需要完整备份时显式添加：
+
+```bash
+eget config export --with-global complete.toml
+```
+
+省略输出文件时，命令只向 stdout 输出纯 TOML，适合重定向或管道处理。输出文件与当前活动配置指向同一个文件时会拒绝执行，避免截断源配置。导入到新机器：
+
+```bash
+eget config import portable.toml
+eget config import --force portable.toml
+```
+
+目标配置已存在时默认要求交互确认，`--force` 跳过确认。来源文件与目标配置指向同一个文件时会拒绝执行。来源文件不含 `[global]` 时保留目标机器当前的 `[global]`；来源文件包含 `[global]` 时替换它。其它顶层配置块都以来源文件为准整体替换，不做 package 逐项合并。导入会先完整校验 TOML，再安全替换目标文件；重新序列化会丢失来源文件原有的注释和排版。
+
 ## 配置块
 
 支持的配置块：

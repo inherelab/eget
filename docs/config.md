@@ -62,6 +62,29 @@ url = "${PROXY_URL}"
 
 Keep `.env` out of version control.
 
+## Import and Export
+
+Export a portable configuration from the old machine:
+
+```bash
+eget config export portable.toml
+```
+
+The entire `[global]` section is excluded by default because it commonly contains machine-specific target paths, cache paths, proxy settings, and tokens. Include it only for a complete backup:
+
+```bash
+eget config export --with-global complete.toml
+```
+
+When FILE is omitted, the command writes pure TOML to stdout for redirection or piping. The operation is rejected when the output and active config refer to the same file, preventing the source config from being truncated. Import it on the new machine with:
+
+```bash
+eget config import portable.toml
+eget config import --force portable.toml
+```
+
+An existing target config requires interactive confirmation unless `--force` is used. The operation is rejected when the source and target refer to the same file. If the source omits `[global]`, the target machine's current `[global]` is retained; if the source contains `[global]`, it is replaced. Every other top-level section is replaced as a whole from the source instead of merging individual packages. The source TOML is fully validated before the target is safely replaced. Re-serialization does not preserve the source file's comments or formatting.
+
 ## Sections
 
 Supported sections:
