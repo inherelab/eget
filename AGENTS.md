@@ -16,6 +16,9 @@
 
 <!-- PROCESSING WORKS:START -->
 
+- 配置导入导出设计与实施：[docs/superpowers/specs/2026-07-15-config-import-export-design.md](docs/superpowers/specs/2026-07-15-config-import-export-design.md)
+- Cache Server 离线安装两期设计：[docs/superpowers/specs/2026-07-15-cache-offline-install-design.md](docs/superpowers/specs/2026-07-15-cache-offline-install-design.md)
+
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则
