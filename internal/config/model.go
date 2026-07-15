@@ -92,7 +92,8 @@ type HTTPProxySection struct {
 
 type File struct {
 	Meta struct {
-		Keys []string
+		Keys      []string
+		HasGlobal bool
 	}
 	Global       Section            `toml:"global" mapstructure:"global"`
 	HTTPProxy    HTTPProxySection   `toml:"http_proxy" mapstructure:"http_proxy"`

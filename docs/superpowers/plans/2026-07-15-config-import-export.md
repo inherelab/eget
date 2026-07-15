@@ -36,7 +36,7 @@
 - Create: `internal/config/replace_windows.go`
 - Test: `internal/config/gookit_test.go`
 
-- [ ] **Step 1: 写 section 存在性和导出过滤失败测试**
+- [x] **Step 1: 写 section 存在性和导出过滤失败测试**
 
 在 `internal/config/gookit_test.go` 增加表驱动测试，使用项目断言库：
 
@@ -71,13 +71,13 @@ func TestDumpExportOmitsGlobalByDefault(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认 RED**
+- [x] **Step 2: 运行测试确认 RED**
 
 Run: `go test ./internal/config -run 'TestLoadFileTracksGlobalSection|TestDumpExportOmitsGlobalByDefault'`
 
 Expected: FAIL，提示 `Meta.HasGlobal` 或 `DumpExport` 尚不存在。
 
-- [ ] **Step 3: 最小实现 section 标记与导出 writer**
+- [x] **Step 3: 最小实现 section 标记与导出 writer**
 
 在 `File.Meta` 增加 `HasGlobal bool`；`decodeConfigFile` 使用 `cfg.Exists("global", false)` 设置它。新增：
 
@@ -94,17 +94,17 @@ func DumpExport(out io.Writer, file *File, withGlobal bool) error {
 }
 ```
 
-- [ ] **Step 4: 写原子保存失败不破坏旧文件的失败测试**
+- [x] **Step 4: 写原子保存失败不破坏旧文件的失败测试**
 
 通过包内可替换的 `replaceConfigFile` 函数模拟最终替换失败，断言旧文件仍为 `old` 且临时文件已清理；成功用例保存后再 `LoadFile` 验证新内容可解析。
 
-- [ ] **Step 5: 运行原子保存测试确认 RED**
+- [x] **Step 5: 运行原子保存测试确认 RED**
 
 Run: `go test ./internal/config -run TestSaveAtomic`
 
 Expected: FAIL，提示 `SaveAtomic` 尚不存在。
 
-- [ ] **Step 6: 实现同目录临时写入和平台替换**
+- [x] **Step 6: 实现同目录临时写入和平台替换**
 
 新增接口：
 
@@ -114,13 +114,13 @@ func SaveAtomic(path string, file *File) error
 
 实现必须先 `MkdirAll`，再在目标目录 `CreateTemp`，关闭临时句柄后调用现有 `Save(tempPath, file)`，最后调用平台 `replaceConfigFile(tempPath, path)`；任何错误均删除临时文件。Unix 实现调用 `os.Rename`，Windows 实现调用 `windows.MoveFileEx` 并带 `MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH`。
 
-- [ ] **Step 7: 运行配置包测试确认 GREEN**
+- [x] **Step 7: 运行配置包测试确认 GREEN**
 
 Run: `go test ./internal/config`
 
 Expected: PASS。
 
-- [ ] **Step 8: 更新计划并提交配置基础阶段**
+- [x] **Step 8: 更新计划并提交配置基础阶段**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 

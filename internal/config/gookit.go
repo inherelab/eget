@@ -25,6 +25,7 @@ func decodeConfigFile(cfg *configutil.Manager) (*File, error) {
 	}
 
 	conf := NewFile()
+	conf.Meta.HasGlobal = cfg.Exists("global", false)
 	if err := cfg.MapOnExists("global", &conf.Global); err != nil {
 		return nil, err
 	}
@@ -101,6 +102,18 @@ func encodeConfigFile(file *File) *configutil.Manager {
 
 func dumpConfig(file *File, out io.Writer) error {
 	cfg := encodeConfigFile(file)
+	_, err := cfg.DumpTo(out)
+	return err
+}
+
+// DumpExport writes a portable TOML configuration to out.
+func DumpExport(out io.Writer, file *File, withGlobal bool) error {
+	cfg := encodeConfigFile(file)
+	if !withGlobal {
+		data := cfg.Data()
+		delete(data, "global")
+		cfg.SetData(data)
+	}
 	_, err := cfg.DumpTo(out)
 	return err
 }

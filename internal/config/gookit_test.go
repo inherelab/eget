@@ -2,12 +2,85 @@ package config
 
 import (
 	"bytes"
+	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/gookit/goutil/x/assert"
 )
+
+func TestLoadFileTracksGlobalSection(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want bool
+	}{
+		{name: "missing", body: "[packages.fzf]\nrepo = 'junegunn/fzf'\n"},
+		{name: "present", body: "[global]\n\n[packages.fzf]\nrepo = 'junegunn/fzf'\n", want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "eget.toml")
+			assert.NoErr(t, os.WriteFile(path, []byte(tc.body), 0o644))
+
+			cfg, err := LoadFile(path)
+
+			assert.NoErr(t, err)
+			assert.Eq(t, tc.want, cfg.Meta.HasGlobal)
+		})
+	}
+}
+
+func TestDumpExportOmitsGlobalByDefault(t *testing.T) {
+	target, repo := "/machine/bin", "junegunn/fzf"
+	cfg := NewFile()
+	cfg.Global.Target = &target
+	cfg.Packages["fzf"] = Section{Repo: &repo}
+
+	var out bytes.Buffer
+	assert.NoErr(t, DumpExport(&out, cfg, false))
+	assert.NotContains(t, out.String(), "[global]")
+	assert.Contains(t, out.String(), "[packages.fzf]")
+
+	out.Reset()
+	assert.NoErr(t, DumpExport(&out, cfg, true))
+	assert.Contains(t, out.String(), "[global]")
+	assert.Contains(t, out.String(), "/machine/bin")
+}
+
+func TestSaveAtomic(t *testing.T) {
+	t.Run("writes a loadable replacement", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "eget.toml")
+		target := "/new/bin"
+		cfg := NewFile()
+		cfg.Global.Target = &target
+
+		assert.NoErr(t, SaveAtomic(path, cfg))
+		loaded, err := LoadFile(path)
+		assert.NoErr(t, err)
+		assert.Eq(t, target, *loaded.Global.Target)
+	})
+
+	t.Run("keeps old file when replacement fails", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "eget.toml")
+		assert.NoErr(t, os.WriteFile(path, []byte("old"), 0o644))
+		oldReplace := replaceConfigFile
+		replaceConfigFile = func(string, string) error { return errors.New("replace failed") }
+		defer func() { replaceConfigFile = oldReplace }()
+
+		err := SaveAtomic(path, NewFile())
+
+		assert.Err(t, err)
+		body, readErr := os.ReadFile(path)
+		assert.NoErr(t, readErr)
+		assert.Eq(t, "old", string(body))
+		files, globErr := filepath.Glob(filepath.Join(dir, ".eget.toml.tmp-*"))
+		assert.NoErr(t, globErr)
+		assert.Len(t, files, 0)
+	})
+}
 
 func TestPathGetAndSet(t *testing.T) {
 	cfg := NewFile()
