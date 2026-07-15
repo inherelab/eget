@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -134,6 +135,40 @@ func TestHandleConfigExportWritesFile(t *testing.T) {
 	assert.Contains(t, string(body), "[global]")
 }
 
+func TestHandleConfigExportProtectsExistingFiles(t *testing.T) {
+	t.Run("load error keeps existing output", func(t *testing.T) {
+		exportPath := filepath.Join(t.TempDir(), "portable.toml")
+		writeCLIFile(t, exportPath, "keep me")
+		svc := &cliService{cfgService: app.ConfigService{Load: func() (*cfgpkg.File, error) {
+			return nil, errors.New("load failed")
+		}}}
+
+		err := svc.handleConfig(&ConfigOptions{Action: "export", File: exportPath})
+
+		assert.Err(t, err)
+		body, readErr := os.ReadFile(exportPath)
+		assert.NoErr(t, readErr)
+		assert.Eq(t, "keep me", string(body))
+	})
+
+	t.Run("active config output is rejected", func(t *testing.T) {
+		configPath := filepath.Join(t.TempDir(), "eget.toml")
+		original := "[global]\ntarget = '/machine/bin'\n"
+		writeCLIFile(t, configPath, original)
+		svc := &cliService{cfgService: app.ConfigService{
+			ConfigPath: configPath,
+			Load:       func() (*cfgpkg.File, error) { return cfgpkg.LoadFile(configPath) },
+		}}
+
+		err := svc.handleConfig(&ConfigOptions{Action: "export", File: configPath})
+
+		assert.Err(t, err)
+		body, readErr := os.ReadFile(configPath)
+		assert.NoErr(t, readErr)
+		assert.Eq(t, original, string(body))
+	})
+}
+
 func TestHandleConfigImportCanCancelOrForce(t *testing.T) {
 	t.Run("cancel keeps target unchanged", func(t *testing.T) {
 		dir := t.TempDir()
@@ -157,14 +192,50 @@ func TestHandleConfigImportCanCancelOrForce(t *testing.T) {
 		dir := t.TempDir()
 		targetPath := filepath.Join(dir, "eget.toml")
 		sourcePath := filepath.Join(dir, "complete.toml")
-		writeCLIFile(t, targetPath, "[global]\ntarget = '/current/bin'\n")
+		writeCLIFile(t, targetPath, "[global\ntarget =")
 		writeCLIFile(t, sourcePath, "[global]\ntarget = '/imported/bin'\n")
 		svc := &cliService{cfgService: app.ConfigService{ConfigPath: targetPath}}
 
 		assert.NoErr(t, svc.handleConfig(&ConfigOptions{Action: "import", File: sourcePath, Force: true}))
 		loaded, err := cfgpkg.LoadFile(targetPath)
 		assert.NoErr(t, err)
-		assert.Eq(t, "/imported/bin", *loaded.Global.Target)
+		if err == nil {
+			assert.Eq(t, "/imported/bin", *loaded.Global.Target)
+		}
+	})
+}
+
+func TestHandleConfigImportValidatesBeforeConfirmation(t *testing.T) {
+	t.Run("malformed source returns parse error", func(t *testing.T) {
+		dir := t.TempDir()
+		targetPath := filepath.Join(dir, "eget.toml")
+		sourcePath := filepath.Join(dir, "broken.toml")
+		writeCLIFile(t, targetPath, "[global]\ntarget = '/current/bin'\n")
+		writeCLIFile(t, sourcePath, "[global\ntarget =")
+		svc := &cliService{cfgService: app.ConfigService{ConfigPath: targetPath}}
+		var gotErr error
+		withTestStdin(t, "", func() {
+			gotErr = svc.handleConfig(&ConfigOptions{Action: "import", File: sourcePath})
+		})
+		assert.Err(t, gotErr)
+		if gotErr != nil {
+			assert.NotContains(t, gotErr.Error(), "cancelled")
+			assert.Contains(t, gotErr.Error(), "toml")
+		}
+	})
+
+	t.Run("same source and target returns same-file error", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "eget.toml")
+		writeCLIFile(t, path, "[global]\ntarget = '/current/bin'\n")
+		svc := &cliService{cfgService: app.ConfigService{ConfigPath: path}}
+		var gotErr error
+		withTestStdin(t, "", func() {
+			gotErr = svc.handleConfig(&ConfigOptions{Action: "import", File: path})
+		})
+		assert.Err(t, gotErr)
+		if gotErr != nil {
+			assert.Contains(t, gotErr.Error(), "same file")
+		}
 	})
 }
 

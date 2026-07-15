@@ -133,6 +133,28 @@ func TestMain_ConfigPathRejectsExtraArgs(t *testing.T) {
 	assert.Contains(t, err.Error(), "too many")
 }
 
+func TestMain_ConfigMigrationRejectsInvalidArgs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{name: "export extra file", args: []string{"config", "export", "one.toml", "two.toml"}},
+		{name: "import missing file", args: []string{"config", "import"}},
+		{name: "import extra file", args: []string{"config", "import", "one.toml", "two.toml"}},
+		{name: "with-global on import", args: []string{"config", "import", "--with-global", "one.toml"}},
+		{name: "force on export", args: []string{"config", "export", "--force"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			err := newApp(func(string, any) error {
+				t.Fatal("handler should not run")
+				return nil
+			}, &stdout, &stderr).RunWithArgs(tc.args)
+			assert.Err(t, err)
+		})
+	}
+}
+
 func TestMain_ConfigWithoutSubcommandShowsHelp(t *testing.T) {
 	calls := make([]commandCall, 0, 1)
 	handler := func(name string, options any) error {

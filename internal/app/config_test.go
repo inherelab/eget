@@ -33,6 +33,23 @@ func TestConfigExport(t *testing.T) {
 }
 
 func TestConfigImport(t *testing.T) {
+	t.Run("rejects source that is the target file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "eget.toml")
+		writeRawConfigFile(t, path, "[packages.fzf]\nrepo = 'junegunn/fzf'\n")
+		before, readErr := os.ReadFile(path)
+		assert.NoErr(t, readErr)
+
+		_, err := (ConfigService{ConfigPath: path}).ConfigImport(path)
+
+		assert.Err(t, err)
+		if err != nil {
+			assert.Contains(t, err.Error(), "same file")
+		}
+		after, afterErr := os.ReadFile(path)
+		assert.NoErr(t, afterErr)
+		assert.Eq(t, before, after)
+	})
+
 	t.Run("imports portable config when target does not exist", func(t *testing.T) {
 		dir := t.TempDir()
 		targetPath := filepath.Join(dir, "eget.toml")

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -86,23 +87,38 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		if opts.File == "" {
 			return s.cfgService.ConfigExport(os.Stdout, opts.WithGlobal)
 		}
-		out, err := os.Create(opts.File)
+		info, err := s.cfgService.ConfigPathInfo("config_file")
 		if err != nil {
 			return err
 		}
-		exportErr := s.cfgService.ConfigExport(out, opts.WithGlobal)
-		closeErr := out.Close()
-		if exportErr != nil {
-			return exportErr
+		if info.Exists {
+			configInfo, err := os.Stat(info.Path)
+			if err != nil {
+				return err
+			}
+			if outputInfo, statErr := os.Stat(opts.File); statErr == nil {
+				if os.SameFile(configInfo, outputInfo) {
+					return fmt.Errorf("config export target is the active config file: %s", opts.File)
+				}
+			} else if !os.IsNotExist(statErr) {
+				return statErr
+			}
 		}
-		if closeErr != nil {
-			return closeErr
+		var out bytes.Buffer
+		if err := s.cfgService.ConfigExport(&out, opts.WithGlobal); err != nil {
+			return err
+		}
+		if err := os.WriteFile(opts.File, out.Bytes(), 0o644); err != nil {
+			return err
 		}
 		ccolor.Successf("✓ Exported config: %s\n", opts.File)
 		return nil
 	case "import":
-		info, err := s.cfgService.ConfigInfo()
+		info, err := s.cfgService.ConfigPathInfo("config_file")
 		if err != nil {
+			return err
+		}
+		if err := s.cfgService.ConfigImportCheck(opts.File); err != nil {
 			return err
 		}
 		if info.Exists && !opts.Force {

@@ -196,26 +196,51 @@ func (s ConfigService) ConfigExport(out io.Writer, withGlobal bool) error {
 
 // ConfigImport validates and replaces the writable configuration file.
 func (s ConfigService) ConfigImport(sourcePath string) (string, error) {
-	incoming, err := cfgpkg.LoadFile(sourcePath)
+	targetPath, incoming, err := s.prepareConfigImport(sourcePath)
 	if err != nil {
 		return "", err
 	}
+	if err := cfgpkg.SaveAtomic(targetPath, incoming); err != nil {
+		return "", err
+	}
+	return targetPath, nil
+}
+
+// ConfigImportCheck validates an import without changing the target file.
+func (s ConfigService) ConfigImportCheck(sourcePath string) error {
+	_, _, err := s.prepareConfigImport(sourcePath)
+	return err
+}
+
+func (s ConfigService) prepareConfigImport(sourcePath string) (string, *cfgpkg.File, error) {
 	targetPath, err := s.configFilePath()
 	if err != nil {
-		return "", err
+		return "", nil, err
+	}
+	sourceInfo, err := os.Stat(sourcePath)
+	if err != nil {
+		return "", nil, err
+	}
+	if targetInfo, statErr := os.Stat(targetPath); statErr == nil {
+		if os.SameFile(sourceInfo, targetInfo) {
+			return "", nil, fmt.Errorf("config source and target are the same file: %s", sourcePath)
+		}
+	} else if !os.IsNotExist(statErr) {
+		return "", nil, statErr
+	}
+	incoming, err := cfgpkg.LoadFile(sourcePath)
+	if err != nil {
+		return "", nil, err
 	}
 	if !incoming.Meta.HasGlobal {
 		current, loadErr := cfgpkg.LoadFile(targetPath)
 		if loadErr == nil {
 			incoming.Global = current.Global
 		} else if !os.IsNotExist(loadErr) {
-			return "", loadErr
+			return "", nil, loadErr
 		}
 	}
-	if err := cfgpkg.SaveAtomic(targetPath, incoming); err != nil {
-		return "", err
-	}
-	return targetPath, nil
+	return targetPath, incoming, nil
 }
 
 func (s ConfigService) ConfigGet(key string) (any, error) {
