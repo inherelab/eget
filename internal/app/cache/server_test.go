@@ -202,6 +202,21 @@ func TestCacheServerDownloadPathKey(t *testing.T) {
 	assert.Eq(t, "pkg", rec.Body.String())
 }
 
+func TestCacheServerDownloadPathKeyServesAPICache(t *testing.T) {
+	cacheDir := t.TempDir()
+	rel := filepath.ToSlash(filepath.Join("api-cache", "github-repos-owner-tool-releases-latest.json"))
+	file := filepath.Join(cacheDir, filepath.FromSlash(rel))
+	assert.NoErr(t, os.MkdirAll(filepath.Dir(file), 0o755))
+	assert.NoErr(t, os.WriteFile(file, []byte(`{"tag_name":"v1.2.3"}`), 0o644))
+
+	req := httptest.NewRequest(http.MethodGet, "/download/"+cachemirror.KeyForRelPath(rel), nil)
+	rec := httptest.NewRecorder()
+	NewHandler(Service{}, cacheDir, ServeOptions{}).ServeHTTP(rec, req)
+
+	assert.Eq(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"tag_name":"v1.2.3"`)
+}
+
 func TestCacheServerDownloadPathKeyMiss(t *testing.T) {
 	cacheDir := t.TempDir()
 	handler := NewHandler(Service{}, cacheDir, ServeOptions{})

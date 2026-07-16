@@ -200,6 +200,28 @@ fallback = true
 
 第一版 mirror 协议使用基于缓存相对路径的 path-key，因此可以直接复用 mirror 机器上已有的老缓存文件。mirror 只是下载优化，不是信任根；已有 checksum 配置仍会在后续流程中执行校验。
 
+### 已知工具的全离线安装
+
+联网机器先正常查询或安装目标，让同一个 cache root 下的 `api-cache` 和 `pkg-cache` 都完成预热，然后启动 cache server：
+
+```bash
+eget install owner/tool
+eget cache serve --host 0.0.0.0 --port 8686
+```
+
+离线客户端已知道 repo、package alias 或 pkg-template target 时，使用严格模式：
+
+```toml
+[cache_mirror]
+enable = true
+url = "http://192.168.1.10:8686"
+fallback = false
+```
+
+`fallback = false` 会同时禁止 provider metadata 和资产下载回源。缺少 metadata 时错误包含 `cache mirror metadata miss`；metadata 存在但缺少资产时错误包含 `cache mirror miss`。`api_cache.enable = false` 只关闭普通 API cache 策略，不会禁用 metadata mirror；mirror 命中的 metadata 仍会暂存到本地 `api-cache`，供当前解析和后续复用。
+
+一期只支持客户端已经知道的 target，不支持从 cache server 搜索或列出可安装工具。package/version/platform catalog 属于后续独立阶段。
+
 `[cache_mirror]` 是客户端侧的 mirror 查询配置。服务端访问保护是 `cache serve` 的运行时参数：
 
 ```bash

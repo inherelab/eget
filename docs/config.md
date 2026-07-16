@@ -200,6 +200,28 @@ Fields:
 
 The first mirror protocol uses a path key based on the normalized cache relative path. It can reuse old cache files already present on the mirror server. The mirror is an optimization, not a trust root; checksum verification still uses existing package verification when configured.
 
+### Fully offline installation for known targets
+
+On an online machine, query or install the target normally so both `api-cache` and `pkg-cache` under the same cache root are warm, then start the cache server:
+
+```bash
+eget install owner/tool
+eget cache serve --host 0.0.0.0 --port 8686
+```
+
+When the offline client already knows the repo, package alias, or pkg-template target, enable strict mode:
+
+```toml
+[cache_mirror]
+enable = true
+url = "http://192.168.1.10:8686"
+fallback = false
+```
+
+`fallback = false` blocks origin access for both provider metadata and asset downloads. Missing metadata reports `cache mirror metadata miss`; available metadata with a missing asset reports `cache mirror miss`. Setting `api_cache.enable = false` only disables the normal API cache policy; it does not disable the metadata mirror. Mirrored metadata is still staged in the local `api-cache` for parsing and later reuse.
+
+Phase one supports only targets already known to the client. It does not search or list installable tools from the cache server. A package/version/platform catalog belongs to a later, separate phase.
+
 `[cache_mirror]` is client-side lookup configuration. Server access protection is a runtime `cache serve` option:
 
 ```bash

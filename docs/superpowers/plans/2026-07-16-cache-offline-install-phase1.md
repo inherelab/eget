@@ -423,7 +423,7 @@ git commit -m "test: cover fully offline cached installation"
 - Modify: `docs/config.md`
 - Modify: `docs/config.zh-CN.md`
 
-- [ ] **Step 1: 写 server API cache path-key 回归测试**
+- [x] **Step 1: 写 server API cache path-key 回归测试**
 
 在 `internal/app/cache/server_test.go` 增加 `TestCacheServerDownloadPathKeyServesAPICache`，显式创建 `api-cache/github-repos-owner-tool-releases-latest.json`，使用完整相对路径计算 key：
 
@@ -445,13 +445,13 @@ func TestCacheServerDownloadPathKeyServesAPICache(t *testing.T) {
 
 这里使用当前 `NewHandler(Service{}, cacheDir, ServeOptions{})` 签名；测试语义必须保留完整 `api-cache/...` key，不能只复用已有 pkg-cache fixture。
 
-- [ ] **Step 2: 运行 server 回归**
+- [x] **Step 2: 运行 server 回归**
 
 Run: `go test ./internal/app/cache -run 'TestCacheServerDownloadPathKey|TestCacheServerDownloadPathKeyServesAPICache'`
 
 Expected: PASS。现有 server 已扫描 `KindAPI`，正常情况下无需修改 production server；若失败，先确认测试构造是否符合现有 root scope，再决定是否需要最小生产修复。
 
-- [ ] **Step 3: 更新中英文配置文档**
+- [x] **Step 3: 更新中英文配置文档**
 
 在 `cache_mirror` 配置章节加入完整操作说明，内容必须覆盖：
 
@@ -472,7 +472,7 @@ fallback = false
 
 英文文档表达相同语义，不增加新的配置字段或未经实现的命令。
 
-- [ ] **Step 4: 验证 server 与文档并提交阶段 4**
+- [x] **Step 4: 验证 server 与文档并提交阶段 4**
 
 Run: `go test ./internal/app/cache`
 
