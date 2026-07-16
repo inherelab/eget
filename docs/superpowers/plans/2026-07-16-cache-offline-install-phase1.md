@@ -328,25 +328,28 @@ git commit -m "feat: pass cache mirror to metadata clients"
 **Files:**
 - Create: `internal/install/runner_offline_cache_test.go`
 
-- [ ] **Step 1: 写完整离线安装 RED 测试**
+- [x] **Step 1: 写完整离线安装 RED 测试**
 
 新增 `TestRunnerInstallsKnownGitHubToolFullyOfflineFromCacheMirror`。测试只模拟 server 已公开的 `/download/{path-key}` 协议，不 import `internal/app/cache`，避免形成跨层依赖。
 
 测试准备顺序必须与生产计算一致：
 
 ```go
-cacheDir := t.TempDir()
-apiCacheDir := filepath.Join(cacheDir, "api-cache")
+cacheRoot := t.TempDir()
+apiCacheDir := filepath.Join(cacheRoot, "api-cache")
 metadataURL := "https://api.github.com/repos/owner/tool/releases/latest"
 assetURL := "https://origin.invalid/tool-v1.2.3-windows-amd64.zip"
 
 metadataPath := APICacheFilePath(apiCacheDir, metadataURL)
-metadataRel, err := cachemirror.RelPath(cacheDir, metadataPath)
+metadataRel, err := cachemirror.RelPath(cacheRoot, metadataPath)
 assert.NoErr(t, err)
 metadataKey := cachemirror.KeyForRelPath(metadataRel)
 
-assetPath := CacheFilePath(cacheDir, assetURL)
-assetRel, err := cachemirror.RelPath(cacheDir, assetPath)
+assetPath := CacheFilePathWithMeta(cacheRoot, assetURL, cacheMetaFromOptions(Options{
+	CacheName: "tool",
+	System:    "windows/amd64",
+}))
+assetRel, err := cachemirror.RelPath(cacheRoot, assetPath)
 assert.NoErr(t, err)
 assetKey := cachemirror.KeyForRelPath(assetRel)
 ```
@@ -370,7 +373,8 @@ default:
 runner := NewRunner(NewDefaultService(nil, nil))
 runner.Stdout, runner.Stderr = io.Discard, io.Discard
 result, err := runner.Run("owner/tool", Options{
-	CacheDir: cacheDir,
+	APICacheDir: apiCacheDir,
+	CacheDir: cacheRoot,
 	Output: filepath.Join(t.TempDir(), "bin"),
 	System: "windows/amd64",
 	CacheMirror: cachemirror.Options{Enable: true, URL: mirror.URL, Fallback: false},
@@ -385,23 +389,23 @@ result, err := runner.Run("owner/tool", Options{
 - 本地 `metadataPath` 和 `assetPath` 已写入。
 - `result.ExtractedFiles` 包含安装目录下的 `tool.exe`，内容与归档一致。
 
-- [ ] **Step 2: 运行完整链路测试确认 RED**
+- [x] **Step 2: 运行完整链路测试确认 RED**
 
 Run: `go test ./internal/install -run TestRunnerInstallsKnownGitHubToolFullyOfflineFromCacheMirror -v`
 
 Expected: FAIL；实施 Task 1 前会尝试 origin，实施 Task 1/2 后应直接 GREEN。如果此时直接 PASS，仍检查 origin 计数和两个 key 的精确请求断言，不能仅以文件存在作为成功标准。
 
-- [ ] **Step 3: 只修正测试暴露的组合缺口**
+- [x] **Step 3: 只修正测试暴露的组合缺口**
 
 如果失败来自 production wiring，限制修复范围为 Task 1/2 已涉及的 metadata mirror 和 option mapping；不得在本任务新增 finder、server 路由或测试专用生产 API。若 fixture 的字段不足，依据 `GitHubClient.LatestRelease`/asset detector 当前读取字段补全 JSON，而不是绕过真实 finder。
 
-- [ ] **Step 4: 验证完整链路与既有资产 mirror 回归**
+- [x] **Step 4: 验证完整链路与既有资产 mirror 回归**
 
 Run: `go test ./internal/install -run 'TestRunnerInstallsKnownGitHubToolFullyOfflineFromCacheMirror|TestDownloadBodyUsesCacheMirrorBeforeOrigin|TestDownloadBodyFallsBackWhenCacheMirrorMisses|TestDownloadBodyErrorsWhenCacheMirrorFallbackDisabled'`
 
 Expected: 全部 PASS；新测试证明 metadata 和 asset 均命中 mirror，旧测试证明资产 fallback 语义未回归。
 
-- [ ] **Step 5: 检查影响并提交阶段 3**
+- [x] **Step 5: 检查影响并提交阶段 3**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 
