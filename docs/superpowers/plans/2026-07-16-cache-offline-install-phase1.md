@@ -61,7 +61,7 @@ npx gitnexus detect-changes --repo eget --scope all
 - Modify: `internal/client/api_cache.go`
 - Test: `internal/client/api_cache_test.go`
 
-- [ ] **Step 1: 为 API cache path 激活条件写 RED 测试**
+- [x] **Step 1: 为 API cache path 激活条件写 RED 测试**
 
 在 `internal/client/api_cache_test.go` 增加表驱动测试，固定 GitHub release URL，分别验证普通 API cache、仅 mirror、两者关闭和非 metadata URL：
 
@@ -90,13 +90,13 @@ func TestResolvedAPICachePathSupportsMetadataMirror(t *testing.T) {
 
 另加一个 download URL 用例，断言即使 mirror 开启也返回 `false`。
 
-- [ ] **Step 2: 运行测试确认 RED**
+- [x] **Step 2: 运行测试确认 RED**
 
 Run: `go test ./internal/client -run TestResolvedAPICachePathSupportsMetadataMirror`
 
 Expected: FAIL，`mirror only` 用例得到 `false`，且 `client.Options` 尚无 `CacheMirror` 字段。
 
-- [ ] **Step 3: 最小扩展 client 选项与 API cache path 条件**
+- [x] **Step 3: 最小扩展 client 选项与 API cache path 条件**
 
 在 `internal/client/network.go` 引入已有包并给 `Options` 添加一个字段：
 
@@ -130,7 +130,7 @@ func resolvedAPICachePath(opts Options, rawURL string, parsed *url.URL) (string,
 }
 ```
 
-- [ ] **Step 4: 写 metadata mirror 命中、持久化和本地优先 RED 测试**
+- [x] **Step 4: 写 metadata mirror 命中、持久化和本地优先 RED 测试**
 
 新增 `TestGetWithOptionsUsesMetadataMirrorBeforeOrigin`：
 
@@ -151,13 +151,13 @@ body := `{"tag_name":"v1.2.3","prerelease":false,"assets":[{"name":"tool-windows
 
 另增 `TestGetWithOptionsPrefersLocalAPICacheToMetadataMirror`，预先写入本地 cache，mirror handler 和 origin stub 被调用即失败，断言本地内容直接返回。
 
-- [ ] **Step 5: 运行命中测试确认 RED**
+- [x] **Step 5: 运行命中测试确认 RED**
 
 Run: `go test ./internal/client -run 'TestGetWithOptionsUsesMetadataMirrorBeforeOrigin|TestGetWithOptionsPrefersLocalAPICacheToMetadataMirror'`
 
 Expected: FAIL；当前本地 miss 后直接进入 origin，mirror handler 未收到请求。
 
-- [ ] **Step 6: 实现最小 metadata mirror helper**
+- [x] **Step 6: 实现最小 metadata mirror helper**
 
 在 `internal/client/api_cache.go` 增加 helper。cache root 必须是 `filepath.Dir(apiCacheDir)`，从而 key 对应 server 扫描到的 `api-cache/<filename>`，不能只 hash basename：
 
@@ -209,7 +209,7 @@ if useAPICache && opts.CacheMirror.Active() {
 
 `cachePath` 已由 `resolvedAPICachePath` 展开后生成。helper 固定从该路径的父目录得到 `api-cache`，再从上一级得到 cache root；不得改为使用可能仍含 `~` 的 `opts.APICacheDir`，也不得只对 basename 计算 key。
 
-- [ ] **Step 7: 写 fallback 与请求范围 RED 测试**
+- [x] **Step 7: 写 fallback 与请求范围 RED 测试**
 
 增加以下用例，均通过 origin 计数证明真实行为：
 
@@ -218,13 +218,13 @@ if useAPICache && opts.CacheMirror.Active() {
 - `TestGetWithOptionsMetadataMirrorErrorFailsWithoutOrigin`：mirror 500、`fallback=false`，错误保留 server 状态语义，origin 次数 0。
 - `TestGetWithOptionsDoesNotUseMetadataMirrorForDownload`：普通 asset URL 不请求 metadata mirror，继续走原有请求流程。
 
-- [ ] **Step 8: 运行 client 聚焦测试并修正最小实现**
+- [x] **Step 8: 运行 client 聚焦测试并修正最小实现**
 
 Run: `go test ./internal/client -run 'TestResolvedAPICachePathSupportsMetadataMirror|TestGetWithOptions.*MetadataMirror|TestGetWithOptionsPrefersLocalAPICacheToMetadataMirror|TestGetWithOptionsDoesNotUseAPICacheForDownloads'`
 
 Expected: PASS；严格模式所有用例 origin 次数为 0，fallback 模式 origin 次数恰为 1。
 
-- [ ] **Step 9: 回归整个 client 包并提交阶段 1**
+- [x] **Step 9: 回归整个 client 包并提交阶段 1**
 
 Run: `go test ./internal/client`
 

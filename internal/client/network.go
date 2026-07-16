@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"github.com/inherelab/eget/internal/cachemirror"
 )
 
 type Options struct {
@@ -23,6 +26,7 @@ type Options struct {
 	DisableSSL       bool
 	ChunkConcurrency int
 	UserAgent        string
+	CacheMirror      cachemirror.Options
 }
 
 type DownloadResult struct {
@@ -61,6 +65,25 @@ func GetWithOptions(rawURL string, opts Options) (*http.Response, error) {
 			return resp, nil
 		} else {
 			verbosef("api cache miss: %s", cachePath)
+		}
+	}
+	if useAPICache && opts.CacheMirror.Active() {
+		hit, err := tryAPICacheMirror(cachePath, opts.CacheMirror)
+		if err != nil {
+			if !opts.CacheMirror.Fallback {
+				return nil, err
+			}
+			verbosef("cache mirror metadata fallback: %v", err)
+		}
+		if hit {
+			resp, ok, err := loadAPICacheResponse(cachePath, 0)
+			if err != nil {
+				return nil, fmt.Errorf("load mirrored api cache: %w", err)
+			}
+			if !ok {
+				return nil, fmt.Errorf("mirrored api cache is unavailable: %s", cachePath)
+			}
+			return resp, nil
 		}
 	}
 

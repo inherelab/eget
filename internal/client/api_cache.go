@@ -1,7 +1,9 @@
 package client
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -10,11 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/inherelab/eget/internal/cachemirror"
 	"github.com/inherelab/eget/internal/util"
 )
 
 func resolvedAPICachePath(opts Options, rawURL string, parsed *url.URL) (string, bool) {
-	if !opts.APICacheEnabled || !isProviderMetadataRequest(parsed) {
+	if (!opts.APICacheEnabled && !opts.CacheMirror.Active()) || !isProviderMetadataRequest(parsed) {
 		return "", false
 	}
 	cacheDir := opts.APICacheDir
@@ -27,6 +30,23 @@ func resolvedAPICachePath(opts Options, rawURL string, parsed *url.URL) (string,
 		return "", false
 	}
 	return APICacheFilePath(expanded, rawURL), true
+}
+
+func tryAPICacheMirror(cachePath string, opts cachemirror.Options) (bool, error) {
+	cacheRoot := filepath.Dir(filepath.Dir(cachePath))
+	rel, err := cachemirror.RelPath(cacheRoot, cachePath)
+	if err != nil {
+		return false, err
+	}
+	key := cachemirror.KeyForRelPath(rel)
+	result, err := cachemirror.DownloadToFile(context.Background(), opts, key, cachePath)
+	if err != nil {
+		return false, fmt.Errorf("cache mirror metadata %s: %w", rel, err)
+	}
+	if !result.Hit && !opts.Fallback {
+		return false, fmt.Errorf("cache mirror metadata miss: %s (fallback disabled)", rel)
+	}
+	return result.Hit, nil
 }
 
 func loadAPICacheResponse(path string, cacheTime int) (*http.Response, bool, error) {
