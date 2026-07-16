@@ -16,8 +16,6 @@
 
 <!-- PROCESSING WORKS:START -->
 
-- Cache Server 离线安装一期：[设计](docs/superpowers/specs/2026-07-15-cache-offline-install-design.md) · [实施计划](docs/superpowers/plans/2026-07-16-cache-offline-install-phase1.md)
-
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则

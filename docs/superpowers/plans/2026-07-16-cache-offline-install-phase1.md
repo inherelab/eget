@@ -497,25 +497,25 @@ git commit -m "docs: explain fully offline cache installation"
 - Modify: `AGENTS.md`
 - Verify only: all files changed by Tasks 1-4
 
-- [ ] **Step 1: 运行聚焦包回归**
+- [x] **Step 1: 运行聚焦包回归**
 
 Run: `go test ./internal/client ./internal/install ./internal/app ./internal/app/cache`
 
 Expected: PASS，无 data race、fixture 外网依赖或平台特定失败。
 
-- [ ] **Step 2: 运行 MVP 主链路全量回归**
+- [x] **Step 2: 运行 MVP 主链路全量回归**
 
 Run: `go test ./...`
 
 Expected: PASS。若失败，区分本次改动导致的回归与仓库已有失败；本次回归必须修复，已有失败要保留完整命令和首个错误证据，不能宣称全量通过。
 
-- [ ] **Step 3: 执行最终 GitNexus 影响核查**
+- [x] **Step 3: 执行最终 GitNexus 影响核查**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 
 Expected: 受影响流程仅包括 provider metadata cache、install/SDK option wiring、离线安装回归与文档；不得出现 catalog、search、upload、server proxy 等二期能力。
 
-- [ ] **Step 4: 人工验收严格离线语义**
+- [x] **Step 4: 人工验收严格离线语义**
 
 在可访问预热 cache server、但 provider 域名不可访问的测试环境运行：
 
@@ -525,7 +525,7 @@ eget install --system windows/amd64 owner/tool
 
 Expected: metadata 与 asset 均显示从 cache mirror 命中，工具安装成功；服务端缺 metadata 时错误包含 metadata miss，缺资产时错误为 asset cache mirror miss，且两种情况都无 provider 请求。
 
-- [ ] **Step 5: 更新正在进行工作并提交交付状态**
+- [x] **Step 5: 更新正在进行工作并提交交付状态**
 
 全部验证通过后，从 `AGENTS.md` 的 `PROCESSING WORKS` 移除一期设计/计划条目；二期设计仍未进入实施，不新增“正在编码”的二期条目。
 
@@ -534,6 +534,6 @@ git add AGENTS.md
 git commit -m "docs: complete offline cache phase one"
 ```
 
-- [ ] **Step 6: 输出交付摘要**
+- [x] **Step 6: 输出交付摘要**
 
 交付时列出每阶段 commit、聚焦测试、`go test ./...` 结果、严格离线人工验收结果，以及仍保留到二期的 package catalog 范围。不得以单元测试代替未执行的真实断网验收；若未具备 server 环境，明确标记该项尚未实测。
