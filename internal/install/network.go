@@ -35,6 +35,7 @@ func ClientOptions(opts Options) client.Options {
 		DisableSSL:       opts.DisableSSL,
 		ChunkConcurrency: opts.ChunkConcurrency,
 		UserAgent:        opts.UserAgent,
+		CacheMirror:      opts.CacheMirror,
 	}
 }
 

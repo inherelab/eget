@@ -62,10 +62,31 @@ func TestNewDefaultSDKServiceUsesConfigPathsAndNetworkOptions(t *testing.T) {
 	assert.False(t, service.ClientOpts.GhproxyEnabled)
 	assert.Eq(t, ghproxyHost, service.ClientOpts.GhproxyHostURL)
 	assert.Eq(t, []string{"https://gh2.example.com"}, service.ClientOpts.GhproxyFallbacks)
+	assert.True(t, service.ClientOpts.CacheMirror.Enable)
+	assert.Eq(t, "http://mirror.local:8686", service.ClientOpts.CacheMirror.URL)
+	assert.Eq(t, 4*time.Second, service.ClientOpts.CacheMirror.Timeout)
+	assert.False(t, service.ClientOpts.CacheMirror.Fallback)
 	assert.True(t, service.CacheMirror.Enable)
 	assert.Eq(t, "http://mirror.local:8686", service.CacheMirror.URL)
 	assert.Eq(t, 4*time.Second, service.CacheMirror.Timeout)
 	assert.False(t, service.CacheMirror.Fallback)
+}
+
+func TestSDKClientOptionsEnablesAPICachePathForMirrorOnly(t *testing.T) {
+	cacheDir := t.TempDir()
+	apiCacheEnabled := false
+	mirrorEnabled := true
+	mirrorURL := "http://mirror.local:8686"
+	cfg := cfgpkg.NewFile()
+	cfg.Global.CacheDir = &cacheDir
+	cfg.ApiCache.Enable = &apiCacheEnabled
+	cfg.CacheMirror.Enable = &mirrorEnabled
+	cfg.CacheMirror.URL = &mirrorURL
+
+	opts := sdkClientOptionsFromConfig(cfg)
+	assert.False(t, opts.APICacheEnabled)
+	assert.Eq(t, filepath.Join(cacheDir, "api-cache"), opts.APICacheDir)
+	assert.True(t, opts.CacheMirror.Active())
 }
 
 func TestNewDefaultSDKServiceSkipsProxyURLWhenNoProxyEnabled(t *testing.T) {

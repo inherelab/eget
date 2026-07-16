@@ -27,7 +27,7 @@
 - 修改 `internal/client/api_cache.go`：允许 metadata mirror 独立解析 API cache path，并封装 path-key 下载。
 - 修改 `internal/client/api_cache_test.go`：覆盖本地命中、mirror 命中、回源、严格离线和非 metadata URL。
 - 修改 `internal/install/network.go`：将 `install.Options.CacheMirror` 传给 `client.Options`。
-- 修改 `internal/install/network_test.go`：验证 install 到 client 的选项映射。
+- 修改 `internal/install/runner_network_test.go`：验证 install 到 client 的选项映射。
 - 修改 `internal/app/sdk.go`：将相同 cache mirror 配置传给 SDK metadata client。
 - 修改 `internal/app/sdk_test.go`：验证 SDK metadata 选项与独立 APICacheDir。
 - 新建 `internal/install/runner_offline_cache_test.go`：组合 GitHub metadata mirror、pkg mirror 与实际解压安装，断言 origin 请求数为零。
@@ -243,13 +243,13 @@ git commit -m "feat: fetch provider metadata from cache mirror"
 
 **Files:**
 - Modify: `internal/install/network.go`
-- Test: `internal/install/network_test.go`
+- Test: `internal/install/runner_network_test.go`
 - Modify: `internal/app/sdk.go`
 - Test: `internal/app/sdk_test.go`
 
-- [ ] **Step 1: 写 install client 映射 RED 测试**
+- [x] **Step 1: 写 install client 映射 RED 测试**
 
-在 `internal/install/network_test.go` 增加：
+在 `internal/install/runner_network_test.go` 增加：
 
 ```go
 func TestClientOptionsCopiesCacheMirror(t *testing.T) {
@@ -261,13 +261,13 @@ func TestClientOptionsCopiesCacheMirror(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行 install 映射测试确认 RED**
+- [x] **Step 2: 运行 install 映射测试确认 RED**
 
 Run: `go test ./internal/install -run TestClientOptionsCopiesCacheMirror`
 
 Expected: FAIL；`ClientOptions` 返回的 `client.Options.CacheMirror` 是零值。
 
-- [ ] **Step 3: 最小补齐 install 映射**
+- [x] **Step 3: 最小补齐 install 映射**
 
 在 `ClientOptions` 的现有 struct literal 中加入：
 
@@ -277,7 +277,7 @@ CacheMirror: opts.CacheMirror,
 
 不要修改 `resolveInstallOptionsWithConfig`；该入口已经把 `CacheMirrorOptionsFromConfig(cfg)` 写入 `install.Options`。
 
-- [ ] **Step 4: 扩展 SDK 配置 RED 测试**
+- [x] **Step 4: 扩展 SDK 配置 RED 测试**
 
 在现有 `TestNewDefaultSDKServiceUsesConfigPathsAndNetworkOptions` 中补充 client metadata mirror 断言：
 
@@ -290,13 +290,13 @@ assert.False(t, service.ClientOpts.CacheMirror.Fallback)
 
 再新增 `TestSDKClientOptionsEnablesAPICachePathForMirrorOnly`，设置 `api_cache.enable=false`、cache mirror enable，断言 `ClientOpts.APICacheEnabled` 仍为 false，但 `ClientOpts.APICacheDir` 为 `<cacheDir>/api-cache` 且 mirror active。
 
-- [ ] **Step 5: 运行 SDK 测试确认 RED**
+- [x] **Step 5: 运行 SDK 测试确认 RED**
 
 Run: `go test ./internal/app -run 'TestNewDefaultSDKServiceUsesConfigPathsAndNetworkOptions|TestSDKClientOptionsEnablesAPICachePathForMirrorOnly'`
 
 Expected: FAIL；SDK `ClientOpts.CacheMirror` 仍为零值。
 
-- [ ] **Step 6: 最小补齐 SDK metadata 配置映射**
+- [x] **Step 6: 最小补齐 SDK metadata 配置映射**
 
 在 `sdkClientOptionsFromConfig` 构造的 client options 中加入：
 
@@ -306,7 +306,7 @@ opts.CacheMirror = CacheMirrorOptionsFromConfig(cfg)
 
 保留 `NewDefaultSDKService` 当前用于 SDK archive 的 `CacheMirror` 字段，metadata 与 archive 两条链路共享同一份规范化配置，不新增 SDK 专用 mirror 实现。
 
-- [ ] **Step 7: 验证选项贯通并提交阶段 2**
+- [x] **Step 7: 验证选项贯通并提交阶段 2**
 
 Run: `go test ./internal/install -run 'TestClientOptionsCopiesProxyExclude|TestClientOptionsCopiesCacheMirror'`
 
@@ -319,7 +319,7 @@ Run: `npx gitnexus detect-changes --repo eget --scope all`
 Expected: 只影响 install 和 SDK 的 client option wiring，不改变配置 schema。
 
 ```powershell
-git add internal/install/network.go internal/install/network_test.go internal/app/sdk.go internal/app/sdk_test.go
+git add internal/install/network.go internal/install/runner_network_test.go internal/app/sdk.go internal/app/sdk_test.go
 git commit -m "feat: pass cache mirror to metadata clients"
 ```
 

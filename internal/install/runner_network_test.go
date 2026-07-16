@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gookit/goutil/x/assert"
+	"github.com/inherelab/eget/internal/cachemirror"
 )
 
 func TestDownloadPrintsProxyNoticeForRemoteRequest(t *testing.T) {
@@ -159,6 +161,14 @@ func TestClientOptionsCopiesProxyExclude(t *testing.T) {
 	assert.Eq(t, []string{"github.com"}, opts.ProxyExclude)
 	opts.ProxyExclude[0] = "example.com"
 	assert.Eq(t, []string{"github.com"}, ClientOptions(Options{ProxyExclude: []string{"github.com"}}).ProxyExclude)
+}
+
+func TestClientOptionsCopiesCacheMirror(t *testing.T) {
+	want := cachemirror.Options{
+		Enable: true, URL: "http://mirror.local:8686", Timeout: 4 * time.Second, Fallback: false,
+	}
+	got := ClientOptions(Options{CacheMirror: want})
+	assert.Eq(t, want, got.CacheMirror)
 }
 
 func TestGetWithOptionsPrintsProxyNoticeForGitHubAPI(t *testing.T) {

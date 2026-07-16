@@ -83,5 +83,6 @@ func sdkClientOptionsFromConfig(cfg *cfgpkg.File, noProxyOpt ...bool) client.Opt
 	if len(cfg.Ghproxy.Fallbacks) > 0 {
 		opts.GhproxyFallbacks = append([]string(nil), cfg.Ghproxy.Fallbacks...)
 	}
+	opts.CacheMirror = CacheMirrorOptionsFromConfig(cfg)
 	return opts
 }
