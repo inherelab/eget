@@ -8,7 +8,7 @@ require (
 	github.com/gookit/cliui v0.3.2-0.20260624120656-906827b77d7b
 	github.com/gookit/color v1.6.2-0.20260604125953-289d54c4470a
 	github.com/gookit/config/v2 v2.2.8
-	github.com/gookit/gcli/v3 v3.8.1
+	github.com/gookit/gcli/v3 v3.8.3
 	github.com/gookit/goutil v0.8.0
 	github.com/klauspost/compress v1.18.5
 	github.com/ulikunitz/xz v0.5.15
