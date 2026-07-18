@@ -29,6 +29,57 @@ type parsedCacheAsset struct {
 	version assetVersion
 }
 
+type keepLatestSelection struct {
+	Matched      []Entry
+	Kept         []Entry
+	Unrecognized []Entry
+}
+
+type familyLatest struct {
+	stable, prerelease       assetVersion
+	hasStable, hasPrerelease bool
+}
+
+func selectKeepLatest(entries []Entry) keepLatestSelection {
+	parsed := make([]parsedCacheAsset, 0, len(entries))
+	latest := make(map[string]familyLatest)
+	result := keepLatestSelection{}
+	for _, entry := range entries {
+		asset, ok := parseKeepLatestEntry(entry)
+		if !ok {
+			result.Unrecognized = append(result.Unrecognized, entry)
+			continue
+		}
+		parsed = append(parsed, asset)
+		group := latest[asset.family]
+		if asset.version.stable() {
+			if !group.hasStable || compareAssetVersion(asset.version, group.stable) > 0 {
+				group.stable = asset.version
+				group.hasStable = true
+			}
+		} else if !group.hasPrerelease || compareAssetVersion(asset.version, group.prerelease) > 0 {
+			group.prerelease = asset.version
+			group.hasPrerelease = true
+		}
+		latest[asset.family] = group
+	}
+
+	for _, asset := range parsed {
+		group := latest[asset.family]
+		keep := asset.version.stable() && compareAssetVersion(asset.version, group.stable) == 0
+		keepPrerelease := group.hasPrerelease && (!group.hasStable || compareVersionCore(group.prerelease.core, group.stable.core) > 0)
+		if !asset.version.stable() && keepPrerelease && compareAssetVersion(asset.version, group.prerelease) == 0 {
+			keep = true
+		}
+		if keep {
+			result.Kept = append(result.Kept, asset.entry)
+		} else {
+			result.Matched = append(result.Matched, asset.entry)
+		}
+	}
+	return result
+}
+
 func parseAssetVersion(raw string) (assetVersion, bool) {
 	if strings.HasPrefix(raw, "v") {
 		raw = raw[1:]

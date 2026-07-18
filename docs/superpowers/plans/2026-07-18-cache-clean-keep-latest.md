@@ -127,7 +127,7 @@ git commit -m "feat: parse cache asset versions"
 - Consumes: `parseKeepLatestEntry`
 - Produces: `selectKeepLatest([]Entry) keepLatestSelection`
 
-- [ ] **Step 1: 写选择规则失败测试**
+- [x] **Step 1: 写选择规则失败测试**
 
 ```go
 type keepLatestSelection struct {
@@ -137,17 +137,17 @@ type keepLatestSelection struct {
 
 逐个 `t.Run()` 覆盖：`1.8/1.9/2.0-beta.1` 保留后两者；`2.0-beta.1/2.0` 只保留正式版；只有 prerelease 时保留最高者；最高版本所有平台/扩展名/hash 全保留；`2.0/2.0.0/v2.0.0` 全保留；unrecognized 不进入 Matched；qualifier family 不互相淘汰。
 
-- [ ] **Step 2: 运行失败测试**
+- [x] **Step 2: 运行失败测试**
 
 Run: `go test ./internal/app/cache -run TestSelectKeepLatest`
 
 Expected: FAIL，`selectKeepLatest` 未定义。
 
-- [ ] **Step 3: 实现两遍选择器**
+- [x] **Step 3: 实现两遍选择器**
 
 第一遍按 family 找最高 stable/prerelease，第二遍归类。相等必须使用 `compareAssetVersion(...) == 0`，不能比较原始字符串；仅当 prerelease core 大于 stable core 时额外保留 prerelease。
 
-- [ ] **Step 4: 验证并提交**
+- [x] **Step 4: 验证并提交**
 
 Run: `go test ./internal/app/cache`
 

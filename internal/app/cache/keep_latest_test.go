@@ -2,6 +2,7 @@ package cache
 
 import (
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/gookit/goutil/x/assert"
@@ -89,6 +90,57 @@ func TestNormalizeAssetFamilyKeepsProductTokens(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestSelectKeepLatest(t *testing.T) {
+	t.Run("stable and newer prerelease", func(t *testing.T) {
+		got := selectKeepLatest(testCacheEntries(
+			"foo-1.8.0-a1b2c3d4.zip",
+			"foo-1.9.0-b1b2c3d4.zip",
+			"foo-2.0.0-beta.1-c1b2c3d4.zip",
+		))
+		assert.Eq(t, []string{"foo-1.8.0-a1b2c3d4.zip"}, entryBaseNames(got.Matched))
+		assert.Eq(t, 2, len(got.Kept))
+	})
+
+	t.Run("stable covers prerelease core", func(t *testing.T) {
+		got := selectKeepLatest(testCacheEntries(
+			"foo-1.9.0-a1b2c3d4.zip",
+			"foo-2.0.0-beta.1-b1b2c3d4.zip",
+			"foo-2.0.0-c1b2c3d4.zip",
+		))
+		assert.Eq(t, 2, len(got.Matched))
+		assert.Eq(t, []string{"foo-2.0.0-c1b2c3d4.zip"}, entryBaseNames(got.Kept))
+	})
+
+	t.Run("only highest prerelease", func(t *testing.T) {
+		got := selectKeepLatest(testCacheEntries(
+			"foo-2.0.0-beta.1-a1b2c3d4.zip",
+			"foo-2.0.0-beta.3-b1b2c3d4.zip",
+		))
+		assert.Eq(t, 1, len(got.Matched))
+		assert.Eq(t, []string{"foo-2.0.0-beta.3-b1b2c3d4.zip"}, entryBaseNames(got.Kept))
+	})
+
+	t.Run("keeps equivalent version variants", func(t *testing.T) {
+		got := selectKeepLatest(testCacheEntries(
+			"foo-1.0.0-a1b2c3d4.zip",
+			"foo-2.0-b1b2c3d4.zip",
+			"foo-2.0.0-c1b2c3d4.tar.gz",
+			"foo-v2.0.0-d1b2c3d4.exe",
+		))
+		assert.Eq(t, 1, len(got.Matched))
+		assert.Eq(t, 3, len(got.Kept))
+	})
+
+	t.Run("preserves unrecognized", func(t *testing.T) {
+		entries := testCacheEntries("foo-1.0.0-a1b2c3d4.zip")
+		entries = append(entries, testKeepLatestEntry("pkg-cache/manual.zip"))
+		got := selectKeepLatest(entries)
+		assert.Eq(t, 0, len(got.Matched))
+		assert.Eq(t, 1, len(got.Kept))
+		assert.Eq(t, 1, len(got.Unrecognized))
+	})
+}
+
 func assertVersionOrder(t *testing.T, lower, higher string) {
 	t.Helper()
 	a, ok := parseAssetVersion(lower)
@@ -109,4 +161,21 @@ func assertVersionEqual(t *testing.T, left, right string) {
 
 func testKeepLatestEntry(rel string) Entry {
 	return Entry{Kind: KindPkg, RelPath: rel, Path: filepath.FromSlash(rel), Size: 1}
+}
+
+func testCacheEntries(names ...string) []Entry {
+	entries := make([]Entry, 0, len(names))
+	for _, name := range names {
+		entries = append(entries, testKeepLatestEntry("pkg-cache/"+name))
+	}
+	return entries
+}
+
+func entryBaseNames(entries []Entry) []string {
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, filepath.Base(entry.Path))
+	}
+	sort.Strings(names)
+	return names
 }
