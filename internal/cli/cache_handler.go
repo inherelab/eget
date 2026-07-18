@@ -14,7 +14,22 @@ import (
 )
 
 func cleanOptionsFromCLI(opts *CacheCleanOptions) (appcache.CleanOptions, error) {
-	older, err := appcache.ParseOlderDuration(opts.Older)
+	if opts.KeepLatest {
+		if opts.Older != "" || opts.All || opts.API || opts.SDK || opts.SDKIndex || opts.Partial {
+			return appcache.CleanOptions{}, fmt.Errorf("--keep-latest conflicts with --older, --all, and non-package cache kinds")
+		}
+		return appcache.CleanOptions{
+			KeepLatest: true,
+			DryRun:     opts.DryRun,
+			Yes:        opts.Yes,
+			Kinds:      []appcache.Kind{appcache.KindPkg},
+		}, nil
+	}
+	olderText := opts.Older
+	if olderText == "" {
+		olderText = "3d"
+	}
+	older, err := appcache.ParseOlderDuration(olderText)
 	if err != nil {
 		return appcache.CleanOptions{}, err
 	}
@@ -116,6 +131,10 @@ func (s *cliService) handleCacheClean(opts *CacheCleanOptions) error {
 		ccolor.Fprintf(s.stderrWriter(), " - cache dir: %s\n", preview.CacheDir)
 		ccolor.Fprintf(s.stderrWriter(), " - matched files: <mga>%d</>\n", preview.MatchedFiles)
 		ccolor.Fprintf(s.stderrWriter(), " - matched size: <mga>%s</>\n", formatBytes(preview.MatchedSize))
+		if opts.KeepLatest {
+			ccolor.Fprintf(s.stderrWriter(), " - kept latest files: <mga>%d</>\n", preview.KeptLatestFiles)
+			ccolor.Fprintf(s.stderrWriter(), " - unrecognized files: <mga>%d</>\n", preview.UnrecognizedFiles)
+		}
 		return nil
 	}
 	if preview.NeedsConfirmation() && !opts.Yes {
@@ -132,7 +151,7 @@ func (s *cliService) handleCacheClean(opts *CacheCleanOptions) error {
 			return fmt.Errorf("cache clean cancelled")
 		}
 	}
-	result, err := s.cacheService.Clean("", cleanOpts)
+	result, err := s.cacheService.ApplyClean(preview)
 	if err != nil {
 		return err
 	}
@@ -144,6 +163,10 @@ func (s *cliService) handleCacheClean(opts *CacheCleanOptions) error {
 	ccolor.Fprintf(s.stderrWriter(), " - removed files: <mga>%d</>\n", result.RemovedFiles)
 	ccolor.Fprintf(s.stderrWriter(), " - freed size: <green>%s</>\n", formatBytes(result.RemovedSize))
 	ccolor.Fprintf(s.stderrWriter(), " - skipped files: <mga>%d</>\n", len(result.Skipped))
+	if opts.KeepLatest {
+		ccolor.Fprintf(s.stderrWriter(), " - kept latest files: <mga>%d</>\n", result.KeptLatestFiles)
+		ccolor.Fprintf(s.stderrWriter(), " - unrecognized files: <mga>%d</>\n", result.UnrecognizedFiles)
+	}
 	if len(result.Skipped) > 0 {
 		ccolor.Fprintln(s.stderrWriter(), "Skipped:")
 		for _, skipped := range result.Skipped {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -41,6 +42,90 @@ func TestCliServiceHandleCacheCleanDryRun(t *testing.T) {
 	assert.Contains(t, out, "Dry run: eget cache clean")
 	assert.Contains(t, out, "matched files: 1")
 	assert.True(t, fileExistsCLI(filepath.Join(tmp, "old.zip")))
+}
+
+func TestCleanOptionsFromCLIKeepLatest(t *testing.T) {
+	got, err := cleanOptionsFromCLI(&CacheCleanOptions{KeepLatest: true})
+	assert.NoErr(t, err)
+	assert.True(t, got.KeepLatest)
+	assert.Eq(t, []appcache.Kind{appcache.KindPkg}, got.Kinds)
+
+	got, err = cleanOptionsFromCLI(&CacheCleanOptions{})
+	assert.NoErr(t, err)
+	assert.Eq(t, 72*time.Hour, got.Older)
+
+	got, err = cleanOptionsFromCLI(&CacheCleanOptions{KeepLatest: true, Pkg: true})
+	assert.NoErr(t, err)
+	assert.True(t, got.KeepLatest)
+}
+
+func TestCleanOptionsFromCLIKeepLatestRejectsConflicts(t *testing.T) {
+	tests := []*CacheCleanOptions{
+		{KeepLatest: true, Older: "3d"},
+		{KeepLatest: true, All: true},
+		{KeepLatest: true, API: true},
+		{KeepLatest: true, SDK: true},
+		{KeepLatest: true, SDKIndex: true},
+		{KeepLatest: true, Partial: true},
+	}
+	for _, opts := range tests {
+		_, err := cleanOptionsFromCLI(opts)
+		assert.Err(t, err)
+	}
+}
+
+func TestCliServiceHandleCacheCleanKeepLatest(t *testing.T) {
+	cacheDir := newCLICacheDir(t)
+	oldFile := filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip")
+	newFile := filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip")
+	writeCLITestFile(t, oldFile, "old")
+	writeCLITestFile(t, newFile, "new")
+	writeCLITestFile(t, filepath.Join(cacheDir, "pkg-cache", "manual.zip"), "manual")
+
+	cfg := cfgpkg.NewFile()
+	cfg.Global.CacheDir = &cacheDir
+	var stderr bytes.Buffer
+	service := &cliService{cacheService: appcache.Service{Config: cfg}, stderr: &stderr}
+
+	err := service.handleCacheClean(&CacheCleanOptions{KeepLatest: true, DryRun: true})
+	assert.NoErr(t, err)
+	out := ccolor.ClearCode(stderr.String())
+	assert.Contains(t, out, "kept latest files: 1")
+	assert.Contains(t, out, "unrecognized files: 1")
+	assert.True(t, fileExistsCLI(oldFile))
+
+	stderr.Reset()
+	err = service.handleCacheClean(&CacheCleanOptions{KeepLatest: true, Yes: true})
+	assert.NoErr(t, err)
+	assert.False(t, fileExistsCLI(oldFile))
+	assert.True(t, fileExistsCLI(newFile))
+	assert.Contains(t, ccolor.ClearCode(stderr.String()), "kept latest files: 1")
+}
+
+func TestCliServiceHandleCacheCleanKeepLatestDryRunJSON(t *testing.T) {
+	cacheDir := newCLICacheDir(t)
+	writeCLITestFile(t, filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip"), "old")
+	writeCLITestFile(t, filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip"), "new")
+	cfg := cfgpkg.NewFile()
+	cfg.Global.CacheDir = &cacheDir
+	service := &cliService{cacheService: appcache.Service{Config: cfg}}
+
+	reader, writer, err := os.Pipe()
+	assert.NoErr(t, err)
+	original := os.Stdout
+	os.Stdout = writer
+	err = service.handleCacheClean(&CacheCleanOptions{KeepLatest: true, DryRun: true, JSON: true})
+	assert.NoErr(t, err)
+	assert.NoErr(t, writer.Close())
+	os.Stdout = original
+	data, err := io.ReadAll(reader)
+	assert.NoErr(t, err)
+
+	var got appcache.CleanResult
+	assert.NoErr(t, json.Unmarshal(data, &got))
+	assert.Eq(t, 1, got.MatchedFiles)
+	assert.Eq(t, 0, got.RemovedFiles)
+	assert.Eq(t, 1, got.KeptLatestFiles)
 }
 
 func TestCliServiceHandleCacheCleanLargeDeletionRequiresYesInNonTTY(t *testing.T) {

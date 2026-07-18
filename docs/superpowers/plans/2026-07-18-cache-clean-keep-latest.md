@@ -235,6 +235,7 @@ git commit -m "feat: apply cache clean previews safely"
 
 **Files:**
 
+- Modify: `internal/cli/app.go`
 - Modify: `internal/cli/cache_cmd.go`
 - Modify: `internal/cli/cache_handler.go`
 - Modify: `internal/cli/app_cache_test.go`
@@ -245,11 +246,11 @@ git commit -m "feat: apply cache clean previews safely"
 - Consumes: `CleanOptions.KeepLatest`、`PreviewClean`、`ApplyClean`
 - Produces: `eget cache clean --keep-latest`
 
-- [ ] **Step 1: 对 `CacheCleanOptions/newCacheCmd/newCacheCleanCmd/cleanOptionsFromCLI/handleCacheClean` 做 GitNexus impact**
+- [x] **Step 1: 对 `CacheCleanOptions/newCacheCmd/newCacheCleanCmd/cleanOptionsFromCLI/handleCacheClean` 做 GitNexus impact**
 
 报告 HIGH/CRITICAL 后再编辑。
 
-- [ ] **Step 2: 写 flag、reset 与互斥失败测试**
+- [x] **Step 2: 写 flag、reset 与互斥失败测试**
 
 覆盖：keep-latest 合法；与非空 older/all/api/sdk/sdk-index/partial 互斥；与 pkg 合法；`--older=` 合法；普通空 older 得到 72h；同一 app 二次运行不残留 KeepLatest，Older reset 为空。
 
@@ -260,15 +261,15 @@ assert.True(t, got.KeepLatest)
 assert.Eq(t, []appcache.Kind{appcache.KindPkg}, got.Kinds)
 ```
 
-- [ ] **Step 3: 实现 options 与 flag**
+- [x] **Step 3: 实现 options 与 flag**
 
 `CacheCleanOptions` 增加 `KeepLatest bool`；`cleanOpts` 初始化和 reset 改为空结构；`StrOpt` 默认值改空且帮助写明默认 3d；增加 `BoolOpt(..."keep-latest"...)`。`cleanOptionsFromCLI` 先校验冲突，普通模式空值回填 `3d`，keep-latest 固定 KindPkg 且不解析 duration。
 
-- [ ] **Step 4: 写文本和真实 JSON 失败测试**
+- [x] **Step 4: 写文本和真实 JSON 失败测试**
 
 临时写同一 family 两个版本。dry-run JSON 反序列化后断言 matched=1、removed=0、kept=1；文本两行只在 keep-latest 出现；非 dry-run 删除旧版本。不得只用 JSON 字符串 contains 替代反序列化。
 
-- [ ] **Step 5: handler 改用同一 Preview**
+- [x] **Step 5: handler 改用同一 Preview**
 
 ```go
 preview, err := s.cacheService.PreviewClean("", cleanOpts)
@@ -278,7 +279,7 @@ result, err := s.cacheService.ApplyClean(preview)
 
 keep-latest 文本输出新增 kept/unrecognized；普通模式不显示。确认阈值和 `--yes` 不变。
 
-- [ ] **Step 6: 验证并提交**
+- [x] **Step 6: 验证并提交**
 
 Run: `go test ./internal/cli`
 

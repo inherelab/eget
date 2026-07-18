@@ -7,16 +7,17 @@ import (
 )
 
 type CacheCleanOptions struct {
-	Older    string
-	All      bool
-	DryRun   bool
-	Yes      bool
-	JSON     bool
-	Pkg      bool
-	API      bool
-	SDK      bool
-	SDKIndex bool
-	Partial  bool
+	Older      string
+	All        bool
+	DryRun     bool
+	Yes        bool
+	JSON       bool
+	Pkg        bool
+	API        bool
+	SDK        bool
+	SDKIndex   bool
+	Partial    bool
+	KeepLatest bool
 }
 
 type CacheListOptions struct {
@@ -38,7 +39,7 @@ type CacheServeOptions struct {
 }
 
 func newCacheCmd(handler CommandHandler) (*gcli.Command, func()) {
-	cleanOpts := &CacheCleanOptions{Older: "3d"}
+	cleanOpts := &CacheCleanOptions{}
 	serveOpts := &CacheServeOptions{Host: "0.0.0.0", Port: 8686, Root: "all"}
 	cmd := gcli.NewCommand("cache", "Manage local eget cache")
 	cmd.Aliases = []string{"ca"}
@@ -57,7 +58,7 @@ func newCacheCmd(handler CommandHandler) (*gcli.Command, func()) {
 		newCacheServeCmd(serveOpts, handler),
 	}
 	return cmd, func() {
-		*cleanOpts = CacheCleanOptions{Older: "3d"}
+		*cleanOpts = CacheCleanOptions{}
 		*serveOpts = CacheServeOptions{Host: "0.0.0.0", Port: 8686, Root: "all"}
 	}
 }
@@ -101,8 +102,9 @@ func newCacheStatusCmd(opts *CacheStatusOptions, handler CommandHandler) *gcli.C
 func newCacheCleanCmd(opts *CacheCleanOptions, handler CommandHandler) *gcli.Command {
 	cmd := gcli.NewCommand("clean", "Clean local cache files")
 	cmd.Config = func(c *gcli.Command) {
-		c.StrOpt(&opts.Older, "older", "", "3d", "Remove files older than duration, e.g. 3d, 12h, 1w")
+		c.StrOpt(&opts.Older, "older", "", "", "Remove files older than duration, default 3d")
 		c.BoolOpt(&opts.All, "all", "a", false, "Ignore older duration and remove all selected cache files")
+		c.BoolOpt(&opts.KeepLatest, "keep-latest", "", false, "Keep the latest package cache versions")
 		c.BoolOpt(&opts.DryRun, "dry-run", "", false, "Print matched files without removing them")
 		c.BoolOpt(&opts.Yes, "yes", "y", false, "Skip large deletion confirmation")
 		c.BoolOpt(&opts.JSON, "json", "j", false, "Output as JSON")

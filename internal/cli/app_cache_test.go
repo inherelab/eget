@@ -85,6 +85,25 @@ func TestMain_CacheCleanBindsJSON(t *testing.T) {
 	assert.True(t, opts.JSON)
 }
 
+func TestMain_CacheCleanBindsKeepLatestAndResets(t *testing.T) {
+	calls := make([]commandCall, 0, 2)
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+	var stdout, stderr bytes.Buffer
+	app := newApp(handler, &stdout, &stderr)
+	assert.NoErr(t, app.RunWithArgs([]string{"cache", "clean", "--keep-latest", "--older="}))
+	assert.NoErr(t, app.RunWithArgs([]string{"cache", "clean"}))
+
+	first := calls[0].options.(*CacheCleanOptions)
+	second := calls[1].options.(*CacheCleanOptions)
+	assert.True(t, first.KeepLatest)
+	assert.Eq(t, "", first.Older)
+	assert.False(t, second.KeepLatest)
+	assert.Eq(t, "", second.Older)
+}
+
 func TestMain_CacheServeBindsOptions(t *testing.T) {
 	calls := make([]commandCall, 0, 1)
 	handler := func(name string, options any) error {
