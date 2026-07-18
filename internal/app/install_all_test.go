@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"sort"
 	"strings"
 	"sync"
@@ -83,11 +84,68 @@ func TestInstallAllPackagesRejectsEmptyConfig(t *testing.T) {
 	}
 }
 
+func TestInstallAllPackagesContinuesAfterPackageFailure(t *testing.T) {
+	runner := newFailingInstallAllRunner()
+	svc := installAllFailureTestService(runner)
+
+	results, err := svc.InstallAllPackages(install.Options{
+		BatchConcurrency: 1, BatchConcurrencySet: true, Quiet: true,
+	})
+
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "1 install failed")
+	assert.Eq(t, []string{"BurntSushi/ripgrep", "astral-sh/uv", "pkgforge/aeris"}, sortedStrings(runner.targets))
+	assert.Eq(t, []string{"rg", "uv"}, installAllResultNames(results))
+}
+
+func TestInstallAllPackagesConcurrentContinuesAfterPackageFailure(t *testing.T) {
+	runner := newFailingInstallAllRunner()
+	svc := installAllFailureTestService(runner)
+
+	results, err := svc.InstallAllPackages(install.Options{
+		BatchConcurrency: 2, BatchConcurrencySet: true, Quiet: true,
+	})
+
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "1 install failed")
+	assert.Eq(t, []string{"BurntSushi/ripgrep", "astral-sh/uv", "pkgforge/aeris"}, sortedStrings(runner.targets))
+	assert.Eq(t, []string{"rg", "uv"}, installAllResultNames(results))
+}
+
+func newFailingInstallAllRunner() *fakeBatchRunner {
+	return &fakeBatchRunner{
+		results: map[string]RunResult{
+			"BurntSushi/ripgrep": {Tool: "rg"},
+			"astral-sh/uv":       {Tool: "uv"},
+		},
+		errs: map[string]error{"pkgforge/aeris": errors.New("EOF")},
+	}
+}
+
+func installAllFailureTestService(runner *fakeBatchRunner) Service {
+	return Service{Runner: runner, LoadConfig: func() (*cfgpkg.File, error) {
+		cfg := cfgpkg.NewFile()
+		cfg.Packages["aeris"] = cfgpkg.Section{Repo: util.StringPtr("pkgforge/aeris")}
+		cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+		cfg.Packages["uv"] = cfgpkg.Section{Repo: util.StringPtr("astral-sh/uv")}
+		return cfg, nil
+	}}
+}
+
+func installAllResultNames(results []InstallAllResult) []string {
+	names := make([]string, len(results))
+	for index, result := range results {
+		names[index] = result.Name
+	}
+	return names
+}
+
 type fakeBatchRunner struct {
 	mu        sync.Mutex
 	targets   []string
 	opts      map[string]install.Options
 	results   map[string]RunResult
+	errs      map[string]error
 	active    int
 	maxActive int
 	block     chan struct{}

@@ -72,6 +72,9 @@ func (f *fakeBatchRunner) Run(target string, opts install.Options) (RunResult, e
 	f.active--
 	f.mu.Unlock()
 
+	if err := f.errs[target]; err != nil {
+		return RunResult{}, err
+	}
 	if result, ok := f.results[target]; ok {
 		return result, nil
 	}

@@ -112,14 +112,6 @@ func effectiveBatchConcurrency(value, total int) int {
 	return value
 }
 
-func sendFirstError(errCh chan<- error, err error, cancel func()) {
-	select {
-	case errCh <- err:
-		cancel()
-	default:
-	}
-}
-
 func mapOpt(value map[string]string) *map[string]string {
 	if len(value) == 0 {
 		return nil

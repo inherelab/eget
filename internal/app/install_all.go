@@ -1,7 +1,7 @@
 package app
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -39,30 +39,38 @@ func (s Service) InstallAllPackages(cli install.Options) ([]InstallAllResult, er
 	}
 
 	results := make([]InstallAllResult, 0, len(names))
+	var failures []error
 	for _, name := range names {
 		pkg := cfg.Packages[name]
 		repo := util.DerefString(pkg.Repo)
 		if repo == "" {
-			return nil, fmt.Errorf("package %q has no repo", name)
+			failures = append(failures, fmt.Errorf("package %q has no repo", name))
+			continue
 		}
 		runTarget, recordTarget, opts, err := s.resolveInstallRequestWithConfig(cfg, name, cli, false)
 		if err != nil {
-			return nil, err
+			failures = append(failures, fmt.Errorf("%s: %w", name, err))
+			continue
 		}
 		if err := validateConcurrencyOptions(opts); err != nil {
-			return nil, err
+			failures = append(failures, fmt.Errorf("%s: %w", name, err))
+			continue
 		}
 		opts = applyDefaultInstallTarget(opts)
 		opts = normalizeExtractionOptions(opts)
 		result, err := s.installResolvedTarget(runTarget, recordTarget, opts)
 		if err != nil {
-			return nil, err
+			failures = append(failures, fmt.Errorf("%s: %w", name, err))
+			continue
 		}
 		results = append(results, InstallAllResult{
 			Name:   name,
 			Target: runTarget,
 			Result: result,
 		})
+	}
+	if len(failures) > 0 {
+		return results, fmt.Errorf("%d install failed: %w", len(failures), errors.Join(failures...))
 	}
 	return results, nil
 }
@@ -73,10 +81,15 @@ func (s Service) installAllPackagesConcurrent(cfg *cfgpkg.File, names []string, 
 		name  string
 	}
 	results := make([]InstallAllResult, len(names))
+	ok := make([]bool, len(names))
 	jobs := make(chan job)
-	errCh := make(chan error, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	var failures []error
+	var mu sync.Mutex
+	recordFailure := func(name string, err error) {
+		mu.Lock()
+		failures = append(failures, fmt.Errorf("%s: %w", name, err))
+		mu.Unlock()
+	}
 
 	var wg sync.WaitGroup
 	for i := 0; i < batch; i++ {
@@ -84,47 +97,42 @@ func (s Service) installAllPackagesConcurrent(cfg *cfgpkg.File, names []string, 
 		go func() {
 			defer wg.Done()
 			for item := range jobs {
-				select {
-				case <-ctx.Done():
-					continue
-				default:
-				}
 				runTarget, recordTarget, opts, err := s.resolveInstallRequestWithConfig(cfg, item.name, cli, false)
 				if err != nil {
-					sendFirstError(errCh, err, cancel)
+					recordFailure(item.name, err)
 					continue
 				}
 				if err := validateConcurrencyOptions(opts); err != nil {
-					sendFirstError(errCh, err, cancel)
+					recordFailure(item.name, err)
 					continue
 				}
 				opts = applyDefaultInstallTarget(opts)
 				opts = normalizeExtractionOptions(opts)
 				result, err := s.installResolvedTarget(runTarget, recordTarget, opts)
 				if err != nil {
-					sendFirstError(errCh, err, cancel)
+					recordFailure(item.name, err)
 					continue
 				}
 				results[item.index] = InstallAllResult{Name: item.name, Target: runTarget, Result: result}
+				ok[item.index] = true
 			}
 		}()
 	}
 
-sendLoop:
 	for index, name := range names {
-		select {
-		case <-ctx.Done():
-			break sendLoop
-		case jobs <- job{index: index, name: name}:
-		}
+		jobs <- job{index: index, name: name}
 	}
 	close(jobs)
 	wg.Wait()
 
-	select {
-	case err := <-errCh:
-		return nil, err
-	default:
+	out := make([]InstallAllResult, 0, len(names)-len(failures))
+	for index, result := range results {
+		if ok[index] {
+			out = append(out, result)
+		}
 	}
-	return results, nil
+	if len(failures) > 0 {
+		return out, fmt.Errorf("%d install failed: %w", len(failures), errors.Join(failures...))
+	}
+	return out, nil
 }
