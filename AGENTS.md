@@ -16,6 +16,8 @@
 
 <!-- PROCESSING WORKS:START -->
 
+- Install Mode 与 GUI 选项归一化：[docs/superpowers/specs/2026-07-18-install-mode-gui-normalization-design.md](docs/superpowers/specs/2026-07-18-install-mode-gui-normalization-design.md)
+
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则
