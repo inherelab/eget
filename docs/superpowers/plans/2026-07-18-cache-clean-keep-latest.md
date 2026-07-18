@@ -33,7 +33,7 @@
 - Produces: `compareAssetVersion(assetVersion, assetVersion) int`
 - Produces: `parseKeepLatestEntry(Entry) (parsedCacheAsset, bool)`
 
-- [ ] **Step 1: 写版本文法与比较失败测试**
+- [x] **Step 1: 写版本文法与比较失败测试**
 
 使用 `t.Run()` 和 `assert` 建表，精确覆盖：`1.2.3`、`v1.2.3`、`2026.7.17`、`beta.2 < beta.10`、`alpha < beta`、`beta < beta.0`、`Beta.1 < beta.1`、`preview.9 < rc.1`；拒绝 `1`、`1.02.3`、`beta.01`、第二个 `-`、`_`、首 identifier 为大小写任意的 `build`。
 
@@ -50,13 +50,13 @@ func TestParseAssetVersion(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行失败测试**
+- [x] **Step 2: 运行失败测试**
 
 Run: `go test ./internal/app/cache -run 'Test(Parse|Compare)AssetVersion'`
 
 Expected: FAIL，解析函数尚未定义。
 
-- [ ] **Step 3: 实现有限版本模型**
+- [x] **Step 3: 实现有限版本模型**
 
 ```go
 type versionIdentifier struct { text string; number uint64; numeric bool }
@@ -70,7 +70,7 @@ func comparePrerelease(a, b []versionIdentifier) int
 
 仅用 `strconv`、`strings` 落实设计文法；不要引入 semver 包。
 
-- [ ] **Step 4: 写真实缓存名解析失败测试**
+- [x] **Step 4: 写真实缓存名解析失败测试**
 
 表格必须覆盖：
 
@@ -86,7 +86,7 @@ foo-1.2.3-2.0.0-<hash>.zip              -> foo, 2.0.0
 
 同时拒绝大写 hash、未知平台 tuple、根目录、`misc/`、partial、symlink；断言 `windows-terminal != terminal`、`arm-tool != tool`，且 `go/fd/jq` 不受 denylist 影响。
 
-- [ ] **Step 5: 实现 cache 名解析与 family 归一化**
+- [x] **Step 5: 实现 cache 名解析与 family 归一化**
 
 ```go
 type parsedCacheAsset struct {
@@ -102,7 +102,7 @@ func cacheAssetExt(name string) string
 
 顺序固定：严格路径/类型检查 → 组合扩展名或 `path.Ext` → `[0-9a-f]{8}` → 有限平台 tuple 优先 → 最右侧合法版本起点 → family 归一化。只用精确 denylist，不拆 target triple。
 
-- [ ] **Step 6: 验证并提交**
+- [x] **Step 6: 验证并提交**
 
 Run: `go test ./internal/app/cache -run 'Test(Parse|Compare|Normalize)'`
 
