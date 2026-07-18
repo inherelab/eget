@@ -15,12 +15,13 @@ type AddOptions struct {
 	All              bool
 	GUI              bool
 	Quiet            bool
+	Retries          int
 	ChunkConcurrency int
 	Target           string
 }
 
 func newAddCmd(handler CommandHandler) (*gcli.Command, func()) {
-	opts := &AddOptions{ChunkConcurrency: -1}
+	opts := &AddOptions{Retries: 1, ChunkConcurrency: -1}
 	cmd := gcli.NewCommand("add", "Add a managed package")
 	cmd.Config = func(c *gcli.Command) {
 		c.StrOpt(&opts.Name, "name", "", "", "Managed package name")
@@ -35,6 +36,7 @@ func newAddCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.All, "extract-all", "ea", false, "Extract all files")
 		c.BoolOpt(&opts.GUI, "gui", "", false, "Add as GUI application")
 		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
+		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.AddArg("target", "Package target", true)
 	}
@@ -43,10 +45,13 @@ func newAddCmd(handler CommandHandler) (*gcli.Command, func()) {
 		if err := validateNoFlagArgs(append([]string{opts.Target}, args...)); err != nil {
 			return err
 		}
+		if err := validateRetries(opts.Retries); err != nil {
+			return err
+		}
 		snapshot := *opts
 		return handler("add", &snapshot)
 	}
 	return cmd, func() {
-		*opts = AddOptions{ChunkConcurrency: -1}
+		*opts = AddOptions{Retries: 1, ChunkConcurrency: -1}
 	}
 }

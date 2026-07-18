@@ -240,7 +240,7 @@ Expected: 第一个提交只包含批量安装修复、测试和两份文档。
 - Modify: `internal/app/install_resolve.go`
 - Test: `internal/app/install_config_test.go`
 - Modify: `internal/app/update_options.go`
-- Test: `internal/app/update_options_test.go`
+- Test: `internal/app/update_batch_test.go`
 - Modify: `internal/install/network.go`
 - Test: `internal/install/runner_network_test.go`
 - Modify: `internal/client/network.go`
@@ -250,7 +250,7 @@ Expected: 第一个提交只包含批量安装修复、测试和两份文档。
 - Produces: `Retries int` 依次存在于四个 CLI options、`install.Options` 和 `client.Options`。
 - Consumes later: `requestWithOptions(..., opts client.Options)` 使用 `opts.Retries`。
 
-- [ ] **Step 1: 对 options 传播 symbols 做 upstream impact analysis**
+- [x] **Step 1: 对 options 传播 symbols 做 upstream impact analysis**
 
 对四个 command constructor、四个 options converter 和三个下游 copier 运行：
 
@@ -270,7 +270,7 @@ npx gitnexus impact ClientOptions --direction upstream --repo eget
 
 Expected: CLI constructors 和 install options resolver 为 HIGH/CRITICAL。逐项报告后只增加字段、绑定、校验和原样复制，不改变现有默认合并规则。
 
-- [ ] **Step 2: 写 CLI 解析和传播失败测试**
+- [x] **Step 2: 写 CLI 解析和传播失败测试**
 
 在 `internal/cli/app_install_test.go` 用表驱动运行四个命令并捕获 handler snapshot：
 
@@ -299,14 +299,14 @@ assert.Eq(t, 3, installOptionsFromAdd(&AddOptions{Retries: 3}).Retries)
 
 在 `internal/install/runner_network_test.go` 断言 `ClientOptions(Options{Retries: 3}).Retries == 3`。
 
-在 `internal/app/install_config_test.go` 通过 `resolveInstallOptionsWithConfig` 断言 CLI `Retries: 3` 保留；在 `internal/app/update_options_test.go` 直接断言：
+在 `internal/app/install_config_test.go` 通过 `resolveInstallOptionsWithConfig` 断言 CLI `Retries: 3` 保留；在 `internal/app/update_batch_test.go` 直接断言：
 
 ```go
 got := applyUpdateCLIOverrides(install.Options{Retries: 1}, install.Options{Retries: 3})
 assert.Eq(t, 3, got.Retries)
 ```
 
-- [ ] **Step 3: 运行测试确认 RED**
+- [x] **Step 3: 运行测试确认 RED**
 
 Run:
 
@@ -318,7 +318,7 @@ go test ./internal/app -run 'Test.*Retries' -count=1
 
 Expected: FAIL，提示 options 没有 `Retries` 字段或 `--retries` 未定义。
 
-- [ ] **Step 4: 增加字段、CLI 绑定与校验**
+- [x] **Step 4: 增加字段、CLI 绑定与校验**
 
 四个 CLI options struct 增加 `Retries int`，command constructor 使用默认值 `1`：
 
@@ -339,7 +339,7 @@ func validateRetries(value int) error {
 
 每个 command Func 在调用 handler 前执行 `validateRetries(opts.Retries)`。在 `internal/cli/app.go` 的 install/update/download/add value flag whitelist 中加入 `"retries"`。
 
-- [ ] **Step 5: 贯通 app/install/client options**
+- [x] **Step 5: 贯通 app/install/client options**
 
 给 `install.Options` 和 `client.Options` 增加 `Retries int`。四个 `installOptionsFrom*`、`resolveInstallOptionsWithConfig` 和 `install.ClientOptions` 在 struct literal 中原样复制该字段：
 
@@ -357,12 +357,12 @@ if cli.Retries > 0 {
 
 没有显式配置合并：CLI 默认已经是 `1`，项目不新增 `retries` 配置字段。
 
-- [ ] **Step 6: 验证 options 传播**
+- [x] **Step 6: 验证 options 传播**
 
 Run:
 
 ```powershell
-gofmt -w internal/cli/app.go internal/cli/install_cmd.go internal/cli/update_cmd.go internal/cli/download_cmd.go internal/cli/add_cmd.go internal/cli/options.go internal/cli/app_install_test.go internal/cli/install_handler_test.go internal/install/options.go internal/install/network.go internal/install/runner_network_test.go internal/app/install_resolve.go internal/app/install_config_test.go internal/app/update_options.go internal/app/update_options_test.go internal/client/network.go
+gofmt -w internal/cli/app.go internal/cli/install_cmd.go internal/cli/update_cmd.go internal/cli/download_cmd.go internal/cli/add_cmd.go internal/cli/options.go internal/cli/app_install_test.go internal/cli/install_handler_test.go internal/install/options.go internal/install/network.go internal/install/runner_network_test.go internal/app/install_resolve.go internal/app/install_config_test.go internal/app/update_options.go internal/app/update_batch_test.go internal/client/network.go
 go test ./internal/cli -run 'TestMain_.*Retries|TestInstallOptionsFromCommandsPropagateRetries' -count=1
 go test ./internal/install -run TestClientOptionsPropagatesRetries -count=1
 go test ./internal/app -run 'Test.*Retries' -count=1
@@ -388,18 +388,18 @@ Expected: PASS。Task 2 不提交，和 Task 3 的请求重试实现一起进入
 - Consumes: `client.Options.Retries int`，`requestAttemptURLs(...) []string`。
 - Produces: 文件下载的每个候选 URL 最多调用 `httpDo` `Retries` 次；成功立即返回，耗尽后进入下一候选或返回最后错误；provider 元数据保持一次。
 
-- [ ] **Step 1: 对两个下载请求入口做 upstream impact analysis**
+- [x] **Step 1: 对两个下载请求入口做 upstream impact analysis**
 
 Run:
 
 ```powershell
 npx gitnexus impact requestWithOptions --direction upstream --repo eget
-npx gitnexus impact GetWithOptions --direction upstream --repo eget
+npx gitnexus impact "Function:internal/client/network.go:GetWithOptions" --direction upstream --repo eget
 ```
 
 Expected: `downloadFileSingle`、Range chunks、probe、provider 请求和 SDK 下载为 CRITICAL/HIGH。先报告影响，再限定修改为两个现有 attempt URL 循环内的 transport retry，并用 provider metadata 判定保持 API 单次请求。
 
-- [ ] **Step 2: 写请求重试失败测试**
+- [x] **Step 2: 写请求重试失败测试**
 
 在 `internal/client/http_client_test.go` 使用现有 `SetHTTPDoForTest`：
 
@@ -474,17 +474,17 @@ func TestGetWithOptionsDoesNotRetryProviderMetadata(t *testing.T) {
 
 保留现有默认/零值调用一次的测试，确保内部调用者不因零值死循环。
 
-- [ ] **Step 3: 运行测试确认 RED**
+- [x] **Step 3: 运行测试确认 RED**
 
 Run:
 
 ```powershell
-go test ./internal/client -run 'Test(RequestWithOptions.*Retry|GetWithOptions.*Retry)' -count=1
+go test ./internal/client -run 'Test(RequestWithOptions|GetWithOptions).*(Retry|Retries)' -count=1
 ```
 
 Expected: FAIL；第一次 transport error 直接返回，calls 小于期望值。
 
-- [ ] **Step 4: 实现最小 transport retry**
+- [x] **Step 4: 实现最小 transport retry**
 
 增加一个文件内 helper，provider 元数据固定返回一次，其他请求把零值规范为一次：
 
@@ -534,13 +534,13 @@ return nil, lastErr
 
 不对 `resp.StatusCode` 加判断，不加 sleep/backoff；`GetWithOptions` 的缓存、proxy notice 和响应保存逻辑保持原位。
 
-- [ ] **Step 5: 运行聚焦、包级和全量测试**
+- [x] **Step 5: 运行聚焦、包级和全量测试**
 
 Run:
 
 ```powershell
 gofmt -w internal/client/http_client.go internal/client/http_client_test.go internal/client/network.go internal/client/network_test.go
-go test ./internal/client -run 'Test(RequestWithOptions.*Retry|GetWithOptions.*Retry)' -count=1
+go test ./internal/client -run 'Test(RequestWithOptions|GetWithOptions).*(Retry|Retries)' -count=1
 go test ./internal/client ./internal/install ./internal/app ./internal/cli -count=1
 go test -count=1 ./...
 git diff --check
@@ -549,12 +549,12 @@ npx gitnexus detect-changes --repo eget --scope all
 
 Expected: 全部 PASS；GitNexus 影响限定在下载请求、options 传播和 CLI 参数绑定。
 
-- [ ] **Step 6: 更新进度并创建第二个提交**
+- [x] **Step 6: 更新进度并创建第二个提交**
 
 把 Task 2、Task 3 checkbox 更新为 `[x]`，从 `AGENTS.md` 移除本项进行中事项，然后确认 staged 文件不包含无关改动：
 
 ```powershell
-git add internal/cli/app.go internal/cli/install_cmd.go internal/cli/update_cmd.go internal/cli/download_cmd.go internal/cli/add_cmd.go internal/cli/options.go internal/cli/app_install_test.go internal/cli/install_handler_test.go internal/app/install_resolve.go internal/app/install_config_test.go internal/app/update_options.go internal/app/update_options_test.go internal/install/options.go internal/install/network.go internal/install/runner_network_test.go internal/client/network.go internal/client/network_test.go internal/client/http_client.go internal/client/http_client_test.go AGENTS.md docs/superpowers/plans/2026-07-18-issue-45-download-retries-and-batch-continuation.md
+git add internal/cli/app.go internal/cli/install_cmd.go internal/cli/update_cmd.go internal/cli/download_cmd.go internal/cli/add_cmd.go internal/cli/options.go internal/cli/app_install_test.go internal/cli/install_handler_test.go internal/app/install_resolve.go internal/app/install_config_test.go internal/app/update_options.go internal/app/update_batch_test.go internal/install/options.go internal/install/network.go internal/install/runner_network_test.go internal/client/network.go internal/client/network_test.go internal/client/http_client.go internal/client/http_client_test.go AGENTS.md docs/superpowers/plans/2026-07-18-issue-45-download-retries-and-batch-continuation.md
 git diff --cached --check
 git diff --cached --name-only
 git commit -m "feat: add configurable download retries (fix #45)"
@@ -562,7 +562,7 @@ git commit -m "feat: add configurable download retries (fix #45)"
 
 Expected: 第二个提交只包含 retries 选项、请求重试、测试和进度收尾。
 
-- [ ] **Step 7: 提交后最终验证**
+- [x] **Step 7: 提交后最终验证**
 
 Run:
 

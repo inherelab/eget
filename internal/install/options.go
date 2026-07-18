@@ -51,6 +51,7 @@ type Options struct {
 	Quiet               bool
 	DownloadOnly        bool
 	FallbackVersions    int
+	Retries             int
 	ChunkConcurrency    int
 	BatchConcurrency    int
 	ChunkConcurrencySet bool

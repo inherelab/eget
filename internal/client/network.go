@@ -24,6 +24,7 @@ type Options struct {
 	GhproxyHostURL   string
 	GhproxyFallbacks []string
 	DisableSSL       bool
+	Retries          int
 	ChunkConcurrency int
 	UserAgent        string
 	CacheMirror      cachemirror.Options
@@ -88,21 +89,9 @@ func GetWithOptions(rawURL string, opts Options) (*http.Response, error) {
 	}
 
 	attempts := requestAttemptURLs(rawURL, originalURL, opts)
+	retries := requestRetries(opts, isProviderMetadataRequest(originalURL))
 	var lastErr error
 	for i, attemptURL := range attempts {
-		req, err := http.NewRequest("GET", attemptURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		if err := setAuthHeader(req, opts.DisableSSL); err != nil {
-			return nil, err
-		}
-		setDefaultHeaders(req, opts)
-		printDownloadProxyNoticeForRequest(rawURL, req.URL, opts)
-		if isGitHubAPIRequest(originalURL) && shouldUseConfiguredProxyURL(req.URL, opts.ProxyURL, opts.ProxyExclude) {
-			printProxyNotice("GitHub API request", opts.ProxyURL)
-		}
-
 		if attemptURL != rawURL {
 			verbosef("ghproxy rewrite: %s -> %s", rawURL, attemptURL)
 		}
@@ -110,10 +99,22 @@ func GetWithOptions(rawURL string, opts Options) (*http.Response, error) {
 			verbosef("ghproxy attempt %d/%d: %s", i+1, len(attempts), attemptURL)
 		}
 
-		verbosef("request: %s %s", req.Method, req.URL.String())
-		resp, err := httpDo(client, req)
+		resp, err := doRequestWithRetries(client, retries, func() (*http.Request, error) {
+			req, err := http.NewRequest(http.MethodGet, attemptURL, nil)
+			if err != nil {
+				return nil, err
+			}
+			if err := setAuthHeader(req, opts.DisableSSL); err != nil {
+				return nil, err
+			}
+			setDefaultHeaders(req, opts)
+			printDownloadProxyNoticeForRequest(rawURL, req.URL, opts)
+			if isGitHubAPIRequest(originalURL) && shouldUseConfiguredProxyURL(req.URL, opts.ProxyURL, opts.ProxyExclude) {
+				printProxyNotice("GitHub API request", opts.ProxyURL)
+			}
+			return req, nil
+		})
 		if err != nil {
-			verbosef("request error: %v", err)
 			lastErr = err
 			if i < len(attempts)-1 {
 				verbosef("ghproxy fallback: switching to next host")
@@ -121,8 +122,6 @@ func GetWithOptions(rawURL string, opts Options) (*http.Response, error) {
 			}
 			return nil, err
 		}
-		verbosef("response: %s %s", req.URL.String(), resp.Status)
-
 		if useAPICache && resp.StatusCode == http.StatusOK {
 			cachedResp, err := storeAPICacheResponse(cachePath, resp)
 			if err != nil {

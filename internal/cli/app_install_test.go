@@ -327,6 +327,69 @@ func TestMain_InstallRejectsInvalidInstallMode(t *testing.T) {
 	assert.Contains(t, err.Error(), "install mode")
 }
 
+func TestMain_RetriesFlagBindsDownloadCommands(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"install", []string{"install", "--retries", "3", "owner/repo"}},
+		{"update", []string{"update", "--retries", "3", "owner/repo"}},
+		{"download", []string{"download", "--retries", "3", "owner/repo"}},
+		{"add", []string{"add", "--retries", "3", "owner/repo"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			called := false
+			handler := func(command string, options any) error {
+				called = true
+				assert.Eq(t, tt.name, command)
+				switch opts := options.(type) {
+				case *InstallOptions:
+					assert.Eq(t, 3, opts.Retries)
+				case *UpdateOptions:
+					assert.Eq(t, 3, opts.Retries)
+				case *DownloadOptions:
+					assert.Eq(t, 3, opts.Retries)
+				case *AddOptions:
+					assert.Eq(t, 3, opts.Retries)
+				default:
+					t.Fatalf("unexpected options type %T", options)
+				}
+				return nil
+			}
+			var stdout, stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs(tt.args)
+			assert.NoErr(t, err)
+			assert.True(t, called)
+		})
+	}
+}
+
+func TestMain_RetriesRejectsZero(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := newApp(func(string, any) error {
+		t.Fatal("handler should not run")
+		return nil
+	}, &stdout, &stderr).RunWithArgs([]string{"install", "--retries", "0", "owner/repo"})
+
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "retries must be at least 1")
+}
+
+func TestMain_RetriesDefaultsToOneAfterReset(t *testing.T) {
+	var got []int
+	handler := func(_ string, options any) error {
+		got = append(got, options.(*InstallOptions).Retries)
+		return nil
+	}
+	var stdout, stderr bytes.Buffer
+	app := newApp(handler, &stdout, &stderr)
+	assert.NoErr(t, app.RunWithArgs([]string{"install", "--retries", "3", "owner/repo"}))
+	assert.NoErr(t, app.RunWithArgs([]string{"install", "owner/repo"}))
+	assert.Eq(t, []int{3, 1}, got)
+}
+
 func TestMain_FallbackVersionsFlagBindsInstallAndDownload(t *testing.T) {
 	tests := []struct {
 		name string

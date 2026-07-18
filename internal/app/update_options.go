@@ -89,6 +89,9 @@ func applyUpdateCLIOverrides(base, cli install.Options) install.Options {
 	if cli.Quiet {
 		base.Quiet = true
 	}
+	if cli.Retries > 0 {
+		base.Retries = cli.Retries
+	}
 	if cli.ChunkConcurrencySet {
 		base.ChunkConcurrency = cli.ChunkConcurrency
 		base.ChunkConcurrencySet = true

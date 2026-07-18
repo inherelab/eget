@@ -64,30 +64,31 @@ func requestWithOptions(method, rawURL, rangeHeader string, opts Options) (*http
 		return nil, err
 	}
 	attempts := requestAttemptURLs(rawURL, originalURL, opts)
+	retries := requestRetries(opts, isProviderMetadataRequest(originalURL))
 	var lastErr error
 	for i, attemptURL := range attempts {
-		req, err := http.NewRequest(method, attemptURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		if rangeHeader != "" {
-			req.Header.Set("Range", rangeHeader)
-		}
-		if err := setAuthHeader(req, opts.DisableSSL); err != nil {
-			return nil, err
-		}
-		setDefaultHeaders(req, opts)
-		printDownloadProxyNoticeForRequest(rawURL, req.URL, opts)
 		if attemptURL != rawURL {
 			verbosef("ghproxy rewrite: %s -> %s", rawURL, attemptURL)
 		}
 		if len(attempts) > 1 {
 			verbosef("ghproxy attempt %d/%d: %s", i+1, len(attempts), attemptURL)
 		}
-		verbosef("request: %s %s", req.Method, req.URL.String())
-		resp, err := httpDo(client, req)
+		resp, err := doRequestWithRetries(client, retries, func() (*http.Request, error) {
+			req, err := http.NewRequest(method, attemptURL, nil)
+			if err != nil {
+				return nil, err
+			}
+			if rangeHeader != "" {
+				req.Header.Set("Range", rangeHeader)
+			}
+			if err := setAuthHeader(req, opts.DisableSSL); err != nil {
+				return nil, err
+			}
+			setDefaultHeaders(req, opts)
+			printDownloadProxyNoticeForRequest(rawURL, req.URL, opts)
+			return req, nil
+		})
 		if err != nil {
-			verbosef("request error: %v", err)
 			lastErr = err
 			if i < len(attempts)-1 {
 				verbosef("ghproxy fallback: switching to next host")
@@ -95,8 +96,36 @@ func requestWithOptions(method, rawURL, rangeHeader string, opts Options) (*http
 			}
 			return nil, err
 		}
-		verbosef("response: %s %s", req.URL.String(), resp.Status)
 		return resp, nil
+	}
+	return nil, lastErr
+}
+
+func requestRetries(opts Options, providerMetadata bool) int {
+	if providerMetadata || opts.Retries < 1 {
+		return 1
+	}
+	return opts.Retries
+}
+
+func doRequestWithRetries(client *http.Client, retries int, newRequest func() (*http.Request, error)) (*http.Response, error) {
+	var lastErr error
+	for attempt := 1; attempt <= retries; attempt++ {
+		req, err := newRequest()
+		if err != nil {
+			return nil, err
+		}
+		verbosef("request: %s %s", req.Method, req.URL.String())
+		resp, err := httpDo(client, req)
+		if err == nil {
+			verbosef("response: %s %s", req.URL.String(), resp.Status)
+			return resp, nil
+		}
+		lastErr = err
+		verbosef("request error: %v", err)
+		if attempt < retries {
+			verbosef("request retry %d/%d: %s", attempt+1, retries, req.URL.String())
+		}
 	}
 	return nil, lastErr
 }

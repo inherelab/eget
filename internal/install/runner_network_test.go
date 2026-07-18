@@ -163,6 +163,12 @@ func TestClientOptionsCopiesProxyExclude(t *testing.T) {
 	assert.Eq(t, []string{"github.com"}, ClientOptions(Options{ProxyExclude: []string{"github.com"}}).ProxyExclude)
 }
 
+func TestClientOptionsPropagatesRetries(t *testing.T) {
+	opts := ClientOptions(Options{Retries: 3})
+
+	assert.Eq(t, 3, opts.Retries)
+}
+
 func TestClientOptionsCopiesCacheMirror(t *testing.T) {
 	want := cachemirror.Options{
 		Enable: true, URL: "http://mirror.local:8686", Timeout: 4 * time.Second, Fallback: false,

@@ -33,6 +33,7 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 		InstallMode:         opts.InstallMode,
 		Quiet:               opts.Quiet,
 		FallbackVersions:    opts.FallbackVersions,
+		Retries:             opts.Retries,
 		ChunkConcurrency:    opts.ChunkConcurrency,
 		BatchConcurrency:    opts.BatchConcurrency,
 		ChunkConcurrencySet: opts.ChunkConcurrency >= 0,
@@ -88,6 +89,7 @@ func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 		Quiet:      opts.Quiet,
 	})
 	base.FallbackVersions = opts.FallbackVersions
+	base.Retries = opts.Retries
 	base.ChunkConcurrency = opts.ChunkConcurrency
 	base.ChunkConcurrencySet = opts.ChunkConcurrency >= 0
 	base.StripComponents = opts.StripComponents
@@ -111,6 +113,7 @@ func installOptionsFromAdd(opts *AddOptions) install.Options {
 		StripComponents:     opts.StripComponents,
 		IsGUI:               opts.GUI,
 		Quiet:               opts.Quiet,
+		Retries:             opts.Retries,
 		ChunkConcurrency:    opts.ChunkConcurrency,
 		ChunkConcurrencySet: opts.ChunkConcurrency >= 0,
 		Asset:               splitAssetFilters(opts.Asset),
@@ -125,6 +128,7 @@ func installOptionsFromUpdate(opts *UpdateOptions) install.Options {
 		Output:              opts.To,
 		System:              opts.System,
 		Quiet:               opts.Quiet,
+		Retries:             opts.Retries,
 		ChunkConcurrency:    opts.ChunkConcurrency,
 		BatchConcurrency:    opts.BatchConcurrency,
 		ChunkConcurrencySet: opts.ChunkConcurrency >= 0,
@@ -194,4 +198,11 @@ func normalizeInstallMode(value string) (string, error) {
 	default:
 		return "", fmt.Errorf("invalid install mode %q: use portable (p, port) or installer (i, ins, install)", value)
 	}
+}
+
+func validateRetries(value int) error {
+	if value < 1 {
+		return fmt.Errorf("retries must be at least 1")
+	}
+	return nil
 }

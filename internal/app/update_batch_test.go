@@ -54,6 +54,12 @@ func TestUpdateAllPackagesIteratesOutdatedManagedPackages(t *testing.T) {
 	}
 }
 
+func TestApplyUpdateCLIOverridesPreservesRetries(t *testing.T) {
+	got := applyUpdateCLIOverrides(install.Options{Retries: 1}, install.Options{Retries: 3})
+
+	assert.Eq(t, 3, got.Retries)
+}
+
 func TestUpdateAllPackagesInstallsOnlyOutdatedInstalledPackages(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	installer := &fakeInstallService{}

@@ -279,6 +279,15 @@ func TestInstallOptionsIncludeCacheMirrorConfig(t *testing.T) {
 	assert.False(t, opts.CacheMirror.Fallback)
 }
 
+func TestResolveInstallOptionsPreservesRetries(t *testing.T) {
+	svc := Service{LoadConfig: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil }}
+
+	opts, err := svc.resolveInstallOptions("owner/repo", install.Options{Retries: 3}, false)
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 3, opts.Retries)
+}
+
 func TestInstallTargetUsesDefaultTargetWhenGlobalTargetMissingOrEmpty(t *testing.T) {
 	tests := []struct {
 		name string

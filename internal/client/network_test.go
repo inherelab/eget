@@ -1,6 +1,7 @@
 package client
 
 import (
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -76,6 +77,39 @@ func TestGetWithOptionsUsesConfiguredUserAgent(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Eq(t, "custom-agent/1.0", gotUA)
+}
+
+func TestGetWithOptionsRetriesDownloadTransportErrors(t *testing.T) {
+	calls := 0
+	restore := SetHTTPDoForTest(func(*http.Client, *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			return nil, io.ErrUnexpectedEOF
+		}
+		return jsonResponse(http.StatusOK, "200 OK", "ok"), nil
+	})
+	defer restore()
+
+	resp, err := GetWithOptions("https://example.test/tool.exe", Options{Retries: 2})
+	assert.NoErr(t, err)
+	if err != nil {
+		return
+	}
+	assert.Eq(t, 2, calls)
+	_ = resp.Body.Close()
+}
+
+func TestGetWithOptionsDoesNotRetryProviderMetadata(t *testing.T) {
+	calls := 0
+	restore := SetHTTPDoForTest(func(*http.Client, *http.Request) (*http.Response, error) {
+		calls++
+		return nil, io.ErrUnexpectedEOF
+	})
+	defer restore()
+
+	_, err := GetWithOptions("https://api.github.com/repos/owner/repo/releases/latest", Options{Retries: 3})
+	assert.Err(t, err)
+	assert.Eq(t, 1, calls)
 }
 
 func TestResponseFilename(t *testing.T) {

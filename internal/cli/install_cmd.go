@@ -24,13 +24,14 @@ type InstallOptions struct {
 	Quiet            bool
 	Add              bool
 	FallbackVersions int
+	Retries          int
 	ChunkConcurrency int
 	BatchConcurrency int
 	Targets          []string
 }
 
 func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
-	opts := &InstallOptions{ChunkConcurrency: -1, BatchConcurrency: -1}
+	opts := &InstallOptions{Retries: 1, ChunkConcurrency: -1, BatchConcurrency: -1}
 	cmd := gcli.NewCommand("install", "Install one or more targets")
 	cmd.Aliases = []string{"i", "ins"}
 	cmd.Config = func(c *gcli.Command) {
@@ -52,6 +53,7 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
 		c.BoolOpt(&opts.Add, "add", "", false, "Add installed repo target to managed packages")
 		c.IntOpt(&opts.FallbackVersions, "fallback-versions", "", 0, "Search older SourceForge version folders when asset is missing")
+		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.IntOpt(&opts.BatchConcurrency, "batch", "", -1, "Concurrent package tasks for --all: 0 auto, 1 serial")
 		c.AddArg("target", "Installation target(s)", false, true)
@@ -59,6 +61,9 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 	cmd.Func = func(c *gcli.Command, args []string) error {
 		targetArgs := append(c.Arg("target").Strings(), args...)
 		if err := validateNoFlagArgs(targetArgs); err != nil {
+			return err
+		}
+		if err := validateRetries(opts.Retries); err != nil {
 			return err
 		}
 		mode, err := normalizeInstallMode(opts.InstallMode)
@@ -78,6 +83,6 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 		return handler("install", &snapshot)
 	}
 	return cmd, func() {
-		*opts = InstallOptions{ChunkConcurrency: -1, BatchConcurrency: -1}
+		*opts = InstallOptions{Retries: 1, ChunkConcurrency: -1, BatchConcurrency: -1}
 	}
 }

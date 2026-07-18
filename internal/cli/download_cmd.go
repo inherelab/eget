@@ -16,12 +16,13 @@ type DownloadOptions struct {
 	Quiet            bool
 	Ghproxy          bool
 	FallbackVersions int
+	Retries          int
 	ChunkConcurrency int
 	Target           string
 }
 
 func newDownloadCmd(handler CommandHandler) (*gcli.Command, func()) {
-	opts := &DownloadOptions{ChunkConcurrency: -1}
+	opts := &DownloadOptions{Retries: 1, ChunkConcurrency: -1}
 	cmd := gcli.NewCommand("download", "Download a target")
 	cmd.Aliases = []string{"dl"}
 	cmd.Config = func(c *gcli.Command) {
@@ -38,6 +39,7 @@ func newDownloadCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
 		c.BoolOpt(&opts.Ghproxy, "ghproxy", "", false, "Rewrite GitHub download URL with configured ghproxy")
 		c.IntOpt(&opts.FallbackVersions, "fallback-versions", "", 0, "Search older SourceForge version folders when asset is missing")
+		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.AddArg("target", "Download target", true)
 	}
@@ -46,10 +48,13 @@ func newDownloadCmd(handler CommandHandler) (*gcli.Command, func()) {
 		if err := validateNoFlagArgs(append([]string{opts.Target}, args...)); err != nil {
 			return err
 		}
+		if err := validateRetries(opts.Retries); err != nil {
+			return err
+		}
 		snapshot := *opts
 		return handler("download", &snapshot)
 	}
 	return cmd, func() {
-		*opts = DownloadOptions{ChunkConcurrency: -1}
+		*opts = DownloadOptions{Retries: 1, ChunkConcurrency: -1}
 	}
 }

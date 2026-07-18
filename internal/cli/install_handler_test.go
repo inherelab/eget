@@ -549,6 +549,13 @@ func TestInstallOptionsFromCommandsPropagateConcurrency(t *testing.T) {
 	assert.True(t, updateOpts.BatchConcurrencySet)
 }
 
+func TestInstallOptionsFromCommandsPropagateRetries(t *testing.T) {
+	assert.Eq(t, 3, installOptionsFromInstall(&InstallOptions{Retries: 3}).Retries)
+	assert.Eq(t, 3, installOptionsFromUpdate(&UpdateOptions{Retries: 3}).Retries)
+	assert.Eq(t, 3, installOptionsFromDownload(&DownloadOptions{Retries: 3}).Retries)
+	assert.Eq(t, 3, installOptionsFromAdd(&AddOptions{Retries: 3}).Retries)
+}
+
 func TestHandleInstallAllRejectsTarget(t *testing.T) {
 	svc := &cliService{}
 

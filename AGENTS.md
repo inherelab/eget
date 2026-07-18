@@ -16,8 +16,6 @@
 
 <!-- PROCESSING WORKS:START -->
 
-- Issue #45 下载重试与批量安装容错：[设计](docs/superpowers/specs/2026-07-18-issue-45-download-retries-and-batch-continuation-design.md) · [实施计划](docs/superpowers/plans/2026-07-18-issue-45-download-retries-and-batch-continuation.md)
-
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则

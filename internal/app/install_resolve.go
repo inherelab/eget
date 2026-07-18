@@ -316,6 +316,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		Quiet:               merged.Quiet,
 		DownloadOnly:        merged.DownloadOnly,
 		FallbackVersions:    cli.FallbackVersions,
+		Retries:             cli.Retries,
 		ChunkConcurrency:    merged.ChunkConcurrency,
 		BatchConcurrency:    batchConcurrency,
 		ChunkConcurrencySet: true,

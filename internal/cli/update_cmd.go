@@ -16,13 +16,14 @@ type UpdateOptions struct {
 	Asset            string
 	Source           bool
 	Quiet            bool
+	Retries          int
 	ChunkConcurrency int
 	BatchConcurrency int
 	Targets          []string
 }
 
 func newUpdateCmd(handler CommandHandler) (*gcli.Command, func()) {
-	opts := &UpdateOptions{ChunkConcurrency: -1, BatchConcurrency: -1}
+	opts := &UpdateOptions{Retries: 1, ChunkConcurrency: -1, BatchConcurrency: -1}
 	cmd := gcli.NewCommand("update", "Update installed targets")
 	cmd.Aliases = []string{"up"}
 	cmd.Config = func(c *gcli.Command) {
@@ -39,6 +40,7 @@ func newUpdateCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.StrOpt(&opts.Asset, "asset", "a", "", "Asset filter, multi use comma split")
 		c.BoolOpt(&opts.Source, "source", "", false, "Download source archive")
 		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
+		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.IntOpt(&opts.BatchConcurrency, "batch", "", -1, "Concurrent package tasks for --all: 0 auto, 1 serial")
 		c.AddArg("target", "Target(s) to update", false, true)
@@ -48,12 +50,15 @@ func newUpdateCmd(handler CommandHandler) (*gcli.Command, func()) {
 		if err := validateNoFlagArgs(targetArgs); err != nil {
 			return err
 		}
+		if err := validateRetries(opts.Retries); err != nil {
+			return err
+		}
 		opts.Targets = splitTargets(targetArgs)
 		snapshot := *opts
 		snapshot.Targets = append([]string(nil), opts.Targets...)
 		return handler("update", &snapshot)
 	}
 	return cmd, func() {
-		*opts = UpdateOptions{ChunkConcurrency: -1, BatchConcurrency: -1}
+		*opts = UpdateOptions{Retries: 1, ChunkConcurrency: -1, BatchConcurrency: -1}
 	}
 }
