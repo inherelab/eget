@@ -1,6 +1,9 @@
 package cli
 
-import "github.com/gookit/gcli/v3"
+import (
+	"github.com/gookit/gcli/v3"
+	"github.com/inherelab/eget/internal/install"
+)
 
 type InstallOptions struct {
 	Tag              string
@@ -38,7 +41,7 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.StrOpt(&opts.Asset, "asset", "a", "", "Asset filter, multi use comma split")
 		c.StrOpt(&opts.Rename, "rename", "", "", "Rename extracted files, comma separated from=to pairs")
 		c.StrOpt(&opts.Name, "name", "", "", "Managed package name when used with --add")
-		c.StrOpt(&opts.InstallMode, "install-mode", "", "", "GUI install mode: portable or installer")
+		c.StrOpt(&opts.InstallMode, "install-mode", "imode", "", "GUI install mode: portable or installer")
 		c.IntOpt(&opts.StripComponents, "strip-components", "", 0, "Strip leading archive path components when extracting all files")
 		c.BoolOpt(&opts.Source, "source", "", false, "Download source archive")
 		c.BoolOpt(&opts.Prerelease, "prerelease", "p", false, "Select latest release including prereleases")
@@ -58,8 +61,16 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 		if err := validateNoFlagArgs(targetArgs); err != nil {
 			return err
 		}
-		if err := validateInstallMode(opts.InstallMode); err != nil {
+		mode, err := normalizeInstallMode(opts.InstallMode)
+		if err != nil {
 			return err
+		}
+		if mode == "" && opts.GUI {
+			mode = install.InstallModeInstaller
+		}
+		opts.InstallMode = mode
+		if mode != "" {
+			opts.GUI = true
 		}
 		opts.Targets = splitTargets(targetArgs)
 		snapshot := *opts

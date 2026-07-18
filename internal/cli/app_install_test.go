@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gookit/goutil/x/assert"
+	"github.com/inherelab/eget/internal/install"
 )
 
 func TestMain_InstallStandardOrderRoutesAndBindsOptions(t *testing.T) {
@@ -242,6 +243,76 @@ func TestMain_InstallModeFlagBindsInstallAlias(t *testing.T) {
 	assert.True(t, opts.GUI)
 	assert.Eq(t, "installer", opts.InstallMode)
 	assert.Eq(t, []string{"owner/repo"}, opts.Targets)
+}
+
+func TestMain_InstallModeNormalizesGUI(t *testing.T) {
+	tests := []struct {
+		name, mode, wantMode string
+		gui, wantGUI         bool
+	}{
+		{"gui defaults installer", "", install.InstallModeInstaller, true, true},
+		{"portable alias enables gui", "p", install.InstallModePortable, false, true},
+		{"portable short name enables gui", "port", install.InstallModePortable, false, true},
+		{"installer alias enables gui", "ins", install.InstallModeInstaller, false, true},
+		{"install short name enables gui", "install", install.InstallModeInstaller, false, true},
+		{"explicit portable beats gui default", "portable", install.InstallModePortable, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got *InstallOptions
+			handler := func(_ string, options any) error {
+				got = options.(*InstallOptions)
+				return nil
+			}
+			args := []string{"install"}
+			if tt.gui {
+				args = append(args, "--gui")
+			}
+			if tt.mode != "" {
+				args = append(args, "--install-mode", tt.mode)
+			}
+			args = append(args, "owner/repo")
+			var stdout, stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs(args)
+			assert.NoErr(t, err)
+			assert.True(t, got != nil)
+			assert.Eq(t, tt.wantGUI, got.GUI)
+			assert.Eq(t, tt.wantMode, got.InstallMode)
+		})
+	}
+}
+
+func TestMain_InstallModeNormalizationResets(t *testing.T) {
+	var got []*InstallOptions
+	handler := func(_ string, options any) error {
+		got = append(got, options.(*InstallOptions))
+		return nil
+	}
+	var stdout, stderr bytes.Buffer
+	app := newApp(handler, &stdout, &stderr)
+	assert.NoErr(t, app.RunWithArgs([]string{"install", "--install-mode", "p", "owner/repo"}))
+	assert.NoErr(t, app.RunWithArgs([]string{"install", "owner/repo"}))
+	assert.True(t, got[0].GUI)
+	assert.Eq(t, install.InstallModePortable, got[0].InstallMode)
+	assert.False(t, got[1].GUI)
+	assert.Eq(t, "", got[1].InstallMode)
+}
+
+func TestMain_InstallModeShortAliasNormalizes(t *testing.T) {
+	var got *InstallOptions
+	handler := func(_ string, options any) error {
+		got = options.(*InstallOptions)
+		return nil
+	}
+	var stdout, stderr bytes.Buffer
+	err := newApp(handler, &stdout, &stderr).RunWithArgs([]string{"install", "-imode", "port", "owner/repo"})
+	assert.NoErr(t, err)
+	if err != nil {
+		return
+	}
+	assert.True(t, got != nil)
+	assert.True(t, got.GUI)
+	assert.Eq(t, install.InstallModePortable, got.InstallMode)
 }
 
 func TestMain_InstallRejectsInvalidInstallMode(t *testing.T) {

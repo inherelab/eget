@@ -182,9 +182,16 @@ func hasMultipleFilePatterns(value string) bool {
 	return false
 }
 
-func validateInstallMode(value string) error {
-	if value == "" || value == install.InstallModePortable || value == install.InstallModeInstaller {
-		return nil
+func normalizeInstallMode(value string) (string, error) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "":
+		return "", nil
+	case "p", "port", install.InstallModePortable:
+		return install.InstallModePortable, nil
+	case "i", "ins", "install", install.InstallModeInstaller:
+		return install.InstallModeInstaller, nil
+	default:
+		return "", fmt.Errorf("invalid install mode %q: use portable (p, port) or installer (i, ins, install)", value)
 	}
-	return fmt.Errorf("install mode must be %q or %q", install.InstallModePortable, install.InstallModeInstaller)
 }
