@@ -84,9 +84,7 @@ func selectKeepLatest(entries []Entry) keepLatestSelection {
 }
 
 func parseAssetVersion(raw string) (assetVersion, bool) {
-	if strings.HasPrefix(raw, "v") {
-		raw = raw[1:]
-	}
+	raw = strings.TrimPrefix(raw, "v")
 	if raw == "" || strings.Count(raw, "-") > 1 {
 		return assetVersion{}, false
 	}
