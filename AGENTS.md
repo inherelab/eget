@@ -16,8 +16,6 @@
 
 <!-- PROCESSING WORKS:START -->
 
-- Cache Clean 保留最新版本：[设计](docs/superpowers/specs/2026-07-17-cache-clean-keep-latest-design.md) · [实施计划](docs/superpowers/plans/2026-07-18-cache-clean-keep-latest.md)
-
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则

@@ -299,7 +299,7 @@ git commit -m "feat: add cache clean keep latest mode"
 - Modify: `docs/superpowers/plans/2026-07-18-cache-clean-keep-latest.md`
 - Modify: `AGENTS.md`
 
-- [ ] **Step 1: 格式化并运行聚焦测试**
+- [x] **Step 1: 格式化并运行聚焦测试**
 
 Run: `gofmt -w internal/app/cache/keep_latest.go internal/app/cache/keep_latest_test.go internal/app/cache/model.go internal/app/cache/service.go internal/app/cache/cache_test.go internal/cli/cache_cmd.go internal/cli/cache_handler.go internal/cli/app_cache_test.go internal/cli/cache_cmd_test.go`
 
@@ -307,29 +307,29 @@ Run: `go test ./internal/app/cache ./internal/cli`
 
 Expected: PASS。
 
-- [ ] **Step 2: 运行 MVP 全量测试**
+- [x] **Step 2: 运行 MVP 全量测试**
 
 Run: `go test ./...`
 
 Expected: PASS；若有无关既有失败，保留命令和失败包证据，不宣称全量通过。
 
-- [ ] **Step 3: 检查 diff**
+- [x] **Step 3: 检查 diff**
 
 Run: `git diff --check`
 
 Expected: 无输出。
 
-- [ ] **Step 4: 运行 GitNexus change detection**
+- [x] **Step 4: 运行 GitNexus change detection**
 
 Run: `npx gitnexus detect-changes --repo eget --scope all`
 
 Expected: 仅影响 cache clean parser/selector/service/CLI 及测试；无无关 flow。
 
-- [ ] **Step 5: 更新 checkbox 和进行中事项**
+- [x] **Step 5: 更新 checkbox 和进行中事项**
 
 所有实际完成步骤改为 `[x]`；从 `AGENTS.md` 移除 Cache Clean 工作项，不移除其他事项。
 
-- [ ] **Step 6: 提交收尾并审计状态**
+- [x] **Step 6: 提交收尾并审计状态**
 
 ```bash
 git add AGENTS.md docs/superpowers/plans/2026-07-18-cache-clean-keep-latest.md
