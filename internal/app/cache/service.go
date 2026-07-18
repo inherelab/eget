@@ -191,6 +191,8 @@ func (s Service) Scan(cacheDir string, opts CacheScanOptions) ([]Entry, error) {
 			Size:      info.Size(),
 			ModTime:   info.ModTime(),
 			IsPartial: partial,
+			IsSymlink: info.Mode()&os.ModeSymlink != 0,
+			fileInfo:  info,
 		})
 		return nil
 	})
@@ -198,16 +200,18 @@ func (s Service) Scan(cacheDir string, opts CacheScanOptions) ([]Entry, error) {
 }
 
 func (s Service) PreviewClean(cacheDir string, opts CleanOptions) (CleanResult, error) {
-	opts.DryRun = true
-	return s.clean(cacheDir, opts)
+	return s.buildCleanPreview(cacheDir, opts)
 }
 
 func (s Service) Clean(cacheDir string, opts CleanOptions) (CleanResult, error) {
-	opts.DryRun = false
-	return s.clean(cacheDir, opts)
+	preview, err := s.buildCleanPreview(cacheDir, opts)
+	if err != nil {
+		return CleanResult{}, err
+	}
+	return s.ApplyClean(preview)
 }
 
-func (s Service) clean(cacheDir string, opts CleanOptions) (CleanResult, error) {
+func (s Service) buildCleanPreview(cacheDir string, opts CleanOptions) (CleanResult, error) {
 	if cacheDir == "" {
 		resolved, err := s.ResolveCacheDir()
 		if err != nil {
@@ -222,33 +226,75 @@ func (s Service) clean(cacheDir string, opts CleanOptions) (CleanResult, error) 
 		opts.Older = 3 * 24 * time.Hour
 	}
 
-	entries, err := s.Scan(cacheDir, CacheScanOptions{Kinds: normalizeKinds(opts.Kinds)})
+	kinds := normalizeKinds(opts.Kinds)
+	if opts.KeepLatest {
+		kinds = []Kind{KindPkg}
+	}
+	entries, err := s.Scan(cacheDir, CacheScanOptions{Kinds: kinds})
 	if err != nil {
 		return CleanResult{}, err
 	}
 
+	result := CleanResult{CacheDir: cacheDir, prepared: true}
+	if opts.KeepLatest {
+		selection := selectKeepLatest(entries)
+		result.KeptLatestFiles = len(selection.Kept)
+		result.UnrecognizedFiles = len(selection.Unrecognized)
+		for _, entry := range selection.Matched {
+			result.addCandidate(entry)
+		}
+		return result, nil
+	}
+
 	cutoff := s.now().Add(-opts.Older)
-	result := CleanResult{CacheDir: cacheDir}
 	for _, entry := range entries {
-		if !opts.All && !entry.ModTime.Before(cutoff) {
+		if opts.All || entry.ModTime.Before(cutoff) {
+			result.addCandidate(entry)
+		}
+	}
+	return result, nil
+}
+
+func (r *CleanResult) addCandidate(entry Entry) {
+	r.MatchedFiles++
+	r.MatchedSize += entry.Size
+	r.snapshot = append(r.snapshot, cleanCandidate{
+		path: entry.Path, relPath: entry.RelPath, size: entry.Size,
+		modTime: entry.ModTime, fileInfo: entry.fileInfo,
+	})
+}
+
+// ApplyClean removes only unchanged files captured by PreviewClean.
+func (s Service) ApplyClean(preview CleanResult) (CleanResult, error) {
+	if !preview.prepared {
+		return CleanResult{}, fmt.Errorf("cache clean preview is not prepared")
+	}
+	if err := validateCacheDirForMutation(preview.CacheDir); err != nil {
+		return CleanResult{}, err
+	}
+	result := preview
+	result.RemovedFiles = 0
+	result.RemovedSize = 0
+	result.Skipped = nil
+	result.snapshot = nil
+	for _, candidate := range preview.snapshot {
+		if err := ensurePathInDir(preview.CacheDir, candidate.path); err != nil {
+			result.Skipped = append(result.Skipped, CleanSkip{Path: candidate.path, Reason: err.Error()})
 			continue
 		}
-		result.MatchedFiles++
-		result.MatchedSize += entry.Size
-		if opts.DryRun {
+		info, err := os.Lstat(candidate.path)
+		if err != nil || candidate.fileInfo == nil || !os.SameFile(candidate.fileInfo, info) ||
+			candidate.size != info.Size() || !candidate.modTime.Equal(info.ModTime()) {
+			result.Skipped = append(result.Skipped, CleanSkip{Path: candidate.path, Reason: "changed since preview"})
 			continue
 		}
-		if err := ensurePathInDir(cacheDir, entry.Path); err != nil {
-			result.Skipped = append(result.Skipped, CleanSkip{Path: entry.Path, Reason: err.Error()})
-			continue
-		}
-		if err := os.Remove(entry.Path); err != nil {
-			result.Skipped = append(result.Skipped, CleanSkip{Path: entry.Path, Reason: err.Error()})
+		if err := os.Remove(candidate.path); err != nil {
+			result.Skipped = append(result.Skipped, CleanSkip{Path: candidate.path, Reason: err.Error()})
 			continue
 		}
 		result.RemovedFiles++
-		result.RemovedSize += entry.Size
-		removeEmptyParents(cacheDir, filepath.Dir(entry.Path))
+		result.RemovedSize += candidate.size
+		removeEmptyParents(preview.CacheDir, filepath.Dir(candidate.path))
 	}
 	return result, nil
 }

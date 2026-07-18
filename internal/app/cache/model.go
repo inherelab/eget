@@ -2,6 +2,7 @@ package cache
 
 import (
 	"io"
+	"os"
 	"time"
 )
 
@@ -29,14 +30,25 @@ type Entry struct {
 	Size      int64
 	ModTime   time.Time
 	IsPartial bool
+	IsSymlink bool
+	fileInfo  os.FileInfo
 }
 
 type CleanOptions struct {
-	Older  time.Duration
-	All    bool
-	DryRun bool
-	Yes    bool
-	Kinds  []Kind
+	Older      time.Duration
+	All        bool
+	DryRun     bool
+	Yes        bool
+	KeepLatest bool
+	Kinds      []Kind
+}
+
+type cleanCandidate struct {
+	path     string
+	relPath  string
+	size     int64
+	modTime  time.Time
+	fileInfo os.FileInfo
 }
 
 type CleanSkip struct {
@@ -45,12 +57,16 @@ type CleanSkip struct {
 }
 
 type CleanResult struct {
-	CacheDir     string      `json:"cache_dir"`
-	MatchedFiles int         `json:"matched_files"`
-	RemovedFiles int         `json:"removed_files"`
-	MatchedSize  int64       `json:"matched_size"`
-	RemovedSize  int64       `json:"removed_size"`
-	Skipped      []CleanSkip `json:"skipped"`
+	CacheDir          string      `json:"cache_dir"`
+	MatchedFiles      int         `json:"matched_files"`
+	RemovedFiles      int         `json:"removed_files"`
+	MatchedSize       int64       `json:"matched_size"`
+	RemovedSize       int64       `json:"removed_size"`
+	KeptLatestFiles   int         `json:"kept_latest_files"`
+	UnrecognizedFiles int         `json:"unrecognized_files"`
+	Skipped           []CleanSkip `json:"skipped"`
+	snapshot          []cleanCandidate
+	prepared          bool
 }
 
 func (r CleanResult) NeedsConfirmation() bool {

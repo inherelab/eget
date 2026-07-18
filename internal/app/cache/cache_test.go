@@ -245,26 +245,92 @@ func TestServicePreviewCleanReportsLargeDeletionNeed(t *testing.T) {
 	assert.True(t, fileExistsForTest(filepath.Join(cacheDir, "pkg-000.zip")))
 }
 
+func TestServicePreviewKeepLatestOnlyCountsPkgCacheFiles(t *testing.T) {
+	cacheDir := newCacheDirForCleanTest(t)
+	writeCacheTestFile(t, filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip"), "old")
+	writeCacheTestFile(t, filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip"), "new")
+	writeCacheTestFile(t, filepath.Join(cacheDir, "foo-0.9.0-c1b2c3d4.zip"), "root")
+	writeCacheTestFile(t, filepath.Join(cacheDir, "misc", "foo-0.8.0-d1b2c3d4.zip"), "misc")
+	writeCacheTestFile(t, filepath.Join(cacheDir, "pkg-cache", "manual.zip"), "manual")
+
+	result, err := (Service{}).PreviewClean(cacheDir, CleanOptions{KeepLatest: true})
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, result.MatchedFiles)
+	assert.Eq(t, 1, result.KeptLatestFiles)
+	assert.Eq(t, 1, result.UnrecognizedFiles)
+}
+
+func TestServiceApplyCleanUsesPreviewSnapshot(t *testing.T) {
+	t.Run("does not add files created after preview", func(t *testing.T) {
+		cacheDir := newCacheDirForCleanTest(t)
+		oldFile := filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip")
+		newFile := filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip")
+		lateFile := filepath.Join(cacheDir, "pkg-cache", "foo-0.5.0-c1b2c3d4.zip")
+		writeCacheTestFile(t, oldFile, "old")
+		writeCacheTestFile(t, newFile, "new")
+
+		service := Service{}
+		preview, err := service.PreviewClean(cacheDir, CleanOptions{KeepLatest: true})
+		assert.NoErr(t, err)
+		writeCacheTestFile(t, lateFile, "late")
+		result, err := service.ApplyClean(preview)
+		assert.NoErr(t, err)
+		assert.Eq(t, 1, result.RemovedFiles)
+		assert.True(t, fileExistsForTest(lateFile))
+	})
+
+	t.Run("skips files changed after preview", func(t *testing.T) {
+		cacheDir := newCacheDirForCleanTest(t)
+		oldFile := filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip")
+		writeCacheTestFile(t, oldFile, "old")
+		writeCacheTestFile(t, filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip"), "new")
+
+		service := Service{}
+		preview, err := service.PreviewClean(cacheDir, CleanOptions{KeepLatest: true})
+		assert.NoErr(t, err)
+		writeCacheTestFile(t, oldFile, "changed-size")
+		result, err := service.ApplyClean(preview)
+		assert.NoErr(t, err)
+		assert.Eq(t, 0, result.RemovedFiles)
+		assert.Eq(t, 1, len(result.Skipped))
+		assert.Eq(t, "changed since preview", result.Skipped[0].Reason)
+		assert.True(t, fileExistsForTest(oldFile))
+	})
+}
+
+func TestServicePreviewKeepLatestExcludesSymlinks(t *testing.T) {
+	cacheDir := newCacheDirForCleanTest(t)
+	target := filepath.Join(cacheDir, "target.zip")
+	link := filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip")
+	writeCacheTestFile(t, target, "target")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	writeCacheTestFile(t, filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip"), "new")
+
+	result, err := (Service{}).PreviewClean(cacheDir, CleanOptions{KeepLatest: true})
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, result.MatchedFiles)
+	assert.Eq(t, 1, result.KeptLatestFiles)
+	assert.Eq(t, 0, result.UnrecognizedFiles)
+}
+
 func TestCleanResultJSONUsesSnakeCaseFields(t *testing.T) {
 	data, err := json.Marshal(CleanResult{
-		CacheDir:     "cache",
-		MatchedFiles: 1,
-		RemovedFiles: 0,
-		MatchedSize:  3,
-		RemovedSize:  0,
-		Skipped:      []CleanSkip{{Path: "bad", Reason: "locked"}},
+		CacheDir: "cache", MatchedFiles: 1, MatchedSize: 3,
+		KeptLatestFiles: 2, UnrecognizedFiles: 1,
+		Skipped: []CleanSkip{{Path: "bad", Reason: "locked"}},
 	})
 
 	assert.NoErr(t, err)
-	got := string(data)
-	assert.Contains(t, got, `"cache_dir":"cache"`)
-	assert.Contains(t, got, `"matched_files":1`)
-	assert.Contains(t, got, `"removed_files":0`)
-	assert.Contains(t, got, `"matched_size":3`)
-	assert.Contains(t, got, `"removed_size":0`)
-	assert.Contains(t, got, `"skipped":[`)
-	assert.Contains(t, got, `"path":"bad"`)
-	assert.Contains(t, got, `"reason":"locked"`)
+	var got map[string]any
+	assert.NoErr(t, json.Unmarshal(data, &got))
+	assert.Eq(t, "cache", got["cache_dir"])
+	assert.Eq(t, float64(1), got["matched_files"])
+	assert.Eq(t, float64(0), got["removed_files"])
+	assert.Eq(t, float64(2), got["kept_latest_files"])
+	assert.Eq(t, float64(1), got["unrecognized_files"])
+	assert.NotContains(t, string(data), "snapshot")
 }
 
 func fileExistsForTest(path string) bool {

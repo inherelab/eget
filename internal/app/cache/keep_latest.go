@@ -45,6 +45,9 @@ func selectKeepLatest(entries []Entry) keepLatestSelection {
 	latest := make(map[string]familyLatest)
 	result := keepLatestSelection{}
 	for _, entry := range entries {
+		if !isKeepLatestEntryScope(entry) {
+			continue
+		}
 		asset, ok := parseKeepLatestEntry(entry)
 		if !ok {
 			result.Unrecognized = append(result.Unrecognized, entry)
@@ -221,7 +224,7 @@ func comparePrerelease(a, b []versionIdentifier) int {
 }
 
 func parseKeepLatestEntry(entry Entry) (parsedCacheAsset, bool) {
-	if entry.Kind != KindPkg || entry.IsPartial || !strings.HasPrefix(entry.RelPath, "pkg-cache/") {
+	if !isKeepLatestEntryScope(entry) {
 		return parsedCacheAsset{}, false
 	}
 	base := strings.TrimPrefix(entry.RelPath, "pkg-cache/")
@@ -247,6 +250,10 @@ func parseKeepLatestEntry(entry Entry) (parsedCacheAsset, bool) {
 		return parsedCacheAsset{}, false
 	}
 	return parsedCacheAsset{entry: entry, family: family, rawVer: rawVer, version: version}, true
+}
+
+func isKeepLatestEntryScope(entry Entry) bool {
+	return entry.Kind == KindPkg && !entry.IsPartial && !entry.IsSymlink && strings.HasPrefix(entry.RelPath, "pkg-cache/")
 }
 
 func splitCacheAssetName(body string) (string, string, bool) {

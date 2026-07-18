@@ -174,11 +174,11 @@ git commit -m "feat: select latest cache assets"
 - Produces: `func (s Service) ApplyClean(preview CleanResult) (CleanResult, error)`
 - Preserves: `Clean(cacheDir, opts)` 直接调用语义。
 
-- [ ] **Step 1: 对 `Entry/CleanOptions/CleanResult/Scan/Clean/PreviewClean/clean` 做 GitNexus impact**
+- [x] **Step 1: 对 `Entry/CleanOptions/CleanResult/Scan/Clean/PreviewClean/clean` 做 GitNexus impact**
 
 记录调用方并向用户报告 HIGH/CRITICAL；不得修改 `classifyEntry`。
 
-- [ ] **Step 2: 写 service 失败测试**
+- [x] **Step 2: 写 service 失败测试**
 
 覆盖严格 `pkg-cache/` 范围、根目录/`misc/`/partial/symlink 不计数；Preview 后新增文件不删除；删除重建同路径、size 变化或 mtime 变化时保留并返回 `changed since preview`；普通 `Clean(...Older...)` 仍工作。
 
@@ -189,7 +189,7 @@ result, err := service.ApplyClean(preview)
 assert.NoErr(t, err)
 ```
 
-- [ ] **Step 3: 扩展模型**
+- [x] **Step 3: 扩展模型**
 
 ```go
 type cleanCandidate struct {
@@ -202,7 +202,7 @@ type cleanCandidate struct {
 
 `Entry` 增加 `IsSymlink bool` 和未导出的 `fileInfo os.FileInfo`；`CleanOptions` 增加 `KeepLatest bool`；`CleanResult` 增加带 JSON tag 的 `KeptLatestFiles/UnrecognizedFiles`、未导出的 `snapshot []cleanCandidate` 和 `prepared bool`。`Scan` 只填充新字段，不改分类和返回范围。
 
-- [ ] **Step 4: 拆分 Preview 与 Apply**
+- [x] **Step 4: 拆分 Preview 与 Apply**
 
 ```go
 func (s Service) PreviewClean(cacheDir string, opts CleanOptions) (CleanResult, error) {
@@ -218,7 +218,7 @@ func (s Service) ApplyClean(preview CleanResult) (CleanResult, error)
 
 keep-latest 强制扫描 `KindPkg` 并只把 Matched 放入 snapshot。Apply 验证 prepared/cache root，再依次 `ensurePathInDir`、`os.Lstat`、`os.SameFile`、size、mtime，最后沿用 `os.Remove/removeEmptyParents`。
 
-- [ ] **Step 5: 验证 JSON 与 service 并提交**
+- [x] **Step 5: 验证 JSON 与 service 并提交**
 
 Run: `go test ./internal/app/cache`
 
