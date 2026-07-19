@@ -40,9 +40,9 @@ OxideTerm_1.6.12_windows_x64-setup + 1.6.12 -> oxideterm-windows-x64-setup
 
 ### Installer 文件复用
 
-`downloadBodyResult` 记录实际使用或写入的 `pkg-cache` 路径。仅当选中的 installer 就是下载 asset 本身时，直接将该路径交给 launcher；若 installer 来自 ZIP 等归档，仍调用 `Extract` 写入 `installers/`。
+仅当选中的 installer 就是下载 asset 本身时，使用下载阶段相同的 metadata 和现有 `CacheFilePathWithMeta` 计算实际 `pkg-cache` 路径，并直接交给 launcher；若 installer 来自 ZIP 等归档，仍调用 `Extract` 写入 `installers/`。
 
-不能只在 `materializeInstallerFile` 中重新计算路径：下载阶段使用 metadata，重新计算可能得到不同文件名。
+不能沿用不带 metadata 的 `CacheFilePath`，否则可能与下载阶段得到不同文件名。这里不向 `downloadBodyResult` 增加冗余字段，因为同一组 `opts` 已完整包含所需 metadata。
 
 ### Installers 清理
 

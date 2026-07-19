@@ -55,22 +55,14 @@ func (r *InstallRunner) launchGUIInstaller(path string, file ExtractedFile, opts
 	}, nil
 }
 
-func (r *InstallRunner) materializeInstallerFile(body []byte, url string, file ExtractedFile, opts Options) (string, error) {
+func (r *InstallRunner) materializeInstallerFile(body []byte, url string, file ExtractedFile, opts Options, directAsset bool) (string, error) {
 	if IsLocalFile(url) {
 		return url, nil
 	}
-	cachePath := CacheFilePath(opts.CacheDir, url)
-	if cachePath != "" && filepath.Base(cachePath) == filepath.Base(url) {
+	if cachePath := CacheFilePathWithMeta(opts.CacheDir, url, cacheMetaFromOptions(opts)); directAsset && cachePath != "" {
 		if _, err := os.Stat(cachePath); err == nil {
 			return cachePath, nil
 		}
-		if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
-			return "", err
-		}
-		if err := os.WriteFile(cachePath, body, 0o644); err != nil {
-			return "", err
-		}
-		return cachePath, nil
 	}
 
 	target := installerMaterializePath(opts, file)

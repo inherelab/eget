@@ -304,7 +304,8 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		Version:     opts.URLTemplate.ResolvedVersion,
 	}
 	if opts.InstallMode == InstallModeInstaller {
-		installerPath, err := r.materializeInstallerFile(downloaded.Body, url, bin, opts)
+		directAsset := path.Base(bin.ArchiveName) == path.Base(assetName)
+		installerPath, err := r.materializeInstallerFile(downloaded.Body, url, bin, opts, directAsset)
 		if err != nil {
 			return RunResult{}, err
 		}

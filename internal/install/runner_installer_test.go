@@ -218,6 +218,77 @@ func TestRunExtractAllDoesNotPromptForDetectedInstaller(t *testing.T) {
 	}
 }
 
+func TestRunDirectInstallerUsesCacheFile(t *testing.T) {
+	assetURL := "https://example.com/PowerShell-7.6.3-win-x64.msi"
+	cacheDir := t.TempDir()
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("installer")),
+		}, nil
+	}
+
+	launcher := &fakeInstallerLauncher{}
+	runner := NewRunner(NewDefaultService(nil, nil))
+	runner.InstallerLauncher = launcher
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	runner.ConfirmLaunchInstaller = func(file string) (bool, error) { return true, nil }
+
+	_, err := runner.Run(assetURL, Options{
+		CacheDir:    cacheDir,
+		IsGUI:       true,
+		InstallMode: InstallModeInstaller,
+	})
+	assert.NoErr(t, err)
+	expected := CacheFilePathWithMeta(cacheDir, assetURL, CacheMeta{})
+	assert.Eq(t, expected, launcher.path)
+	assert.Eq(t, InstallerKindMSI, launcher.kind)
+	_, statErr := os.Stat(filepath.Join(cacheDir, "installers"))
+	assert.True(t, os.IsNotExist(statErr))
+}
+
+func TestRunInstallerArchiveMaterializesSelectedFile(t *testing.T) {
+	assetURL := "https://example.com/tool.zip"
+	cacheDir := t.TempDir()
+	svc := NewService()
+	svc.AllDetectorFactory = func() Detector { return &fakeDetector{name: assetURL} }
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		return fakeInstallExtractor{file: ExtractedFile{
+			Name:        "Setup.exe",
+			ArchiveName: "Setup.exe",
+			Extract: func(to string) error {
+				return os.WriteFile(to, []byte("installer"), 0o755)
+			},
+		}}
+	}
+	svc.BinaryChooserFactory = func(tool string) any { return &fakeChooser{name: tool} }
+	svc.NoVerifierFactory = func() Verifier { return &fakeVerifier{} }
+
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("archive")),
+		}, nil
+	}
+
+	launcher := &fakeInstallerLauncher{}
+	runner := NewRunner(svc)
+	runner.InstallerLauncher = launcher
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	runner.ConfirmLaunchInstaller = func(file string) (bool, error) { return true, nil }
+
+	_, err := runner.Run(assetURL, Options{CacheDir: cacheDir})
+	assert.NoErr(t, err)
+	assert.Eq(t, filepath.Join(cacheDir, "installers", "Setup.exe"), launcher.path)
+	assert.Eq(t, InstallerKindEXE, launcher.kind)
+}
+
 func TestDefaultConfirmLaunchInstallerTreatsBlankLineAsCancel(t *testing.T) {
 	origStdin := os.Stdin
 	reader, writer, err := os.Pipe()

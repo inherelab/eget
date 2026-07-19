@@ -4,7 +4,7 @@
 
 **Goal:** 修复真实 pkg-cache 列表中的旧版本漏删，并消除直接 installer 的重复缓存，同时让 keep-latest 清理派生 installer 文件。
 
-**Architecture:** 保持现有纯文件名解析和 preview/apply 清理架构。下载结果携带已经确定的 cache path，直接 asset 复用该文件；归档内容仍按原路径物化。
+**Architecture:** 保持现有纯文件名解析和 preview/apply 清理架构。启动阶段使用与下载阶段相同的 metadata 计算 cache path，直接 asset 复用该文件；归档内容仍按原路径物化。
 
 **Tech Stack:** Go、标准库、`github.com/gookit/goutil/x/assert`、GitNexus CLI。
 
@@ -23,14 +23,13 @@
 
 ### Task 2: 直接 installer 复用 pkg-cache
 
-**Files:** `internal/install/runner_extract.go`、`internal/install/runner_download.go`、`internal/install/runner.go`、`internal/install/runner_installer.go`、`internal/install/runner_installer_test.go`
+**Files:** `internal/install/runner.go`、`internal/install/runner_installer.go`、`internal/install/runner_installer_test.go`
 
-- [ ] 写失败测试：直接 `.exe`/`.msi` 使用 metadata cache path 且不创建 `installers/`；归档内 installer 仍调用 `Extract`。
-- [ ] 运行 `go test ./internal/install -run "TestRun.*Installer.*(Cache|Archive)"`，确认直接 installer 仍从 `installers/` 启动。
-- [ ] 给 `downloadBodyResult` 增加实际 cache path，并在 cache、mirror、下载写入分支设置。
-- [ ] asset 本身为 installer 且 cache path 存在时直接返回，否则保持归档物化路径。
-- [ ] 运行 `go test ./internal/install`，预期通过。
-- [ ] 运行 `npx gitnexus detect-changes --repo eget --scope all` 后提交 `fix(install): reuse cached installer assets`。
+- [x] 写失败测试：直接 `.exe`/`.msi` 使用 metadata cache path 且不创建 `installers/`；归档内 installer 仍调用 `Extract`。
+- [x] 运行 `go test ./internal/install -run "TestRun.*Installer.*(Cache|Archive)"`，确认直接 installer 仍从 `installers/` 启动。
+- [x] 使用下载阶段同一 metadata 计算 cache path；asset 本身为 installer 且该路径存在时直接返回，否则保持归档物化路径。
+- [x] 运行 `go test ./internal/install`，预期通过。
+- [x] 运行 `npx gitnexus detect-changes --repo eget --scope all` 后提交 `fix(install): reuse cached installer assets`。
 
 ### Task 3: keep-latest 清理 installers
 
