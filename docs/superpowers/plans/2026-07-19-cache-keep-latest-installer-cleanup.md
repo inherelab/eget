@@ -43,7 +43,7 @@
 
 ### Task 4: 全量验证与进度收尾
 
-- [ ] 运行 `go test ./...`，预期通过。
-- [ ] 运行 `staticcheck ./...`，预期无输出且退出码 0。
-- [ ] 运行 `npx gitnexus detect-changes --repo eget --scope all`，确认只有预期链路。
-- [ ] 将本计划 checkbox 全部更新为完成，并从 `AGENTS.md` 正在进行的工作移除本任务。
+- [x] 运行 `go test ./...`，预期通过。
+- [x] 运行 `staticcheck ./...`，预期无输出且退出码 0。
+- [x] 运行 `npx gitnexus detect-changes --repo eget --scope all`，确认只有预期链路。
+- [x] 将本计划 checkbox 全部更新为完成，并从 `AGENTS.md` 正在进行的工作移除本任务。

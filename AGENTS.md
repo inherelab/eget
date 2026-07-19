@@ -16,8 +16,6 @@
 
 <!-- PROCESSING WORKS:START -->
 
-- Cache keep-latest 与 installer 缓存优化：[docs/superpowers/specs/2026-07-19-cache-keep-latest-installer-cleanup-design.md](docs/superpowers/specs/2026-07-19-cache-keep-latest-installer-cleanup-design.md)
-
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则
