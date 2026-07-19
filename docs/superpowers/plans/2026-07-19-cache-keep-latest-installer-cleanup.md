@@ -14,12 +14,12 @@
 
 **Files:** `internal/app/cache/keep_latest.go`、`internal/app/cache/keep_latest_test.go`
 
-- [ ] 写失败测试：验证 Git describe 可解析和比较；DBX/OxideTerm 多版本归入同一 family。
-- [ ] 运行 `go test ./internal/app/cache -run "Test(ParseAssetVersion|CompareAssetVersion|ParseKeepLatestEntry|SelectKeepLatest)"`，确认因缺少新行为而失败。
-- [ ] 在 `assetVersion` 保存可选 commit count；精确接受 `core-count-ghex[-dirty]`；core 相等时比较 count。
-- [ ] 只删除 raw name 中唯一、由分隔符包围且等于 appended version 的版本段。
-- [ ] 运行 `go test ./internal/app/cache`，预期通过。
-- [ ] 运行 `npx gitnexus detect-changes --repo eget --scope all` 后提交 `fix(cache): recognize cached build versions`。
+- [x] 写失败测试：验证 Git describe 可解析和比较；DBX/OxideTerm 多版本归入同一 family。
+- [x] 运行 `go test ./internal/app/cache -run "Test(ParseAssetVersion|CompareAssetVersion|ParseKeepLatestEntry|SelectKeepLatest)"`，确认因缺少新行为而失败。
+- [x] 在 `assetVersion` 保存可选 commit count；精确接受 `core-count-ghex[-dirty]`；core 相等时比较 count。
+- [x] 只删除 raw name 中唯一、由分隔符包围且等于 appended version 的版本段。
+- [x] 运行 `go test ./internal/app/cache`，预期通过。
+- [x] 运行 `npx gitnexus detect-changes --repo eget --scope all` 后提交 `fix(cache): recognize cached build versions`。
 
 ### Task 2: 直接 installer 复用 pkg-cache
 

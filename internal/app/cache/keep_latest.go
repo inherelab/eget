@@ -16,8 +16,10 @@ type versionIdentifier struct {
 }
 
 type assetVersion struct {
-	core       []uint64
-	prerelease []versionIdentifier
+	core        []uint64
+	prerelease  []versionIdentifier
+	commitCount uint64
+	described   bool
 }
 
 func (v assetVersion) stable() bool { return len(v.prerelease) == 0 }
@@ -85,22 +87,21 @@ func selectKeepLatest(entries []Entry) keepLatestSelection {
 
 func parseAssetVersion(raw string) (assetVersion, bool) {
 	raw = strings.TrimPrefix(raw, "v")
-	if raw == "" || strings.Count(raw, "-") > 1 {
+	if raw == "" {
+		return assetVersion{}, false
+	}
+	if v, ok := parseGitDescribeVersion(raw); ok {
+		return v, true
+	}
+	if strings.Count(raw, "-") > 1 {
 		return assetVersion{}, false
 	}
 	parts := strings.SplitN(raw, "-", 2)
-	coreParts := strings.Split(parts[0], ".")
-	if len(coreParts) < 2 {
+	core, ok := parseVersionCore(parts[0])
+	if !ok {
 		return assetVersion{}, false
 	}
-	v := assetVersion{core: make([]uint64, 0, len(coreParts))}
-	for _, part := range coreParts {
-		n, ok := parseVersionNumber(part)
-		if !ok {
-			return assetVersion{}, false
-		}
-		v.core = append(v.core, n)
-	}
+	v := assetVersion{core: core}
 	if len(parts) == 1 {
 		return v, true
 	}
@@ -122,6 +123,47 @@ func parseAssetVersion(raw string) (assetVersion, bool) {
 		v.prerelease = append(v.prerelease, versionIdentifier{text: id})
 	}
 	return v, true
+}
+
+func parseGitDescribeVersion(raw string) (assetVersion, bool) {
+	parts := strings.Split(raw, "-")
+	if len(parts) != 3 && (len(parts) != 4 || parts[3] != "dirty") {
+		return assetVersion{}, false
+	}
+	core, ok := parseVersionCore(parts[0])
+	if !ok {
+		return assetVersion{}, false
+	}
+	count, ok := parseVersionNumber(parts[1])
+	if !ok || len(parts[2]) < 2 || parts[2][0] != 'g' || !isHex(parts[2][1:]) {
+		return assetVersion{}, false
+	}
+	return assetVersion{core: core, commitCount: count, described: true}, true
+}
+
+func parseVersionCore(raw string) ([]uint64, bool) {
+	parts := strings.Split(raw, ".")
+	if len(parts) < 2 {
+		return nil, false
+	}
+	core := make([]uint64, 0, len(parts))
+	for _, part := range parts {
+		n, ok := parseVersionNumber(part)
+		if !ok {
+			return nil, false
+		}
+		core = append(core, n)
+	}
+	return core, true
+}
+
+func isHex(s string) bool {
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return s != ""
 }
 
 func parseVersionNumber(s string) (uint64, bool) {
@@ -152,6 +194,21 @@ func isVersionText(s string) bool {
 func compareAssetVersion(a, b assetVersion) int {
 	if cmp := compareVersionCore(a.core, b.core); cmp != 0 {
 		return cmp
+	}
+	if a.described || b.described {
+		if !a.described {
+			return -1
+		}
+		if !b.described {
+			return 1
+		}
+		if a.commitCount < b.commitCount {
+			return -1
+		}
+		if a.commitCount > b.commitCount {
+			return 1
+		}
+		return 0
 	}
 	if a.stable() && b.stable() {
 		return 0
@@ -282,6 +339,7 @@ func normalizeAssetFamily(rawName, appendedVersion string) (string, bool) {
 	if prefix, ok := trimTrailingAssetVersion(name); ok {
 		name = prefix
 	}
+	name = trimUniqueAssetVersion(name, appendedVersion)
 	for _, version := range []string{appendedVersion, "v" + strings.TrimPrefix(appendedVersion, "v")} {
 		if strings.HasSuffix(strings.ToLower(name), "-"+strings.ToLower(version)) {
 			name = name[:len(name)-len(version)-1]
@@ -298,6 +356,38 @@ func normalizeAssetFamily(rawName, appendedVersion string) (string, bool) {
 		}
 	}
 	return name, true
+}
+
+func trimUniqueAssetVersion(name, version string) string {
+	versions := []string{version, "v" + strings.TrimPrefix(version, "v")}
+	matchStart, matchLen, matches := 0, 0, 0
+	lowerName := strings.ToLower(name)
+	for i, candidate := range versions {
+		if i == 1 && strings.EqualFold(candidate, versions[0]) {
+			continue
+		}
+		candidate = strings.ToLower(candidate)
+		for offset := 0; offset <= len(lowerName)-len(candidate); {
+			idx := strings.Index(lowerName[offset:], candidate)
+			if idx < 0 {
+				break
+			}
+			start := offset + idx
+			end := start + len(candidate)
+			if assetVersionBoundary(name, start-1) && assetVersionBoundary(name, end) {
+				matchStart, matchLen, matches = start, len(candidate), matches+1
+			}
+			offset = start + len(candidate)
+		}
+	}
+	if matches != 1 {
+		return name
+	}
+	return name[:matchStart] + name[matchStart+matchLen:]
+}
+
+func assetVersionBoundary(name string, index int) bool {
+	return index < 0 || index >= len(name) || name[index] == '-' || name[index] == '_' || name[index] == '.'
 }
 
 func trimTrailingAssetVersion(name string) (string, bool) {

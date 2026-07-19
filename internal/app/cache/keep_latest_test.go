@@ -18,6 +18,8 @@ func TestParseAssetVersion(t *testing.T) {
 		{"2026.7.17", true},
 		{"2.0.0-beta.1", true},
 		{"7.6.3-preview.4", true},
+		{"1.7.2-47-gb24731e", true},
+		{"0.2.2-3-g17e9b4d-dirty", true},
 		{"1", false},
 		{"1.02.3", false},
 		{"1.2.3-beta.01", false},
@@ -25,6 +27,8 @@ func TestParseAssetVersion(t *testing.T) {
 		{"1.2.3-beta_1", false},
 		{"1.2.3-build.1", false},
 		{"1.2.3-BUILD.1", false},
+		{"1.2.3-01-gabcdef0", false},
+		{"1.2.3-1-not-a-hash", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -43,6 +47,9 @@ func TestCompareAssetVersion(t *testing.T) {
 	assertVersionOrder(t, "2.0.0-beta", "2.0.0-beta.0")
 	assertVersionOrder(t, "2.0.0-Beta.1", "2.0.0-beta.1")
 	assertVersionOrder(t, "2.0.0-preview.9", "2.0.0-rc.1")
+	assertVersionOrder(t, "1.7.2-47-gb24731e", "1.7.3-1-g0d6ad98")
+	assertVersionOrder(t, "1.7.3-1-g0d6ad98", "1.7.3-19-g32e069a")
+	assertVersionEqual(t, "1.7.3-19-g0d6ad98", "1.7.3-19-g32e069a-dirty")
 }
 
 func TestParseKeepLatestEntry(t *testing.T) {
@@ -55,6 +62,9 @@ func TestParseKeepLatestEntry(t *testing.T) {
 		{"claude appended platform", "pkg-cache/claude-2.1.160-linux-amd64-a1b2c3d4.bin", "claude", "2.1.160", true},
 		{"powershell", "pkg-cache/PowerShell-7.6.3-win-x64-7.6.3-a1b2c3d4.msi", "powershell", "7.6.3", true},
 		{"cscli", "pkg-cache/cscli-windows-amd64-0.5.2-a1b2c3d4.exe", "cscli", "0.5.2", true},
+		{"dbx embedded version", "pkg-cache/DBX_0.5.58_x64-setup-0.5.58-a1b2c3d4.exe", "dbx-x64-setup", "0.5.58", true},
+		{"oxide embedded version", "pkg-cache/OxideTerm_1.6.12_windows_x64-setup-1.6.12-a1b2c3d4.exe", "oxideterm-windows-x64-setup", "1.6.12", true},
+		{"git describe", "pkg-cache/eget-windows-amd64-1.7.3-19-g0d6ad98-a1b2c3d4.exe", "eget", "1.7.3-19-g0d6ad98", true},
 		{"rightmost duplicate", "pkg-cache/foo-1.2.3-1.2.3-a1b2c3d4.zip", "foo", "1.2.3", true},
 		{"rightmost different", "pkg-cache/foo-1.2.3-2.0.0-a1b2c3d4.zip", "foo", "2.0.0", true},
 		{"unknown tuple", "pkg-cache/foo-1.2.3-haiku-mips-a1b2c3d4.zip", "", "", false},
@@ -138,6 +148,24 @@ func TestSelectKeepLatest(t *testing.T) {
 		assert.Eq(t, 0, len(got.Matched))
 		assert.Eq(t, 1, len(got.Kept))
 		assert.Eq(t, 1, len(got.Unrecognized))
+	})
+
+	t.Run("real cache naming patterns", func(t *testing.T) {
+		got := selectKeepLatest(testCacheEntries(
+			"DBX_0.5.24_x64-setup-0.5.24-a1b2c3d4.exe",
+			"DBX_0.5.58_x64-setup-0.5.58-b1b2c3d4.exe",
+			"OxideTerm_1.6.8_windows_x64-setup-1.6.8-c1b2c3d4.exe",
+			"OxideTerm_1.6.12_windows_x64-setup-1.6.12-d1b2c3d4.exe",
+			"eget-windows-amd64-1.7.2-47-gb24731e-e1b2c3d4.exe",
+			"eget-windows-amd64-1.7.3-19-g0d6ad98-f1b2c3d4.exe",
+		))
+		assert.Eq(t, []string{
+			"DBX_0.5.24_x64-setup-0.5.24-a1b2c3d4.exe",
+			"OxideTerm_1.6.8_windows_x64-setup-1.6.8-c1b2c3d4.exe",
+			"eget-windows-amd64-1.7.2-47-gb24731e-e1b2c3d4.exe",
+		}, entryBaseNames(got.Matched))
+		assert.Eq(t, 3, len(got.Kept))
+		assert.Eq(t, 0, len(got.Unrecognized))
 	})
 }
 
