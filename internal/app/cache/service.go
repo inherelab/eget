@@ -243,6 +243,12 @@ func (s Service) buildCleanPreview(cacheDir string, opts CleanOptions) (CleanRes
 		for _, entry := range selection.Matched {
 			result.addCandidate(entry)
 		}
+		for _, entry := range entries {
+			name := strings.TrimPrefix(entry.RelPath, "installers/")
+			if name != entry.RelPath && name != "" && !strings.Contains(name, "/") && !entry.IsSymlink {
+				result.addCandidate(entry)
+			}
+		}
 		return result, nil
 	}
 

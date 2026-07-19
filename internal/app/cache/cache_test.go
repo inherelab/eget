@@ -260,6 +260,30 @@ func TestServicePreviewKeepLatestOnlyCountsPkgCacheFiles(t *testing.T) {
 	assert.Eq(t, 1, result.UnrecognizedFiles)
 }
 
+func TestServiceKeepLatestRemovesDerivedInstallers(t *testing.T) {
+	cacheDir := newCacheDirForCleanTest(t)
+	oldPkg := filepath.Join(cacheDir, "pkg-cache", "foo-1.0.0-a1b2c3d4.zip")
+	newPkg := filepath.Join(cacheDir, "pkg-cache", "foo-2.0.0-b1b2c3d4.zip")
+	installer := filepath.Join(cacheDir, "installers", "Setup.exe")
+	writeCacheTestFile(t, oldPkg, "old")
+	writeCacheTestFile(t, newPkg, "new")
+	writeCacheTestFile(t, installer, "installer")
+
+	service := Service{}
+	preview, err := service.PreviewClean(cacheDir, CleanOptions{KeepLatest: true})
+	assert.NoErr(t, err)
+	assert.Eq(t, 2, preview.MatchedFiles)
+	assert.Eq(t, 1, preview.KeptLatestFiles)
+	assert.Eq(t, 0, preview.UnrecognizedFiles)
+
+	result, err := service.ApplyClean(preview)
+	assert.NoErr(t, err)
+	assert.Eq(t, 2, result.RemovedFiles)
+	assert.False(t, fileExistsForTest(oldPkg))
+	assert.False(t, fileExistsForTest(installer))
+	assert.True(t, fileExistsForTest(newPkg))
+}
+
 func TestServiceApplyCleanUsesPreviewSnapshot(t *testing.T) {
 	t.Run("does not add files created after preview", func(t *testing.T) {
 		cacheDir := newCacheDirForCleanTest(t)

@@ -35,11 +35,11 @@
 
 **Files:** `internal/app/cache/keep_latest.go`、`internal/app/cache/service.go`、`internal/app/cache/cache_test.go`
 
-- [ ] 写失败测试：preview 同时匹配旧 pkg 与 `installers/setup.exe`，保留最新 pkg；apply 删除两个候选。
-- [ ] 运行 `go test ./internal/app/cache -run TestServiceKeepLatest`，确认 installer 未进入 matched。
-- [ ] 保持版本选择仅解析 `pkg-cache/`，在 keep-latest preview 中把严格位于 `installers/` 的完整普通文件直接加入候选。
-- [ ] 运行 `go test ./internal/app/cache`，预期通过。
-- [ ] 运行 `npx gitnexus detect-changes --repo eget --scope all` 后提交 `fix(cache): clean derived installer files`。
+- [x] 写失败测试：preview 同时匹配旧 pkg 与 `installers/setup.exe`，保留最新 pkg；apply 删除两个候选。
+- [x] 运行 `go test ./internal/app/cache -run TestServiceKeepLatest`，确认 installer 未进入 matched。
+- [x] 保持版本选择仅解析 `pkg-cache/`，在 keep-latest preview 中把严格位于 `installers/` 的完整普通文件直接加入候选。
+- [x] 运行 `go test ./internal/app/cache`，预期通过。
+- [x] 运行 `npx gitnexus detect-changes --repo eget --scope all` 后提交 `fix(cache): clean derived installer files`。
 
 ### Task 4: 全量验证与进度收尾
 
