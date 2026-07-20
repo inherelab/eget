@@ -51,6 +51,34 @@ net.sf.files = {
 	assert.Len(t, getter.requests, 2)
 }
 
+func TestFinderPrioritizesNewestFilesInSameDirectory(t *testing.T) {
+	rootURL := "https://sourceforge.net/projects/windjviewextended/files/"
+	getter := &fakeGetter{responses: map[string]string{
+		rootURL: `
+<script>
+net.sf.files = {
+  "WinDjView Extended 4.0.1.zip": {
+    "name":"WinDjView Extended 4.0.1.zip",
+    "download_url":"https://downloads.sourceforge.net/project/windjviewextended/WinDjView%20Extended%204.0.1.zip",
+    "type":"f"
+  },
+  "WinDjView Extended 4.1.zip": {
+    "name":"WinDjView Extended 4.1.zip",
+    "download_url":"https://downloads.sourceforge.net/project/windjviewextended/WinDjView%20Extended%204.1.zip",
+    "type":"f"
+  }
+};
+</script>`,
+	}}
+
+	urls, err := Finder{Project: "windjviewextended", Getter: getter}.Find()
+
+	assert.NoErr(t, err)
+	assert.Len(t, urls, 2)
+	assert.Contains(t, urls[0], "4.1.zip")
+	assert.Contains(t, urls[1], "4.0.1.zip")
+}
+
 func TestFinderNormalizesSourceForgeDownloadPageURL(t *testing.T) {
 	getter := &fakeGetter{responses: map[string]string{
 		"https://sourceforge.net/projects/winmerge/files/stable/2.16.56/": `

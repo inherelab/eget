@@ -45,6 +45,7 @@ func (f Finder) Find() ([]string, error) {
 		return nil, err
 	}
 
+	prioritizeNewestFiles(files)
 	urls := downloadableURLs(files)
 	if len(urls) > 0 {
 		return urls, nil
@@ -71,6 +72,7 @@ func (f Finder) Find() ([]string, error) {
 		return nil, err
 	}
 
+	prioritizeNewestFiles(files)
 	urls = downloadableURLs(files)
 	if len(urls) == 0 {
 		return nil, fmt.Errorf("sourceforge downloadable files not found")
@@ -397,6 +399,19 @@ func downloadableURLs(files []File) []string {
 		}
 	}
 	return urls
+}
+
+func prioritizeNewestFiles(files []File) {
+	sort.SliceStable(files, func(i, j int) bool {
+		left, right := fileVersion(files[i]), fileVersion(files[j])
+		if left == "" {
+			return false
+		}
+		if right == "" {
+			return true
+		}
+		return compareVersion(left, right) > 0
+	})
 }
 
 func directDownloadURL(file File) string {
