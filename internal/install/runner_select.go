@@ -2,6 +2,7 @@ package install
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"regexp"
 	"strings"
@@ -79,6 +80,9 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string, opt
 	choices := make([]string, len(candidates))
 	for i, candidate := range candidates {
 		choices[i] = path.Base(candidate)
+		if decoded, err := url.PathUnescape(choices[i]); err == nil {
+			choices[i] = decoded
+		}
 	}
 	choice, err := r.Prompt(candidatePromptTitle(releaseVersion), "Filter assets", choices)
 	if err != nil {

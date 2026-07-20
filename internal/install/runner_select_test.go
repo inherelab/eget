@@ -50,6 +50,26 @@ func TestResolveCandidateKeepsPromptWhenNameMatchIsAmbiguous(t *testing.T) {
 	assert.Eq(t, "https://github.com/gookit/greq/releases/download/v0.6.0/gbench-lite-v0.6.0-windows-amd64.zip", got)
 }
 
+func TestResolveCandidateDecodesPromptChoices(t *testing.T) {
+	runner := &InstallRunner{Stderr: io.Discard}
+	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {
+		assert.Eq(t, []string{
+			"WinDjView Extended 4.1.zip",
+			"bad%ZZ.zip",
+		}, choices)
+		return 0, nil
+	}
+	candidates := []string{
+		"https://example.com/WinDjView%20Extended%204.1.zip",
+		"https://example.com/bad%ZZ.zip",
+	}
+
+	got, err := runner.resolveCandidate("windjviewextended", candidates, Options{}, "4.1")
+
+	assert.NoErr(t, err)
+	assert.Eq(t, candidates[0], got)
+}
+
 func TestResolveCandidateAutoSelectsWindowsMSVCVariant(t *testing.T) {
 	runner := &InstallRunner{Stderr: io.Discard}
 	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {

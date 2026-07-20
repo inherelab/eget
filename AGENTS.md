@@ -16,9 +16,6 @@
 
 <!-- PROCESSING WORKS:START -->
 
-- [x] issue #46：SourceForge 同目录资产版本优先级
-- [ ] issue #46：候选名称 URL 解码
-
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则
