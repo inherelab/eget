@@ -367,7 +367,7 @@ eget config set global.target ~/.local/bin
 - `--extract-all`, `--ea`: 提取归档中的全部文件，而不是只选择一个目标文件。
 - `--strip-components N`: 解压全部文件时剥离归档内路径前 `N` 层，适用于归档内容被版本号顶层目录包裹的场景。
 - `--chunk N`: 控制单个下载文件的 HTTP Range 分片并发。`0` 表示自动，`1` 表示单连接下载，大于 `1` 表示最多使用该数量的分片。
-- `--quiet`: 精简常规输出，适用于脚本或批处理场景。
+- `--quiet`: 精简常规输出；存在多个资源候选时自动选择第一项，适用于脚本或批处理场景。
 
 `install` 和 `download` 还支持 GitHub 目标的 `--prerelease` / `-p`。使用默认 latest 时，会把预发布版本也纳入最新版本选择。
 

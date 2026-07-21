@@ -70,6 +70,23 @@ func TestResolveCandidateDecodesPromptChoices(t *testing.T) {
 	assert.Eq(t, candidates[0], got)
 }
 
+func TestResolveCandidateQuietSelectsFirstWithoutPrompt(t *testing.T) {
+	runner := &InstallRunner{Stderr: io.Discard}
+	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {
+		t.Fatalf("expected --quiet to avoid prompt, got choices %#v", choices)
+		return 0, nil
+	}
+	candidates := []string{
+		"https://example.com/WinDjView%20Extended%204.1.zip",
+		"https://example.com/WinDjView%20Extended%204.0.1.zip",
+	}
+
+	got, err := runner.resolveCandidate("windjviewextended", candidates, Options{Quiet: true}, "4.1")
+
+	assert.NoErr(t, err)
+	assert.Eq(t, candidates[0], got)
+}
+
 func TestResolveCandidateAutoSelectsWindowsMSVCVariant(t *testing.T) {
 	runner := &InstallRunner{Stderr: io.Discard}
 	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {

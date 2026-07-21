@@ -35,7 +35,7 @@ func newAddCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.Source, "source", "", false, "Download source archive")
 		c.BoolOpt(&opts.All, "extract-all", "ea", false, "Extract all files")
 		c.BoolOpt(&opts.GUI, "gui", "", false, "Add as GUI application")
-		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
+		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output; select first asset when multiple candidates remain")
 		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.AddArg("target", "Package target", true)

@@ -36,7 +36,7 @@ func newDownloadCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.Source, "source", "", false, "Download source archive")
 		c.BoolOpt(&opts.Prerelease, "prerelease", "p", false, "Select latest release including prereleases")
 		c.BoolOpt(&opts.All, "extract-all", "ea", false, "Extract all files")
-		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
+		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output; select first asset when multiple candidates remain")
 		c.BoolOpt(&opts.Ghproxy, "ghproxy", "", false, "Rewrite GitHub download URL with configured ghproxy")
 		c.IntOpt(&opts.FallbackVersions, "fallback-versions", "", 0, "Search older SourceForge version folders when asset is missing")
 		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")

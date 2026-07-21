@@ -73,6 +73,9 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string, opt
 		}
 	}
 
+	if opts.Quiet {
+		return candidates[0], nil
+	}
 	if r.Prompt == nil {
 		return "", fmt.Errorf("%d candidates found for asset chain", len(candidates))
 	}

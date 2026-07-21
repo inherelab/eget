@@ -367,7 +367,7 @@ The target argument accepted by `install` and `download` can be:
 - `--extract-all`, `--ea`: Extract all files from the archive instead of selecting a single target file.
 - `--strip-components N`: Remove `N` leading archive path components when extracting all files, useful for archives that wrap contents in a versioned top-level directory.
 - `--chunk N`: Control HTTP Range chunk concurrency for one downloaded file. `0` means auto, `1` means single-connection download, and values greater than `1` request up to that many chunks.
-- `--quiet`: Reduce normal command output for scripting or batch use.
+- `--quiet`: Reduce normal output and select the first asset when multiple candidates remain, for scripting or batch use.
 
 `install` and `download` also support `--prerelease` / `-p` for GitHub targets. With the default latest tag, it selects the newest release including prereleases.
 
