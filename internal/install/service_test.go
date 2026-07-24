@@ -4,10 +4,13 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gookit/goutil/x/assert"
+	"github.com/inherelab/eget/internal/cachemirror"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
 )
 
@@ -97,4 +100,34 @@ func TestNewDefaultServiceWiring(t *testing.T) {
 	if extractor == nil {
 		t.Fatal("expected extractor")
 	}
+}
+
+func TestDefaultChecksumVerifierUsesCacheMirror(t *testing.T) {
+	cacheDir := t.TempDir()
+	originHit := false
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		originHit = true
+		_, _ = w.Write([]byte("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"))
+	}))
+	defer origin.Close()
+
+	checksumURL := origin.URL + "/tool.zip.sha256"
+	cachePath := CacheFilePath(cacheDir, checksumURL)
+	rel, err := cachemirror.RelPath(cacheDir, cachePath)
+	assert.NoErr(t, err)
+	wantPath := "/download/" + cachemirror.KeyForRelPath(rel)
+	mirror := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Eq(t, wantPath, r.URL.Path)
+		_, _ = w.Write([]byte("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"))
+	}))
+	defer mirror.Close()
+
+	verifier := NewDefaultService(nil, nil).Sha256AssetVerifierFactory(checksumURL, Options{
+		CacheDir: cacheDir,
+		CacheMirror: cachemirror.Options{
+			Enable: true, URL: mirror.URL, Fallback: false,
+		},
+	})
+	assert.NoErr(t, verifier.Verify([]byte("test")))
+	assert.False(t, originHit)
 }

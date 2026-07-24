@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/gookit/goutil/x/ccolor"
@@ -126,6 +127,9 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 	verbosef("selected asset url: %s", url)
 	assetID, assetSize, assetUpdatedAt, assetDigest, _ := assetMetadata(finder, url)
+	if opts.Verify == "" && !opts.Hash && strings.HasPrefix(assetDigest, "sha256:") {
+		opts.Verify = strings.TrimPrefix(assetDigest, "sha256:")
+	}
 	withAssetMetadata := func(result RunResult) RunResult {
 		result.AssetID = assetID
 		result.AssetSize = assetSize

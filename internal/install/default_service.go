@@ -1,6 +1,9 @@
 package install
 
 import (
+	"bytes"
+	"io"
+	"net/http"
 	"runtime"
 	"time"
 
@@ -39,7 +42,15 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 		},
 		Sha256AssetVerifierFactory: func(assetURL string, opts Options) Verifier {
 			getter := githubGetter
-			if getter == nil {
+			if opts.CacheMirror.Active() {
+				getter = HTTPGetterFunc(func(url string) (*http.Response, error) {
+					downloaded, err := (&InstallRunner{}).downloadBody(url, opts)
+					if err != nil {
+						return nil, err
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(downloaded.Body))}, nil
+				})
+			} else if getter == nil {
 				getter = NewHTTPGetter(opts)
 			}
 			return &sha256AssetVerifier{AssetURL: assetURL, Getter: getter}

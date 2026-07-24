@@ -1,6 +1,7 @@
 package install
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -21,7 +22,9 @@ func TestRunnerInstallsKnownGitHubToolFullyOfflineFromCacheMirror(t *testing.T) 
 	apiCacheDir := filepath.Join(cacheRoot, "api-cache")
 	metadataURL := "https://api.github.com/repos/owner/tool/releases/latest"
 	assetURL := "https://origin.invalid/tool-v1.2.3-windows-amd64.zip"
+	checksumURL := assetURL + ".sha256"
 	archive := zipBytes(t, map[string]string{"tool.exe": "offline tool"})
+	digest := sha256.Sum256(archive)
 
 	metadataPath := APICacheFilePath(apiCacheDir, metadataURL)
 	metadataRel, err := cachemirror.RelPath(cacheRoot, metadataPath)
@@ -36,7 +39,7 @@ func TestRunnerInstallsKnownGitHubToolFullyOfflineFromCacheMirror(t *testing.T) 
 	assert.NoErr(t, err)
 	assetKey := cachemirror.KeyForRelPath(assetRel)
 
-	releaseJSON := fmt.Sprintf(`{"tag_name":"v1.2.3","assets":[{"browser_download_url":%q}]}`, assetURL)
+	releaseJSON := fmt.Sprintf(`{"tag_name":"v1.2.3","assets":[{"digest":"sha256:%x","browser_download_url":%q},{"browser_download_url":%q}]}`, digest, assetURL, checksumURL)
 	payloads := map[string][]byte{
 		"/download/" + metadataKey: []byte(releaseJSON),
 		"/download/" + assetKey:    archive,
@@ -82,6 +85,7 @@ func TestRunnerInstallsKnownGitHubToolFullyOfflineFromCacheMirror(t *testing.T) 
 	requestsMu.Lock()
 	assert.Eq(t, 1, requests["/download/"+metadataKey])
 	assert.Eq(t, 1, requests["/download/"+assetKey])
+	assert.Eq(t, 2, len(requests))
 	requestsMu.Unlock()
 
 	_, err = os.Stat(metadataPath)
