@@ -302,7 +302,8 @@ func TestDownloadBodyUsesCacheMirrorBeforeOrigin(t *testing.T) {
 	}))
 	defer mirror.Close()
 
-	runner := &InstallRunner{}
+	var stdout bytes.Buffer
+	runner := &InstallRunner{Stdout: &stdout}
 	got, err := runner.downloadBody(downloadURL, Options{
 		CacheDir: cacheDir,
 		CacheMirror: cachemirror.Options{
@@ -315,6 +316,14 @@ func TestDownloadBodyUsesCacheMirrorBeforeOrigin(t *testing.T) {
 	assert.NoErr(t, err)
 	assert.Eq(t, "mirror", string(got.Body))
 	assert.False(t, originHit)
+	output := stdout.String()
+	noticeAt := strings.Index(output, "Use cache mirror")
+	progressAt := strings.Index(output, "Downloading")
+	if noticeAt < 0 || progressAt < 0 || noticeAt > progressAt {
+		t.Fatalf("cache mirror notice should precede download progress, got %q", output)
+	}
+	assert.Contains(t, output, mirror.URL)
+	assert.False(t, strings.Contains(output, "Using cache mirror file"))
 	saved, err := os.ReadFile(cachePath)
 	assert.NoErr(t, err)
 	assert.Eq(t, "mirror", string(saved))

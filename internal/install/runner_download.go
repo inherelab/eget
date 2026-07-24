@@ -33,7 +33,11 @@ func (r *InstallRunner) downloadBody(url string, opts Options) (downloadBodyResu
 			}
 			verbosef("discard invalid cached archive: %s", cachePath)
 		}
-		if hit, err := tryCacheMirrorDownload(cachePath, opts, r.downloadProgress(opts)); err != nil {
+		mirrorProgress := r.downloadProgress(opts)
+		if hit, err := tryCacheMirrorDownload(cachePath, opts, func(size int64) io.Writer {
+			ccolor.Fprintf(output, " - Use cache mirror <cyan>%s</>\n", opts.CacheMirror.URL)
+			return mirrorProgress(size)
+		}); err != nil {
 			if opts.CacheMirror.Fallback {
 				printCacheMirrorFallback(output, err)
 			} else {
@@ -45,7 +49,6 @@ func (r *InstallRunner) downloadBody(url string, opts Options) (downloadBodyResu
 				return downloadBodyResult{}, err
 			}
 			if !isInvalidCachedDownload(cachePath, data) {
-				ccolor.Fprintf(output, " - Using cache mirror file <cyan>%s</>\n", filepath.Base(cachePath))
 				return downloadBodyResult{Body: data, ModTime: fileModTime(cachePath), Filename: assetFilename(url)}, nil
 			}
 			if !opts.CacheMirror.Fallback {
