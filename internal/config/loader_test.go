@@ -15,6 +15,12 @@ func TestNewFileUsesDefaultSDKExtMap(t *testing.T) {
 	assert.Eq(t, "tar.gz", cfg.Global.SDKExtMap["darwin"])
 }
 
+func TestNewFileEnablesAPICacheByDefault(t *testing.T) {
+	cfg := NewFile()
+
+	assert.True(t, cfg.ApiCache.Enable != nil && *cfg.ApiCache.Enable)
+}
+
 func TestLoadFileKeepsDefaultSDKExtMapWhenGlobalOmitsIt(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")

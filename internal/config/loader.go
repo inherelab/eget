@@ -34,6 +34,8 @@ func LoadFile(path string) (*File, error) {
 
 func NewFile() *File {
 	cfg := &File{}
+	apiCacheEnabled := true
+	cfg.ApiCache.Enable = &apiCacheEnabled
 	cfg.Repos = make(map[string]Section)
 	cfg.Packages = make(map[string]Section)
 	cfg.PkgTemplates = make(map[string]Section)

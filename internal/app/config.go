@@ -157,7 +157,6 @@ func (s ConfigService) ConfigInit() (string, error) {
 	userAgent := client.DefaultUserAgent
 	empty := ""
 	sys7zPath := ""
-	apiCacheEnable := false
 	apiCacheTime := 1800
 	ghproxyHostURL := ""
 	chunkConcurrency := 0
@@ -171,7 +170,6 @@ func (s ConfigService) ConfigInit() (string, error) {
 	file.Global.Sys7zPath = &sys7zPath
 	file.Global.ChunkConcurrency = &chunkConcurrency
 	file.Global.BatchConcurrency = &batchConcurrency
-	file.ApiCache.Enable = &apiCacheEnable
 	file.ApiCache.CacheTime = &apiCacheTime
 	file.Ghproxy.HostURL = &ghproxyHostURL
 	file.Ghproxy.Fallbacks = []string{}

@@ -168,13 +168,13 @@ app 级 `--no-proxy` 选项会在单次运行中禁用配置代理。`NO_PROXY=1
 
 ```toml
 [api_cache]
-enable = false
+enable = true
 cache_time = 1800
 ```
 
 字段说明：
 
-- `enable`: 是否缓存已知 provider 的元数据响应。
+- `enable`: 是否缓存已知 provider 的元数据响应，默认值为 `true`；设置为 `false` 可关闭 API cache。
 - `cache_time`: 缓存有效期，单位为秒。
 
 > API cache 会缓存 GitHub API、GitLab/Gitea release API、SourceForge files 列表等已知 provider 的 `GET` 响应。缓存文件目录为 `{cache_dir}/api-cache/`。

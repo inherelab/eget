@@ -168,13 +168,13 @@ Example:
 
 ```toml
 [api_cache]
-enable = false
+enable = true
 cache_time = 1800
 ```
 
 Fields:
 
-- `enable`: whether to cache known provider metadata responses.
+- `enable`: whether to cache known provider metadata responses. Defaults to `true`; set it to `false` to disable the API cache.
 - `cache_time`: cache TTL in seconds.
 
 The API cache stores known provider metadata `GET` responses, including GitHub API, GitLab/Gitea release API, and SourceForge files listings. Cache files are stored under `{cache_dir}/api-cache/`.

@@ -182,8 +182,8 @@ func TestConfigInit(t *testing.T) {
 	if cfg.Global.Sys7zPath == nil || *cfg.Global.Sys7zPath != "" {
 		t.Fatalf("expected default global.sys7z_path, got %#v", cfg.Global.Sys7zPath)
 	}
-	if cfg.ApiCache.Enable == nil || *cfg.ApiCache.Enable {
-		t.Fatalf("expected default api_cache.enable=false, got %#v", cfg.ApiCache.Enable)
+	if cfg.ApiCache.Enable == nil || !*cfg.ApiCache.Enable {
+		t.Fatalf("expected default api_cache.enable=true, got %#v", cfg.ApiCache.Enable)
 	}
 	if cfg.ApiCache.CacheTime == nil || *cfg.ApiCache.CacheTime != 1800 {
 		t.Fatalf("expected default api_cache.cache_time=1800, got %#v", cfg.ApiCache.CacheTime)
