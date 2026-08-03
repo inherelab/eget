@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"io"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,6 +65,8 @@ func decodeConfigFile(cfg *configutil.Manager) (*File, error) {
 		conf.Repos[key] = section
 		conf.Meta.Keys = append(conf.Meta.Keys, key)
 	}
+	conf.Meta.originalData = rootData
+	conf.Meta.resolvedData = encodeConfigFile(conf).Data()
 
 	return conf, nil
 }
@@ -131,7 +134,37 @@ func Save(path string, file *File) error {
 }
 
 func saveConfigFile(path string, file *File) error {
-	return encodeConfigFile(file).SaveTo(path)
+	cfg := encodeConfigFile(file)
+	if file != nil {
+		data := cfg.Data()
+		preserveUnchangedRawValues(data, file.Meta.resolvedData, file.Meta.originalData, true)
+		cfg.SetData(data)
+	}
+	return cfg.SaveTo(path)
+}
+
+func preserveUnchangedRawValues(current, resolved, original map[string]any, root bool) {
+	for key, originalValue := range original {
+		if root && (key == "packages" || key == "sdk") {
+			continue
+		}
+		currentValue, currentOK := current[key]
+		resolvedValue, resolvedOK := resolved[key]
+		if !currentOK || !resolvedOK {
+			continue
+		}
+
+		currentMap, currentIsMap := currentValue.(map[string]any)
+		resolvedMap, resolvedIsMap := resolvedValue.(map[string]any)
+		originalMap, originalIsMap := originalValue.(map[string]any)
+		if currentIsMap && resolvedIsMap && originalIsMap {
+			preserveUnchangedRawValues(currentMap, resolvedMap, originalMap, false)
+			continue
+		}
+		if reflect.DeepEqual(currentValue, resolvedValue) {
+			current[key] = originalValue
+		}
+	}
 }
 
 func GetByPath(file *File, key string) (any, bool) {
@@ -140,6 +173,7 @@ func GetByPath(file *File, key string) (any, bool) {
 }
 
 func SetByPath(file *File, key string, value any) error {
+	originalData, resolvedData := file.Meta.originalData, file.Meta.resolvedData
 	cfg := encodeConfigFile(file)
 	if normalized, ok := normalizePathValue(key, value); ok {
 		value = normalized
@@ -151,6 +185,8 @@ func SetByPath(file *File, key string, value any) error {
 	if err != nil {
 		return err
 	}
+	decoded.Meta.originalData = originalData
+	decoded.Meta.resolvedData = resolvedData
 	*file = *decoded
 	return nil
 }

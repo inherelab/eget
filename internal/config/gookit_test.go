@@ -543,6 +543,51 @@ func TestPkgTemplatesSectionRoundTrip(t *testing.T) {
 	assert.Eq(t, checksumPath, *template.ChecksumJSONPath)
 }
 
+func TestSavePreservesEnvPlaceholdersOutsidePackagesAndSDK(t *testing.T) {
+	t.Setenv("PROXY_URL", "http://127.0.0.1:7890")
+	t.Setenv("PACKAGE_REPO", "owner/resolved")
+	t.Setenv("SDK_INDEX_URL", "https://example.com/resolved.json")
+	path := filepath.Join(t.TempDir(), "eget.toml")
+	body := `[http_proxy]
+url = "${PROXY_URL}"
+
+[packages.demo]
+repo = "${PACKAGE_REPO}"
+
+[sdk.go]
+index_url = "${SDK_INDEX_URL}"
+`
+	assert.NoErr(t, os.WriteFile(path, []byte(body), 0o644))
+
+	cfg, err := LoadFile(path)
+	assert.NoErr(t, err)
+	assert.NoErr(t, SetByPath(cfg, "global.user_agent", "eget-test"))
+	assert.NoErr(t, Save(path, cfg))
+
+	saved, err := os.ReadFile(path)
+	assert.NoErr(t, err)
+	text := string(saved)
+	assert.Contains(t, text, `user_agent = "eget-test"`)
+	assert.Contains(t, text, `url = "${PROXY_URL}"`)
+	assert.Contains(t, text, `repo = "owner/resolved"`)
+	assert.Contains(t, text, `index_url = "https://example.com/resolved.json"`)
+}
+
+func TestSaveWritesExplicitReplacementForEnvPlaceholder(t *testing.T) {
+	t.Setenv("PROXY_URL", "http://127.0.0.1:7890")
+	path := filepath.Join(t.TempDir(), "eget.toml")
+	assert.NoErr(t, os.WriteFile(path, []byte("[http_proxy]\nurl = \"${PROXY_URL}\"\n"), 0o644))
+
+	cfg, err := LoadFile(path)
+	assert.NoErr(t, err)
+	assert.NoErr(t, SetByPath(cfg, "http_proxy.url", "http://new-proxy:8080"))
+	assert.NoErr(t, Save(path, cfg))
+
+	saved, err := os.ReadFile(path)
+	assert.NoErr(t, err)
+	assert.Contains(t, string(saved), `url = "http://new-proxy:8080"`)
+}
+
 func TestSaveAndLoadRoundTrip(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")
