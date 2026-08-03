@@ -36,3 +36,7 @@ func TestTrackingTagPolicyOverridesHeuristic(t *testing.T) {
 		})
 	}
 }
+
+func TestTagPolicyForInstallDefaultsToLatestWithoutExplicitTag(t *testing.T) {
+	assert.Eq(t, tagPolicyLatest, tagPolicyForInstall("", ""))
+}

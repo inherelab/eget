@@ -38,7 +38,7 @@ func tagPolicyForInstall(tag, policy string) string {
 		return policy
 	}
 	if strings.TrimSpace(tag) == "" {
-		return ""
+		return tagPolicyLatest
 	}
 	if isVersionTag(tag) {
 		return tagPolicyLatest
