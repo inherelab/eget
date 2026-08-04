@@ -262,6 +262,40 @@ func TestUpdatePackageRestoresPrereleaseOptionFromInstalledEntry(t *testing.T) {
 	assert.True(t, installer.options[0].Prerelease)
 }
 
+func TestUpdatePackageRestoresCustomInstalledName(t *testing.T) {
+	installer := &fakeInstallService{}
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfgpkg.NewFile(), nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"Apocrypha.AppImage": {
+					Repo:   "Jeagermeister/Apocrypha",
+					Target: "Jeagermeister/Apocrypha",
+					Tag:    "v0.5.0",
+					Options: map[string]any{
+						"prerelease": true,
+						"asset":      []string{"AppImage"},
+					},
+				},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			assert.True(t, target.Prerelease)
+			return LatestInfo{Tag: "v0.6.0"}, nil
+		},
+	}
+
+	_, err := svc.UpdatePackage("Apocrypha.AppImage", install.Options{})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"Jeagermeister/Apocrypha"}, installer.targets)
+	assert.Eq(t, "Apocrypha.AppImage", installer.options[0].Name)
+	assert.True(t, installer.options[0].Prerelease)
+}
+
 func TestUpdatePackageClearsInstalledVersionTagWhenUpdatingToNewLatest(t *testing.T) {
 	installer := &fakeInstallService{}
 	svc := UpdateService{

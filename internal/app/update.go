@@ -80,6 +80,9 @@ func (s UpdateService) UpdatePackageStatus(nameOrRepo string, cli install.Option
 	if !managed {
 		target = installedUpdateTarget(item, entry)
 		opts = applyUpdateCLIOverrides(optionsFromInstalledEntry(entry), cli)
+		if opts.Name == "" {
+			opts.Name = item.Name
+		}
 	}
 	opts.Operation = install.OperationUpdate
 	opts.CurrentVersion = item.InstalledTag
