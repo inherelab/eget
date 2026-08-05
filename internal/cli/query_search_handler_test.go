@@ -138,6 +138,73 @@ func TestPrintQueryResultInfoUsesCompactTime(t *testing.T) {
 	}
 }
 
+func TestQueryResultURLInfo(t *testing.T) {
+	size := int64(2048)
+	result := app.QueryResult{
+		Action: "info",
+		URLInfo: &app.QueryURLInfo{
+			RequestedURL: "https://example.com/start",
+			FinalURL:     "https://cdn.example.com/tool.zip",
+			Status:       "200 OK",
+			StatusCode:   200,
+			FileName:     "tool.zip",
+			Size:         &size,
+			ContentType:  "application/zip",
+			LastModified: "Tue, 05 Aug 2026 10:00:00 GMT",
+			ETag:         `"abc123"`,
+			AcceptRanges: "bytes",
+		},
+	}
+
+	t.Run("prints text fields and readable size", func(t *testing.T) {
+		var out bytes.Buffer
+		cliui.SetOutput(&out)
+		defer cliui.ResetOutput()
+
+		clirender.PrintQueryResult(result)
+
+		got := out.String()
+		for _, want := range []string{
+			result.URLInfo.RequestedURL,
+			result.URLInfo.FinalURL,
+			result.URLInfo.Status,
+			result.URLInfo.FileName,
+			"2.00K",
+			result.URLInfo.ContentType,
+			result.URLInfo.LastModified,
+			result.URLInfo.ETag,
+			result.URLInfo.AcceptRanges,
+		} {
+			if !strings.Contains(got, want) {
+				t.Fatalf("expected URL info output to contain %q, got %q", want, got)
+			}
+		}
+	})
+
+	t.Run("renders JSON with raw byte size", func(t *testing.T) {
+		got, err := clirender.QueryResultJSON(result)
+		if err != nil {
+			t.Fatalf("query result JSON: %v", err)
+		}
+		for _, want := range []string{`"url_info"`, `"size": 2048`, result.URLInfo.FinalURL} {
+			if !strings.Contains(got, want) {
+				t.Fatalf("expected URL info JSON to contain %q, got %q", want, got)
+			}
+		}
+	})
+
+	t.Run("omits unknown size from JSON", func(t *testing.T) {
+		result.URLInfo.Size = nil
+		got, err := clirender.QueryResultJSON(result)
+		if err != nil {
+			t.Fatalf("query result JSON: %v", err)
+		}
+		if strings.Contains(got, `"size"`) {
+			t.Fatalf("expected unknown size to be omitted, got %q", got)
+		}
+	})
+}
+
 func TestHandleQueryJSONOutput(t *testing.T) {
 	svc := &cliService{
 		queryService: app.QueryService{

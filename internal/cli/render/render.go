@@ -86,14 +86,27 @@ type assetDisplay struct {
 	URL           string `json:"url,omitempty" mapstructure:"url"`
 }
 
+type urlInfoTextDisplay struct {
+	RequestedURL string `mapstructure:"requested_url"`
+	FinalURL     string `mapstructure:"final_url"`
+	Status       string `mapstructure:"status"`
+	FileName     string `mapstructure:"file_name"`
+	Size         string `mapstructure:"size"`
+	ContentType  string `mapstructure:"content_type"`
+	LastModified string `mapstructure:"last_modified"`
+	ETag         string `mapstructure:"etag"`
+	AcceptRanges string `mapstructure:"accept_ranges"`
+}
+
 type queryResultDisplay struct {
-	Action   string           `json:"action"`
-	Repo     string           `json:"repo"`
-	Tag      string           `json:"tag,omitempty"`
-	Info     *repoInfoDisplay `json:"info,omitempty"`
-	Latest   *releaseDisplay  `json:"latest,omitempty"`
-	Releases []releaseDisplay `json:"releases,omitempty"`
-	Assets   []assetDisplay   `json:"assets,omitempty"`
+	Action   string            `json:"action"`
+	Repo     string            `json:"repo,omitempty"`
+	Tag      string            `json:"tag,omitempty"`
+	Info     *repoInfoDisplay  `json:"info,omitempty"`
+	Latest   *releaseDisplay   `json:"latest,omitempty"`
+	Releases []releaseDisplay  `json:"releases,omitempty"`
+	Assets   []assetDisplay    `json:"assets,omitempty"`
+	URLInfo  *app.QueryURLInfo `json:"url_info,omitempty"`
 }
 
 type searchRepoDisplay struct {
@@ -275,6 +288,7 @@ func queryResultToDisplay(result app.QueryResult) queryResultDisplay {
 	for _, item := range result.Assets {
 		display.Assets = append(display.Assets, assetToDisplay(item))
 	}
+	display.URLInfo = result.URLInfo
 	return display
 }
 
@@ -464,6 +478,24 @@ func PrintJSON(value any) error {
 
 func PrintQueryResult(result app.QueryResult) {
 	fmt.Printf("action: %s\n", result.Action)
+	if result.URLInfo != nil {
+		size := "unknown"
+		if result.URLInfo.Size != nil && *result.URLInfo.Size >= 0 {
+			size = mathutil.DataSize(uint64(*result.URLInfo.Size))
+		}
+		show.AList("URL Info", urlInfoTextDisplay{
+			RequestedURL: result.URLInfo.RequestedURL,
+			FinalURL:     result.URLInfo.FinalURL,
+			Status:       result.URLInfo.Status,
+			FileName:     result.URLInfo.FileName,
+			Size:         size,
+			ContentType:  result.URLInfo.ContentType,
+			LastModified: result.URLInfo.LastModified,
+			ETag:         result.URLInfo.ETag,
+			AcceptRanges: result.URLInfo.AcceptRanges,
+		})
+		return
+	}
 	fmt.Printf("repo: %s\n", result.Repo)
 	if result.Tag != "" {
 		fmt.Printf("version: %s\n", result.Tag)

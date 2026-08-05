@@ -124,27 +124,27 @@ git commit -m "feat(query): route direct URL queries, refs #52"
 - Modify: `internal/cli/render/render.go`
 - Modify: `internal/cli/query_search_handler_test.go`
 
-- [ ] **Step 1: Write failing rendering tests**
+- [x] **Step 1: Write failing rendering tests**
 
 Add a text test expecting requested URL, final URL, status, filename, human-readable size, content type, last-modified, ETag, and accept-ranges. Add a JSON test that unmarshals output and verifies raw byte size under `url_info.size`; add an unknown-size case proving the size key is omitted.
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run: `go test ./internal/cli -run 'Test(PrintQueryResultURLInfo|QueryResultJSONURLInfo)' -count=1`
 
 Expected: FAIL because the renderer ignores `URLInfo`.
 
-- [ ] **Step 3: Implement minimal text and JSON rendering**
+- [x] **Step 3: Implement minimal text and JSON rendering**
 
 Add `URLInfo *app.QueryURLInfo` to `queryResultDisplay`, copy it in `queryResultToDisplay`, and handle it before repository output in `PrintQueryResult`. Use the existing `mathutil.DataSize` for known byte size and `unknown` for text when size is absent. Keep JSON size as raw bytes.
 
-- [ ] **Step 4: Verify Task 3 GREEN**
+- [x] **Step 4: Verify Task 3 GREEN**
 
 Run: `go test ./internal/cli -run 'Test(PrintQueryResultURLInfo|QueryResultJSONURLInfo)' -count=1`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
 
 ```shell
 git add internal/cli/render/render.go internal/cli/query_search_handler_test.go
