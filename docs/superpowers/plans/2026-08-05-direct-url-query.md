@@ -156,7 +156,7 @@ git commit -m "feat(query): render direct URL metadata, refs #52"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-08-05-direct-url-query.md`
 
-- [ ] **Step 1: Format and run focused package tests**
+- [x] **Step 1: Format and run focused package tests**
 
 Run: `gofmt -w internal/client/url_query.go internal/client/url_query_test.go internal/app/query.go internal/app/query_test.go internal/cli/wiring.go internal/cli/query_cmd.go internal/cli/app_query_search_test.go internal/cli/render/render.go internal/cli/query_search_handler_test.go`
 
@@ -164,13 +164,13 @@ Run: `go test ./internal/client ./internal/app ./internal/cli -count=1`
 
 Expected: PASS.
 
-- [ ] **Step 2: Run the full repository gate**
+- [x] **Step 2: Run the full repository gate**
 
 Run: `go test ./... -count=1`
 
 Expected: PASS.
 
-- [ ] **Step 3: Check diff scope**
+- [x] **Step 3: Check diff scope**
 
 Run: `git diff --check`
 
@@ -178,7 +178,7 @@ Run: `npx gitnexus detect-changes -r eget --scope all`
 
 Expected: only the direct URL probe, query routing, wiring, help, renderer, tests, and this plan are affected.
 
-- [ ] **Step 4: Mark every plan checkbox complete and commit the plan update**
+- [x] **Step 4: Mark every plan checkbox complete and commit the plan update**
 
 ```shell
 git add docs/superpowers/plans/2026-08-05-direct-url-query.md
