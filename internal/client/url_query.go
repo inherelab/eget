@@ -31,7 +31,8 @@ func QueryURL(rawURL string, opts Options) (URLInfo, error) {
 	if headErr == nil {
 		info := urlInfoFromResponse(rawURL, resp)
 		_ = resp.Body.Close()
-		if info.Size != nil && resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusNotImplemented {
+		if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusNotImplemented &&
+			(resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices || info.Size != nil) {
 			return info, nil
 		}
 	}
@@ -42,6 +43,9 @@ func QueryURL(rawURL string, opts Options) (URLInfo, error) {
 	}
 	defer resp.Body.Close()
 	info := urlInfoFromResponse(rawURL, resp)
+	if resp.StatusCode != http.StatusOK {
+		info.Size = nil
+	}
 	if size, ok := contentRangeSize(resp.Header.Get("Content-Range")); ok {
 		info.Size = &size
 	}

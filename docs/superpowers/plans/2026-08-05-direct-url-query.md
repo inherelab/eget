@@ -184,3 +184,9 @@ Expected: only the direct URL probe, query routing, wiring, help, renderer, test
 git add docs/superpowers/plans/2026-08-05-direct-url-query.md
 git commit -m "docs: complete direct URL query plan, refs #52"
 ```
+
+### Review Follow-up
+
+- [x] Do not treat a partial response content length as the complete file size.
+- [x] Preserve valid non-success HEAD responses without an unnecessary GET fallback.
+- [x] Add focused regression cases and rerun `go test ./... -count=1`.

@@ -13,6 +13,8 @@ func TestQueryURL(t *testing.T) {
 	t.Run("rejects non HTTP URL", testQueryURLRejectsNonHTTPURL)
 	t.Run("falls back when HEAD is unsupported", testQueryURLFallsBackWhenHeadUnsupported)
 	t.Run("falls back when HEAD omits size", testQueryURLFallsBackWhenHeadOmitsSize)
+	t.Run("does not use partial response length as total", testQueryURLRejectsPartialResponseLength)
+	t.Run("reports non success HEAD without fallback", testQueryURLReportsNonSuccessHead)
 }
 
 func testQueryURLReadsHeadMetadataAfterRedirect(t *testing.T) {
@@ -106,4 +108,39 @@ func testQueryURLFallsBackWhenHeadOmitsSize(t *testing.T) {
 	if info.Size != nil {
 		assert.Eq(t, int64(8192), *info.Size)
 	}
+}
+
+func testQueryURLRejectsPartialResponseLength(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Range", "bytes 0-0/*")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write([]byte("x"))
+	}))
+	defer server.Close()
+
+	info, err := QueryURL(server.URL+"/unknown.bin", Options{})
+
+	assert.NoErr(t, err)
+	assert.Nil(t, info.Size)
+}
+
+func testQueryURLReportsNonSuccessHead(t *testing.T) {
+	getCalled := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			getCalled = true
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	info, err := QueryURL(server.URL+"/missing.bin", Options{})
+
+	assert.NoErr(t, err)
+	assert.False(t, getCalled)
+	assert.Eq(t, http.StatusNotFound, info.StatusCode)
 }
