@@ -16,17 +16,17 @@
 - Create: `internal/client/url_query.go`
 - Create: `internal/client/url_query_test.go`
 
-- [ ] **Step 1: Write failing HEAD metadata tests**
+- [x] **Step 1: Write failing HEAD metadata tests**
 
 Define tests with `httptest.Server` for `QueryURL(rawURL string, opts Options) (URLInfo, error)`. Assert requested/final URL, redirect handling, status, `Content-Disposition` filename, byte size, content type, last-modified, ETag, and accept-ranges. Add an invalid-scheme case for `ftp://example.com/file.zip`.
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run: `go test ./internal/client -run TestQueryURL -count=1`
 
 Expected: build failure because `QueryURL` and `URLInfo` do not exist.
 
-- [ ] **Step 3: Implement the minimal HEAD probe**
+- [x] **Step 3: Implement the minimal HEAD probe**
 
 Create this public result shape:
 
@@ -47,7 +47,7 @@ type URLInfo struct {
 
 Validate the scheme as HTTP or HTTPS, call `requestWithOptions(http.MethodHead, rawURL, "", opts)`, close the body, and populate the result from the final response. Reuse `responseFilename`.
 
-- [ ] **Step 4: Add and verify range fallback tests**
+- [x] **Step 4: Add and verify range fallback tests**
 
 Add a server that returns `405` for HEAD and `206` for `GET Range: bytes=0-0`, plus a server whose successful HEAD omits size. Assert the fallback request contains the range header, total size comes from `Content-Range`, and only response headers are used.
 
@@ -55,7 +55,7 @@ Run: `go test ./internal/client -run TestQueryURL -count=1`
 
 Expected before fallback implementation: FAIL because size is unknown or GET was not called.
 
-- [ ] **Step 5: Implement minimal fallback and verify GREEN**
+- [x] **Step 5: Implement minimal fallback and verify GREEN**
 
 Fallback when HEAD returns `405`/`501` or has no usable content length. Issue `GET` with `bytes=0-0`, parse the total after `/` in `Content-Range`, close the body without reading it, and otherwise use the response content length. Preserve valid non-success HEAD responses rather than turning missing optional headers into errors.
 
@@ -63,7 +63,7 @@ Run: `go test ./internal/client -run TestQueryURL -count=1`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```shell
 git add internal/client/url_query.go internal/client/url_query_test.go
