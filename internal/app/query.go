@@ -15,6 +15,7 @@ import (
 type QueryRepoInfo = client.RepoInfo
 type QueryRelease = client.Release
 type QueryAsset = client.Asset
+type QueryURLInfo = client.URLInfo
 
 type QueryOptions struct {
 	Repo       string
@@ -33,6 +34,7 @@ type QueryResult struct {
 	Latest   *QueryRelease  `json:"latest,omitempty"`
 	Releases []QueryRelease `json:"releases,omitempty"`
 	Assets   []QueryAsset   `json:"assets,omitempty"`
+	URLInfo  *QueryURLInfo  `json:"url_info,omitempty"`
 }
 
 type QueryClient interface {
@@ -47,12 +49,26 @@ type QueryService struct {
 	SourceForgeLatest   func(project, sourcePath string) (sourcesf.LatestInfo, error)
 	SourceForgeReleases func(project, sourcePath string, limit int, includePrerelease bool) ([]sourcesf.LatestInfo, error)
 	SourceForgeAssets   func(project, sourcePath, tag string) ([]string, error)
+	URLInfo             func(rawURL string) (QueryURLInfo, error)
 }
 
 func (s QueryService) Query(opts QueryOptions) (QueryResult, error) {
 	action := opts.Action
 	if action == "" {
 		action = "latest"
+	}
+	if install.DetectTargetKind(opts.Repo) == install.TargetDirectURL {
+		if action != "latest" && action != "info" {
+			return QueryResult{}, fmt.Errorf("direct URL query does not support action %q", action)
+		}
+		if s.URLInfo == nil {
+			return QueryResult{}, fmt.Errorf("URL info query is required")
+		}
+		info, err := s.URLInfo(opts.Repo)
+		if err != nil {
+			return QueryResult{}, err
+		}
+		return QueryResult{Action: "info", URLInfo: &info}, nil
 	}
 	if sourcesf.IsTarget(opts.Repo) {
 		return s.querySourceForge(opts, action)

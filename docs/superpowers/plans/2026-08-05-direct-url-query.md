@@ -79,21 +79,21 @@ git commit -m "feat(query): probe direct URL metadata, refs #52"
 - Modify: `internal/cli/query_cmd.go`
 - Modify: `internal/cli/app_query_search_test.go`
 
-- [ ] **Step 1: Write failing app routing tests**
+- [x] **Step 1: Write failing app routing tests**
 
 Add tests that inject `QueryService.URLInfo`, query an HTTP URL with the default `latest` action, and expect `Action == "info"` plus populated `URLInfo`. Add table cases rejecting `releases` and `assets`; retain `info` as an accepted explicit action. Assert a repository query still calls the existing release client.
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run: `go test ./internal/app -run 'TestQueryService(DirectURL|LatestUsesDefaultAction)' -count=1`
 
 Expected: build failure because the service/result have no URL metadata field.
 
-- [ ] **Step 3: Implement URL routing**
+- [x] **Step 3: Implement URL routing**
 
 Add `type QueryURLInfo = client.URLInfo`, `URLInfo *QueryURLInfo` to `QueryResult`, and `URLInfo func(string) (QueryURLInfo, error)` to `QueryService`. Before SourceForge/repository normalization, detect `install.TargetDirectURL`; accept the default `latest` and explicit `info`, call the probe, and return action `info`. Reject release-only actions with a target-specific error.
 
-- [ ] **Step 4: Wire the probe and update command help**
+- [x] **Step 4: Wire the probe and update command help**
 
 Set the service callback in `newCLIService`:
 
@@ -105,13 +105,13 @@ URLInfo: func(rawURL string) (client.URLInfo, error) {
 
 Update the query target help and examples to include `eget query https://example.com/tool.zip` and `--json`. Add a parser test proving the URL reaches `QueryOptions.Target` unchanged.
 
-- [ ] **Step 5: Verify Task 2 GREEN**
+- [x] **Step 5: Verify Task 2 GREEN**
 
 Run: `go test ./internal/app ./internal/cli -run 'Test(QueryServiceDirectURL|QueryServiceLatestUsesDefaultAction|Main_Query)' -count=1`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```shell
 git add internal/app/query.go internal/app/query_test.go internal/cli/wiring.go internal/cli/query_cmd.go internal/cli/app_query_search_test.go

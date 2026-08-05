@@ -13,7 +13,7 @@ type QueryOptions struct {
 
 func newQueryCmd(handler CommandHandler) (*gcli.Command, func()) {
 	opts := &QueryOptions{Action: "latest", Limit: 10}
-	cmd := gcli.NewCommand("query", "Query repository or source metadata")
+	cmd := gcli.NewCommand("query", "Query repository, source, or direct URL metadata")
 	cmd.Aliases = []string{"q"}
 	cmd.Help = `<info>Query actions</>:
   latest              Show latest release info (default)
@@ -31,8 +31,10 @@ func newQueryCmd(handler CommandHandler) (*gcli.Command, func()) {
   eget query --action assets --tag v1.2.3 owner/repo
   eget query --action assets --tag 1.2.3 sf:project/path
   eget query --action latest --json owner/repo
+	eget query https://example.com/tool.zip
+	eget query --json https://example.com/tool.zip
 
-SourceForge targets support latest, releases and assets actions.`
+Direct URLs show HTTP file metadata. SourceForge targets support latest, releases and assets actions.`
 
 	cmd.Config = func(c *gcli.Command) {
 		c.StrOpt(&opts.Action, "action", "a", "latest", "Query action: latest, releases, assets, info")
@@ -40,7 +42,7 @@ SourceForge targets support latest, releases and assets actions.`
 		c.IntOpt(&opts.Limit, "limit", "l", 10, "Limit release count for releases action")
 		c.BoolOpt(&opts.JSON, "json", "j", false, "Output as JSON")
 		c.BoolOpt(&opts.Prerelease, "prerelease", "p", false, "Include prerelease entries")
-		c.AddArg("target", "Repository target owner/repo, sourceforge:project[/path] or sf:project[/path]", true)
+		c.AddArg("target", "Repository, SourceForge, or direct HTTP(S) URL target", true)
 	}
 	cmd.Func = func(c *gcli.Command, args []string) error {
 		opts.Target = c.Arg("target").String()

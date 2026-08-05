@@ -173,6 +173,9 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 	}
 	queryService := app.QueryService{
 		Client: githubClient,
+		URLInfo: func(rawURL string) (client.URLInfo, error) {
+			return client.QueryURL(rawURL, defaultClientOpts)
+		},
 		SourceForgeLatest: func(project, sourcePath string) (sourcesf.LatestInfo, error) {
 			return sourcesf.LatestVersion(project, sourcePath, install.NewHTTPGetter(defaultOpts))
 		},

@@ -189,6 +189,54 @@ func TestQueryServiceSourceForgeRejectsUnsupportedActions(t *testing.T) {
 	}
 }
 
+func TestQueryServiceDirectURL(t *testing.T) {
+	t.Run("uses URL info for default action", func(t *testing.T) {
+		const target = "https://example.com/tool.zip"
+		calls := 0
+		svc := QueryService{
+			URLInfo: func(rawURL string) (QueryURLInfo, error) {
+				calls++
+				assert.Eq(t, target, rawURL)
+				return QueryURLInfo{RequestedURL: rawURL, StatusCode: 200}, nil
+			},
+		}
+
+		result, err := svc.Query(QueryOptions{Repo: target})
+
+		assert.NoErr(t, err)
+		assert.Eq(t, 1, calls)
+		assert.Eq(t, "info", result.Action)
+		assert.NotNil(t, result.URLInfo)
+		if result.URLInfo != nil {
+			assert.Eq(t, target, result.URLInfo.RequestedURL)
+		}
+	})
+
+	t.Run("accepts explicit info action", func(t *testing.T) {
+		svc := QueryService{
+			URLInfo: func(rawURL string) (QueryURLInfo, error) {
+				return QueryURLInfo{RequestedURL: rawURL}, nil
+			},
+		}
+
+		result, err := svc.Query(QueryOptions{Repo: "https://example.com/tool.zip", Action: "info"})
+
+		assert.NoErr(t, err)
+		assert.Eq(t, "info", result.Action)
+	})
+
+	for _, action := range []string{"releases", "assets"} {
+		t.Run("rejects "+action, func(t *testing.T) {
+			svc := QueryService{}
+
+			_, err := svc.Query(QueryOptions{Repo: "https://example.com/tool.zip", Action: action})
+
+			assert.Err(t, err)
+			assert.Contains(t, err.Error(), "direct URL query does not support")
+		})
+	}
+}
+
 func TestQueryServiceLatestUsesDefaultAction(t *testing.T) {
 	client := &fakeQueryClient{
 		releases: []QueryRelease{{

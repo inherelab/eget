@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -52,6 +53,35 @@ func TestMain_QueryAliasRoutes(t *testing.T) {
 	}
 	if calls[0].name != "query" {
 		t.Fatalf("expected command query, got %q", calls[0].name)
+	}
+}
+
+func TestMain_QueryDirectURLRoutesAndAppearsInHelp(t *testing.T) {
+	const target = "https://example.com/tool.zip"
+	var calls []commandCall
+	handler := func(name string, options any) error {
+		calls = append(calls, commandCall{name: name, options: options})
+		return nil
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	app := newApp(handler, &stdout, &stderr)
+	if err := app.RunWithArgs([]string{"query", target}); err != nil {
+		t.Fatalf("expected direct URL query to parse, got %v", err)
+	}
+	opts := calls[0].options.(*QueryOptions)
+	if opts.Target != target {
+		t.Fatalf("expected target %q, got %q", target, opts.Target)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := app.RunWithArgs([]string{"query", "--help"}); err != nil {
+		t.Fatalf("expected query help, got %v", err)
+	}
+	if help := stdout.String() + stderr.String(); !strings.Contains(help, target) {
+		t.Fatalf("expected direct URL example in help, got %q", help)
 	}
 }
 
