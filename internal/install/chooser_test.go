@@ -92,3 +92,53 @@ func TestFileChooserExcludeOnlyDefaultsToAllFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestFileChooserSupportsRegexPatterns(t *testing.T) {
+	tests := []struct {
+		expr string
+		name string
+		want bool
+	}{
+		{expr: `REG:(?i)\.(hlf|lng)$`, name: `docs\English.HLF`, want: true},
+		{expr: `REG:^plugins/.+\.dll$`, name: `plugins\foo\bar.dll`, want: true},
+		{expr: `REG:(?i)\.(hlf|lng)$`, name: `docs\readme.txt`, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expr+" "+tt.name, func(t *testing.T) {
+			chooser, err := NewFileChooser(tt.expr)
+			assert.NoErr(t, err)
+			_, possible := chooser.Choose(tt.name, false, 0)
+			assert.Eq(t, tt.want, possible)
+		})
+	}
+}
+
+func TestFileChooserSupportsRegexExcludePatterns(t *testing.T) {
+	chooser, err := NewFileChooser(`*.exe,^REG:(?i)(^|/)x86/`)
+	assert.NoErr(t, err)
+
+	_, possible := chooser.Choose(`bin\x64\tool.exe`, false, 0)
+	assert.True(t, possible)
+	_, possible = chooser.Choose(`bin\x86\tool.exe`, false, 0)
+	assert.False(t, possible)
+}
+
+func TestFileChooserRegexExcludeOnlyDefaultsToAllFiles(t *testing.T) {
+	chooser, err := NewFileChooser(`^REG:(?i)\.(map|cmd|md|txt|diz)$`)
+	assert.NoErr(t, err)
+
+	_, possible := chooser.Choose(`bin\Far.exe`, false, 0)
+	assert.True(t, possible)
+	_, possible = chooser.Choose(`docs\README.md`, false, 0)
+	assert.False(t, possible)
+}
+
+func TestFileChooserRejectsInvalidRegex(t *testing.T) {
+	for _, expr := range []string{`REG:`, `^REG:`, `REG:[`} {
+		t.Run(expr, func(t *testing.T) {
+			_, err := NewFileChooser(expr)
+			assert.Err(t, err)
+		})
+	}
+}

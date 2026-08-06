@@ -23,7 +23,7 @@
 **Files:**
 - Modify: `internal/install/chooser_test.go`
 
-- [ ] **Step 1: Add failing tests for regex matching and validation**
+- [x] **Step 1: Add failing tests for regex matching and validation**
 
 Add table-driven tests using the existing `assert` package:
 
@@ -79,7 +79,7 @@ func TestFileChooserRejectsInvalidRegex(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
