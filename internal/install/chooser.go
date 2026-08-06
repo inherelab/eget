@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -27,6 +28,11 @@ type GlobChooser struct {
 	all  bool
 }
 
+type RegexChooser struct {
+	expr string
+	re   *regexp.Regexp
+}
+
 type MultiChooser struct {
 	expr     string
 	choosers []Chooser
@@ -48,6 +54,22 @@ func NewGlobChooser(gl string) (*GlobChooser, error) {
 	return &GlobChooser{g: g, expr: gl, all: gl == "*" || gl == "/"}, err
 }
 
+func newFilePatternChooser(expr string) (Chooser, error) {
+	if !strings.HasPrefix(expr, "REG:") {
+		return NewGlobChooser(expr)
+	}
+
+	expr = strings.TrimSpace(strings.TrimPrefix(expr, "REG:"))
+	if expr == "" {
+		return nil, fmt.Errorf("empty file regex expression")
+	}
+	re, err := regexp.Compile(expr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid file regex %q: %w", expr, err)
+	}
+	return &RegexChooser{expr: expr, re: re}, nil
+}
+
 func NewFileChooser(expr string) (Chooser, error) {
 	parts := strings.Split(expr, ",")
 	if len(parts) == 1 {
@@ -55,7 +77,7 @@ func NewFileChooser(expr string) (Chooser, error) {
 		if strings.HasPrefix(part, "^") {
 			return newFilterChooser([]string{part})
 		}
-		return NewGlobChooser(part)
+		return newFilePatternChooser(part)
 	}
 
 	hasExclude := false
@@ -77,7 +99,7 @@ func NewFileChooser(expr string) (Chooser, error) {
 	choosers := make([]Chooser, 0, len(parts))
 	normalized := make([]string, 0, len(parts))
 	for _, part := range rawParts {
-		ch, err := NewGlobChooser(part)
+		ch, err := newFilePatternChooser(part)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +133,7 @@ func newFilterChooser(parts []string) (Chooser, error) {
 				return nil, fmt.Errorf("empty file exclude expression")
 			}
 		}
-		ch, err := NewGlobChooser(expr)
+		ch, err := newFilePatternChooser(expr)
 		if err != nil {
 			return nil, err
 		}
@@ -174,6 +196,15 @@ func (g *GlobChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, boo
 
 func (g *GlobChooser) String() string {
 	return fmt.Sprintf("`%s`", g.expr)
+}
+
+func (r *RegexChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bool) {
+	name = archivePathForCompare(name)
+	return false, r.re.MatchString(path.Base(name)) || r.re.MatchString(name)
+}
+
+func (r *RegexChooser) String() string {
+	return fmt.Sprintf("regex `%s`", r.expr)
 }
 
 func (m *MultiChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bool) {
