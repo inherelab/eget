@@ -16,6 +16,8 @@
 
 <!-- PROCESSING WORKS:START -->
 
+- [`--file` 正则包含/排除](docs/superpowers/specs/2026-08-06-file-regex-filter-design.md)：设计已确认，等待文档复核后实施。
+
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则
