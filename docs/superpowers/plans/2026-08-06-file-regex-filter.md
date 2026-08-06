@@ -224,14 +224,14 @@ Expected: all tests PASS, no whitespace errors, and affected flows stay limited 
 
 Change every plan checkbox to `[x]` and remove the `--file` regex work item from `AGENTS.md`.
 
-- [ ] **Step 4: Commit documentation and completion state**
+- [x] **Step 4: Commit documentation and completion state**
 
 ```powershell
 git add -- README.md README.zh-CN.md AGENTS.md docs/superpowers/plans/2026-08-06-file-regex-filter.md
 git commit -m "docs: document file regex filters, refs #53"
 ```
 
-- [ ] **Step 5: Verify the final branch state**
+- [x] **Step 5: Verify the final branch state**
 
 Run:
 
