@@ -89,7 +89,7 @@ go test ./internal/install -run 'TestFileChooser.*Regex' -count=1
 
 Expected: FAIL because `REG:` is still compiled as a glob or accepted as an empty literal rather than parsed as a regular expression.
 
-- [ ] **Step 3: Commit the red tests**
+- [x] **Step 3: Commit the red tests**
 
 ```powershell
 git add -- internal/install/chooser_test.go
@@ -102,7 +102,7 @@ git commit -m "test(file): define regex filter behavior, refs #53"
 - Modify: `internal/install/chooser.go`
 - Test: `internal/install/chooser_test.go`
 
-- [ ] **Step 1: Run GitNexus upstream impact analysis**
+- [x] **Step 1: Run GitNexus upstream impact analysis**
 
 Run:
 
@@ -113,7 +113,7 @@ npx gitnexus impact Choose -r eget
 
 Expected: file selection and archive extraction callers only. Stop and warn before editing if risk is HIGH or CRITICAL.
 
-- [ ] **Step 2: Add the regex-backed chooser and shared parser**
+- [x] **Step 2: Add the regex-backed chooser and shared parser**
 
 Add `regexp` to the imports and implement:
 
@@ -146,7 +146,7 @@ func (r *RegexChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bo
 
 Replace the three `NewGlobChooser` calls used for user-supplied entries in `NewFileChooser` and `newFilterChooser` with `newFilePatternChooser`. Keep the implicit include-all chooser as `NewGlobChooser("*")`.
 
-- [ ] **Step 3: Run focused tests and verify GREEN**
+- [x] **Step 3: Run focused tests and verify GREEN**
 
 Run:
 
@@ -156,7 +156,7 @@ go test ./internal/install -run 'TestFileChooser' -count=1
 
 Expected: PASS, including existing glob behavior and all new regex cases.
 
-- [ ] **Step 4: Run the install package tests**
+- [x] **Step 4: Run the install package tests**
 
 Run:
 
@@ -166,7 +166,7 @@ go test ./internal/install -count=1
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the implementation**
+- [x] **Step 5: Commit the implementation**
 
 Before committing, run:
 
@@ -190,7 +190,7 @@ git commit -m "feat(file): support regex filters, refs #53"
 - Modify: `AGENTS.md`
 - Modify: `docs/superpowers/plans/2026-08-06-file-regex-filter.md`
 
-- [ ] **Step 1: Extend the `--file` documentation**
+- [x] **Step 1: Extend the `--file` documentation**
 
 Document the following forms in both READMEs:
 
@@ -207,7 +207,7 @@ eget dl --file "^REG:(?i)\.(map|cmd|md|txt|diz)$" FarGroup/FarManager
 
 State that regex uses Go syntax, matches both normalized archive paths and basenames, and remains comma-separated like existing glob filters.
 
-- [ ] **Step 2: Run complete verification**
+- [x] **Step 2: Run complete verification**
 
 Run:
 
@@ -220,7 +220,7 @@ npx gitnexus detect-changes --scope all -r eget
 
 Expected: all tests PASS, no whitespace errors, and affected flows stay limited to file selection plus download/install extraction.
 
-- [ ] **Step 3: Mark the plan complete and clear active work**
+- [x] **Step 3: Mark the plan complete and clear active work**
 
 Change every plan checkbox to `[x]` and remove the `--file` regex work item from `AGENTS.md`.
 

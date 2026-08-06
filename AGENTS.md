@@ -16,8 +16,6 @@
 
 <!-- PROCESSING WORKS:START -->
 
-- [`--file` 正则包含/排除](docs/superpowers/plans/2026-08-06-file-regex-filter.md)：设计已确认，按 TDD 计划实施中。
-
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则

@@ -124,6 +124,7 @@ eget download --file README.md,LICENSE --to ./dist owner/repo
 eget download --file "*.txt" owner/repo
 eget download --file "bin/*" owner/repo
 eget download --file "*.exe,^*x86*,^*.sig" owner/repo
+eget download --file "^REG:(?i)\.(map|cmd|md|txt|diz)$" FarGroup/FarManager
 eget download --extract-all --to ./dist windirstat/windirstat
 ```
 
@@ -360,7 +361,7 @@ The target argument accepted by `install` and `download` can be:
 - `--tag`: Select a release tag; defaults to `latest` when omitted.
 - `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
 - `--to`: Set the install or download output path; accepts either a directory or a full file path.
-- `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`. Exclusions can use `^`, such as `*.exe,^*x86*,^*.sig`; exclude-only expressions such as `^*.sig` match all files except excluded entries. For 7z-readable `.exe` installers, system 7z is required.
+- `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`. Exclusions can use `^`, such as `*.exe,^*x86*,^*.sig`; exclude-only expressions such as `^*.sig` match all files except excluded entries. Use `REG:<expr>` for a Go regular-expression include or `^REG:<expr>` for an exclude; regexes match both normalized archive paths and basenames. For 7z-readable `.exe` installers, system 7z is required.
 - `--asset`: Filter release assets by keyword; multiple filters can be separated by commas. Regex is also supported with the `REG:` prefix, for example `REG:\\.deb$`. Prefix and suffix matching are supported with `PRE:` and `SUF:`, for example `PRE:codex` or `SUF:.zip`. Exclusions can use `^`, such as `^REG:...` or `^SUF:.sha256`. Filters can be scoped to the target OS with a Go OS prefix such as `windows:zip`, `linux:tar.gz`, or `darwin:SUF:.zip`; scoped filters only apply when the current `--system` OS matches.
 - `--rename`: Rename extracted files with comma-separated `from=to` pairs, for example `--rename "tool-windows-amd64.exe=tool.exe"`. This works with `--file` and `--extract-all`, and is persisted by `install --add`.
 - `--source`: Download the source archive instead of a prebuilt binary release.
