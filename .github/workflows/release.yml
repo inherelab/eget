@@ -29,9 +29,9 @@ jobs:
           echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
           echo "RELEASE_NAME=$GITHUB_WORKFLOW" >> $GITHUB_ENV
 
-      - name: Mod tidy
+      - name: Verify modules are tidy
         run: |
-          go mod tidy
+          go mod tidy -diff
 
       - name: Build bin package
         run: |
