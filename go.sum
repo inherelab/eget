@@ -27,8 +27,6 @@ github.com/gookit/color v1.6.2-0.20260604125953-289d54c4470a h1:utlwkRKoYYXGEGyQ
 github.com/gookit/color v1.6.2-0.20260604125953-289d54c4470a/go.mod h1:9ACFc7/1IpHGBW8RwuDm/0YEnhg3dwwXpoMsmtyHfjs=
 github.com/gookit/config/v2 v2.2.8 h1:TX6CypFUj9mZeDxpigerUG2P27u/BDM2l6UUIj0G8rA=
 github.com/gookit/config/v2 v2.2.8/go.mod h1:keuITIN2+4SBT3osc3LqqG3xTWaDEbftScDYCbcLwJQ=
-github.com/gookit/gcli/v3 v3.8.1 h1:Sr4O7Js/akzNC72TlZQxOCzJC/aLewhANxcQzxbK1d4=
-github.com/gookit/gcli/v3 v3.8.1/go.mod h1:o+bAsqwwH+XdOcmWnZmZ8GJQ7A1GluqxYCQ83H63YME=
 github.com/gookit/gcli/v3 v3.8.3 h1:sLYPh8y85mc+OLGrD7xUSbHanW0WyELihFs87Ps7IRc=
 github.com/gookit/gcli/v3 v3.8.3/go.mod h1:o+bAsqwwH+XdOcmWnZmZ8GJQ7A1GluqxYCQ83H63YME=
 github.com/gookit/goutil v0.8.0 h1:efZWxfesXw8+5tQfTfRMSIC6A0ax527/H+A/aIiaSrw=
