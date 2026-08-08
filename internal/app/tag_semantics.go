@@ -8,7 +8,7 @@ import (
 	"github.com/inherelab/eget/internal/util"
 )
 
-var versionTagPattern = regexp.MustCompile(`(?i)(^|[-_/])v?\d+\.\d+(\.\d+)?([-.+_][0-9a-z]+)*$`)
+var versionTagPattern = regexp.MustCompile(`(?i)(^|[-_/@])v?\d+\.\d+(\.\d+)?([-.+_][0-9a-z]+)*$`)
 
 const (
 	tagPolicyLatest = "latest"

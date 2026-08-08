@@ -8,11 +8,12 @@ import (
 
 func TestTrackingTagIgnoresVersionTags(t *testing.T) {
 	tests := map[string]string{
-		"v3.2.5":         "",
-		"3.2.5":          "",
-		"release-v1.2.3": "",
-		"nightly":        "nightly",
-		"latest-dev":     "latest-dev",
+		"v3.2.5":                        "",
+		"3.2.5":                         "",
+		"release-v1.2.3":                "",
+		"@moonshot-ai/kimi-code@0.28.1": "",
+		"nightly":                       "nightly",
+		"latest-dev":                    "latest-dev",
 	}
 
 	for input, expected := range tests {
