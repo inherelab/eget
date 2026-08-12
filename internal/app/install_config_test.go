@@ -586,12 +586,15 @@ strip_components = 1
 	assert.Eq(t, 1, runner.opts.StripComponents)
 }
 
-func TestInstallTargetAllowsCLINameToOverrideManagedPackageName(t *testing.T) {
+func TestInstallTargetWithDifferentCLINameDoesNotReuseRepoPackageOptions(t *testing.T) {
 	cfg := mustLoadFromString(t, `
 [packages.erd]
 repo = "solidiquis/erdtree"
 name = "erd"
 file = "erd"
+asset_filters = ["archive"]
+[packages.erd.rename_files]
+erdtree = "erd"
 `)
 	runner := &fakeRunner{
 		result: RunResult{
@@ -606,14 +609,23 @@ file = "erd"
 		},
 	}
 
-	_, err := svc.InstallTarget("solidiquis/erdtree", install.Options{Name: "custom-erd"})
+	_, err := svc.InstallTarget("solidiquis/erdtree", install.Options{
+		Name:  "custom-erd",
+		Asset: []string{"standalone"},
+	})
 	if err != nil {
 		t.Fatalf("install target: %v", err)
 	}
 
-	if runner.opts.Name != "custom-erd" {
-		t.Fatalf("expected CLI name to override package name, got %q", runner.opts.Name)
-	}
+	assert.Eq(t, "custom-erd", runner.opts.Name)
+	assert.Eq(t, []string{"standalone"}, runner.opts.Asset)
+	assert.Eq(t, "", runner.opts.ExtractFile)
+	assert.Eq(t, 0, len(runner.opts.RenameFiles))
+
+	_, err = svc.InstallTarget("solidiquis/erdtree", install.Options{Name: "erd"})
+	assert.NoErr(t, err)
+	assert.Eq(t, "erd", runner.opts.ExtractFile)
+	assert.Eq(t, map[string]string{"erdtree": "erd"}, runner.opts.RenameFiles)
 }
 
 func TestInstallTargetRejectsManagedPackageWithoutRepo(t *testing.T) {

@@ -136,7 +136,7 @@ func (s Service) configDescForRepo(repo string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	pkg := packageSectionForRepoTarget(cfg, repo)
+	pkg := packageSectionForRepoTarget(cfg, repo, "")
 	return util.DerefString(pkg.Desc)
 }
 

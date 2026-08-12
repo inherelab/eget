@@ -48,7 +48,7 @@ func (s Service) resolveInstallRequestWithConfig(cfg *cfgpkg.File, target string
 		return repo, target, opts, nil
 	}
 
-	pkg := packageSectionForRepoTarget(cfg, target)
+	pkg := packageSectionForRepoTarget(cfg, target, cli.Name)
 	target, pkg = resolveRawPkgTemplateTarget(cfg, target, pkg)
 	source, err := resolveInstallSourceSection(cfg, target)
 	if err != nil {
@@ -71,12 +71,15 @@ func installRecordTarget(target string, opts install.Options) string {
 	return target
 }
 
-func packageSectionForRepoTarget(cfg *cfgpkg.File, target string) cfgpkg.Section {
+func packageSectionForRepoTarget(cfg *cfgpkg.File, target, name string) cfgpkg.Section {
 	targetRepo, err := install.NormalizeRepoTarget(target)
 	if err != nil {
 		return cfgpkg.Section{}
 	}
-	for _, pkg := range cfg.Packages {
+	for pkgName, pkg := range cfg.Packages {
+		if name != "" && pkgName != name {
+			continue
+		}
 		repo := util.DerefString(pkg.Repo)
 		if repo == "" {
 			continue
