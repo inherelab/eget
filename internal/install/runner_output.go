@@ -106,6 +106,12 @@ func renamedOutputName(file ExtractedFile, renameFiles map[string]string) string
 		if renamed := renameFiles[key]; renamed != "" {
 			return renamed
 		}
+		normalizedKey := archivePathForCompare(key)
+		for source, renamed := range renameFiles {
+			if renamed != "" && archivePathForCompare(source) == normalizedKey {
+				return renamed
+			}
+		}
 	}
 	return ""
 }

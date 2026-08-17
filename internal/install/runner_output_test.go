@@ -112,6 +112,20 @@ func TestOutputPathAppliesRenameFileForExtractAll(t *testing.T) {
 	}
 }
 
+func TestOutputPathMatchesRenameFileWithSlashArchivePath(t *testing.T) {
+	file := ExtractedFile{
+		Name:        `UX\WindowSpy.ahk`,
+		ArchiveName: `UX\WindowSpy.ahk`,
+		mode:        0o666,
+	}
+	got, err := outputPath(file, "bin", true, "", false, map[string]string{
+		"UX/WindowSpy.ahk": "WindowSpy.ahk",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, filepath.Join("bin", "WindowSpy.ahk"), got)
+}
+
 func TestOutputPathRejectsUnsafeRenameFileTarget(t *testing.T) {
 	file := ExtractedFile{Name: "codex.exe", mode: 0o666}
 	_, err := outputPath(file, "bin", true, "", false, map[string]string{
