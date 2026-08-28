@@ -71,6 +71,44 @@ func TestSelectExtractorUsesRawFileForInstallerMode(t *testing.T) {
 	assert.Eq(t, "raw:PowerShell-7.6.3-win-x64.msi", extractor.(*fakeExtractor).name)
 }
 
+func TestSelectExtractorDetectsGUIInstallerBeforeExtraction(t *testing.T) {
+	svc := NewService()
+	svc.DownloadOnlyExtractorFactory = func(name string) any {
+		return &fakeExtractor{name: "raw:" + name}
+	}
+	svc.GlobChooserFactory = func(pattern string) (any, error) {
+		return &fakeChooser{name: pattern}, nil
+	}
+	svc.BinaryChooserFactory = func(tool string) any {
+		return &fakeChooser{name: tool}
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		return &fakeExtractor{name: "archive:" + filename}
+	}
+
+	tests := []struct {
+		name, asset, wantExtractor, wantMode string
+		opts                                 Options
+	}{
+		{name: "direct msi", asset: "WinDirStat-x64.msi", wantExtractor: "raw:WinDirStat-x64.msi", wantMode: InstallModeInstaller},
+		{name: "explicit portable", asset: "WinDirStat-x64.msi", opts: Options{InstallMode: InstallModePortable}, wantExtractor: "archive:WinDirStat-x64.msi", wantMode: InstallModePortable},
+		{name: "portable exe", asset: "tool-portable.exe", wantExtractor: "archive:tool-portable.exe"},
+		{name: "archive", asset: "tool.zip", wantExtractor: "archive:tool.zip"},
+		{name: "extract file", asset: "WinDirStat-x64.msi", opts: Options{ExtractFile: "*"}, wantExtractor: "archive:WinDirStat-x64.msi"},
+		{name: "extract all", asset: "WinDirStat-x64.msi", opts: Options{All: true}, wantExtractor: "archive:WinDirStat-x64.msi"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.opts.IsGUI = true
+			extractor, err := svc.SelectExtractor("https://example.com/"+tt.asset, "windirstat", &tt.opts)
+
+			assert.NoErr(t, err)
+			assert.Eq(t, tt.wantExtractor, extractor.(*fakeExtractor).name)
+			assert.Eq(t, tt.wantMode, tt.opts.InstallMode)
+		})
+	}
+}
+
 func TestSelectExtractorUsesSystem7zForSevenZipWhenAvailable(t *testing.T) {
 	svc := NewService()
 	svc.BinaryChooserFactory = func(tool string) any {
