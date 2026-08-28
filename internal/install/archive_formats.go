@@ -130,7 +130,8 @@ func zipModifiedTime(f *zip.File) time.Time {
 	if zipHasExtendedModTime(f.Extra) {
 		return f.Modified.UTC()
 	}
-	return msDosTimeToLocation(f.ModifiedDate, f.ModifiedTime, time.Local)
+	modified := f.Modified
+	return time.Date(modified.Year(), modified.Month(), modified.Day(), modified.Hour(), modified.Minute(), modified.Second(), modified.Nanosecond(), time.Local)
 }
 
 func zipHasExtendedModTime(extra []byte) bool {
@@ -153,22 +154,6 @@ func zipHasExtendedModTime(extra []byte) bool {
 		extra = extra[size:]
 	}
 	return false
-}
-
-func msDosTimeToLocation(dosDate, dosTime uint16, loc *time.Location) time.Time {
-	if loc == nil {
-		loc = time.Local
-	}
-	return time.Date(
-		int(dosDate>>9+1980),
-		time.Month(dosDate>>5&0xf),
-		int(dosDate&0x1f),
-		int(dosTime>>11),
-		int(dosTime>>5&0x3f),
-		int(dosTime&0x1f*2),
-		0,
-		loc,
-	)
 }
 
 func (z *ZipArchive) ReadAll() ([]byte, error) {
