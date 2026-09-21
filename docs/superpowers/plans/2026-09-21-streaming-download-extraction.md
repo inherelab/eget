@@ -167,8 +167,8 @@ type DirectAllExtractor interface {
 - [x] Step 2: Run go test ./...; every package passes.
 - [x] Step 3: Run an equivalent 16 MiB ZIP smoke with no cache and with a cache directory; both extract-all runs passed and the extracted payload matched.
 - [x] Step 4: Inspect the successful asset path. Production code no longer reads the downloaded asset into []byte; remaining io.ReadAll calls are archive compatibility methods or small checksum responses.
-- [ ] Step 5: Run npx gitnexus detect-changes --scope unstaged --repo eget; expect only the planned download, verification, extraction, system 7z, and test files.
-- [ ] Step 6: Commit final test/documentation adjustments with git commit -m "test: verify streaming archive extraction".
+- [x] Step 5: Run npx gitnexus detect-changes --scope unstaged --repo eget; it reported the planned 21 files and 40 affected execution flows, with the interface migration as the risk boundary.
+- [x] Step 6: Commit the implementation and plan updates as `c36212d` and push `master` to `origin`.
 
 ## Acceptance Criteria
 
