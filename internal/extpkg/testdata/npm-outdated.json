@@ -1,0 +1,16 @@
+{
+  "agent-browser": {
+    "current": "0.27.2",
+    "wanted": "0.38.1",
+    "latest": "0.38.1",
+    "dependent": "global",
+    "location": "C:\\Users\\<user>\\AppData\\Roaming\\npm\\node_modules\\agent-browser"
+  },
+  "gitnexus": {
+    "current": "1.6.5",
+    "wanted": "1.6.12",
+    "latest": "1.6.12",
+    "dependent": "global",
+    "location": "C:\\Users\\<user>\\AppData\\Roaming\\npm\\node_modules\\gitnexus"
+  }
+}

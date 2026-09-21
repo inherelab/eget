@@ -1,0 +1,2 @@
+C:\Users\<user>\.bun\install\global node_modules (1 installed)
+└── is-number@1.0.0

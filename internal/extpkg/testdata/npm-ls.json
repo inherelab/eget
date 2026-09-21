@@ -1,0 +1,13 @@
+{
+  "name": "npm",
+  "dependencies": {
+    "@colbymchenry/codegraph": {
+      "version": "0.9.4",
+      "overridden": false
+    },
+    "command-code": {
+      "version": "1.58.1",
+      "overridden": false
+    }
+  }
+}

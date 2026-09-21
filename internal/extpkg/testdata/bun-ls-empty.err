@@ -1,0 +1,2 @@
+error: No package.json was found for directory "C:\Users\<user>\.bun\install\global"
+note: Run "bun init" to initialize a project

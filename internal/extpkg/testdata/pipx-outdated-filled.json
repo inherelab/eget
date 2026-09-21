@@ -1,0 +1,23 @@
+{
+  "command": [
+    "list"
+  ],
+  "data": {
+    "packages": [
+      {
+        "environment": "pycowsay",
+        "injected": false,
+        "latest_version": "0.0.0.2",
+        "package": "pycowsay",
+        "pinned": false,
+        "version": "0.0.0.1"
+      }
+    ],
+    "packages_checked": 1,
+    "skipped": []
+  },
+  "errors": [],
+  "exit_code": 0,
+  "pipx_result_version": "1",
+  "status": "success"
+}

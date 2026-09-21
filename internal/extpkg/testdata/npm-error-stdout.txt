@@ -1,0 +1,4 @@
+Unknown command: "definitely-not-a-command"
+
+To see a list of supported npm commands, run:
+  npm help

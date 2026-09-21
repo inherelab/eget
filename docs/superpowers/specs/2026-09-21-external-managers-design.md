@@ -249,12 +249,20 @@ managers_mode = "off"    # off | on
       LookPath func(string) (string, error)
   }
 
-  func (s Service) List(ctx context.Context) ([]Package, error)
-  func (s Service) Outdated(ctx context.Context) ([]Package, []OutdatedFailure, error)
-  func (s Service) Upgrade(ctx context.Context, ref string, names []string) ([]UpgradeResult, error)
+  func (s Service) List(ctx context.Context) ([]Package, []Failure, error)
+  func (s Service) Outdated(ctx context.Context) ([]Package, []Failure, error)
+  func (s Service) Upgrade(ctx context.Context, managerName string, names []string) (UpgradeResult, error)
   func (s Service) Resolve(ref string) (Manager, string, bool) // "npm:typescript" -> (npm, typescript, true)
   func (s Service) Manager(name string) (Manager, bool)
+  func (s Service) Names() []string
+  func (s Service) Path(manager Manager) (string, bool) // 解析后的可执行文件路径
   ```
+
+  实现时的三点收敛（与最初草稿不同，已按实测调整）：
+
+  - `List` / `Outdated` 返回 `[]Failure`（`Failure{Manager, Err}`）：单个管理器坏掉不能拖垮其余，CLI 侧再映射成 `OutdatedCheckFailure` 输出 `check_failed`。不再单独定义 `OutdatedFailure`。
+  - `Upgrade` 收**管理器名**而不是 `manager:pkg` 引用：`eget managers upgrade uv` 这种"整个管理器"的场景没有包名可放进引用；`names` 为空时用 `UpgradeAllArgs`，没有则先 `List` 再逐个 `--names` 升级。`UpgradeResult{Manager, Names, Output}`（`From`/`To` 由调用方补齐，它本来就知道版本）。
+  - **`Bin` 先解析成路径再执行**：`lookPath` 的结果要传给 `Runner`，否则 `bin = "<绝对路径>"` 这个逃生口失效（实测踩到：pipx/cargo 不在 PATH 时 `exec.Command("pipx", ...)` 会自己再查一次 PATH 而失败）。
 
 **执行外挂抽象**：所有命令经 `Runner` 走，测试注入假实现即可，无需真装 npm；每个命令带超时（默认 60s，可配置），避免管理器卡死。
 

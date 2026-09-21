@@ -42,18 +42,19 @@
 
 ### 3. `internal/extpkg` 包
 
-- [ ] `model.go`：`Package`、`Manager`（含 `UpgradeAllArgs`）、`CommandResult{Stdout,Stderr,ExitCode}`、`UpgradeResult`。
-- [ ] `exec.go`：Runner —— `exec.LookPath` + `exec.CommandContext` + 超时，stdout/stderr 分开接、回填 `ExitCode`；不注入 eget 的 proxy 配置（仅继承环境）。
-- [ ] `builtin.go`：6 个内置管理器（npm/pnpm/uv/pipx/cargo/bun），参数照抄设计 §4 表格；**不内置 deno / yarn / go**。JSON 解析：npm / pnpm / pipx；文本解析：uv / bun / cargo（pipx 要处理两种 schema）。
-- [ ] `config.go`：`Managers(cfg)` 内置 + 覆盖合并，`enabled = false` 移除；纯函数。
-- [ ] `parse.go`：`ParseList` / `ParseOutdated` 收 `CommandResult`；实现 `npm-json` / `pnpm-json` / `pipx-json`（两种 schema 按形状分派）/ `uv-tool-text` / `cargo-text`（空输出=空列表）/ `bun-text`（树行 + markdown 表格、跳横幅与分隔行）/ `lines-regex`；文本解析前剥离 ANSI。
-- [ ] `service.go`：`List`（并发 + 缺 bin 跳过）/ `Outdated` / `Upgrade` / `Resolve` / `Manager`。
-- [ ] 测试：黄金样本（含 pipx 两种 schema、bun 空态与表格、cargo 0 字节）、`lines-regex` 命名分组、配置合并、假 Runner 下的缺 bin / 超时 / 空结果 / 非零退出 / 并发；断言"PATH 失败"与"空结果"走不同分支。
+- [x] `model.go`：`Package`、`Manager`（含 `UpgradeAllArgs`）、`CommandResult{Stdout,Stderr,ExitCode}`、`Failure`、`UpgradeResult`。
+- [x] `exec.go`：Runner —— `exec.LookPath` + `exec.CommandContext` + 超时，stdout/stderr 分开接、回填 `ExitCode`；不注入 eget 的 proxy 配置（仅继承环境）。
+- [x] `builtin.go`：6 个内置管理器（npm/pnpm/uv/pipx/cargo/bun），参数照抄设计 §4 表格；**不内置 deno / yarn / go**。JSON 解析：npm / pnpm / pipx；文本解析：uv / bun / cargo（pipx 要处理两种 schema）。
+- [x] `config.go`：`Managers(cfg)` 内置 + 覆盖合并，`enabled = false` 移除；纯函数。
+- [x] `parse.go`：`ParseList` / `ParseOutdated` 收 `CommandResult`；实现 `npm-json` / `pnpm-json` / `pipx-json`（两种 schema 按形状分派）/ `uv-tool-text` / `cargo-text`（空输出=空列表）/ `bun-text`（树行 + markdown 表格、跳横幅与分隔行）/ `lines-regex`；文本解析前剥离 ANSI。
+- [x] `service.go`：`List`（并发 + 缺 bin 跳过）/ `Outdated` / `Upgrade` / `Resolve` / `Manager` / `Names` / `Path`；**Bin 先解析成路径再交给 Runner**（否则绝对路径逃生口失效，实测踩到）。
+- [x] 测试：黄金样本（含 pipx 两种 schema、bun 空态与表格、cargo 0 字节）、`lines-regex` 命名分组、配置合并、假 Runner 下的缺 bin / 超时 / 空结果 / 非零退出 / 并发；断言"PATH 失败"与"空结果"走不同分支。
+- [x] 本机实跑 `extpkg`（临时 live 探针，验证后已删除）：npm 10 包 / 8 个过期、uv 2 包 / 2 个过期、pnpm 空、bun 空（错误特判生效）、pipx 空、cargo 空，**零 failure**；并借此发现并修掉了上面的 Bin 解析缺陷。
 
 ### 4. 固化样本
 
 - [x] 已填充样本已实测（pipx `pycowsay==0.0.0.1`、bun `is-number@1.0.0`、cargo 本地 crate `cargo install --path`），测完均已卸载还原；原始输出见设计文档 §4.1/§4.4~§4.6。
-- [ ] 把实测输出落成 `internal/extpkg/testdata/` 下的 fixture 文件（实施时创建）：`npm-ls.json`、`npm-outdated.json`、`npm-error-stdout.txt`、`pnpm-ls-empty.json`、`pnpm-outdated-empty.json`、`uv-tool-list.txt`、`uv-tool-outdated.txt`、`pipx-list-empty.json`、`pipx-list-filled.json`、`pipx-outdated-empty.json`、`pipx-outdated-filled.json`、`cargo-list-empty.txt`（0 字节）、`cargo-list-filled.txt`、`bun-ls-empty.err`、`bun-ls-filled.txt`、`bun-outdated-empty.err`、`bun-outdated-filled.txt`。
+- [x] 把实测输出落成 `internal/extpkg/testdata/` 下的 fixture 文件：`npm-ls.json`、`npm-outdated.json`、`npm-error-stdout.txt`、`pnpm-ls.json`、`uv-tool-list.txt`、`uv-tool-outdated.txt`、`pipx-list-filled.json`、`pipx-outdated-filled.json`、`cargo-list-filled.txt`、`bun-ls-empty.err`、`bun-ls-filled.txt`、`bun-outdated-filled.txt`（空态用内联字符串）。
 - [ ] 唯一缺口：pnpm 已填充样本需要 `pnpm setup`（会改 shell 配置）——未执行；pnpm 的 `dependencies.<pkg>` 形状按 npm 兼容实现并容错，设计 §4.7 已标注未验证。
 
 ### 5. `app` 层（含选择模型）
