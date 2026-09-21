@@ -16,6 +16,8 @@
 
 <!-- PROCESSING WORKS:START -->
 
+- [ ] 外部包管理器纳入管理（npm/pnpm/uv/pipx/cargo/bun，新增 `[managers.*]` 与 `eget managers`）：设计 [2026-09-21-external-managers-design.md](docs/superpowers/specs/2026-09-21-external-managers-design.md)，实施计划 [2026-09-21-external-managers.md](docs/superpowers/plans/2026-09-21-external-managers.md)
+
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则
