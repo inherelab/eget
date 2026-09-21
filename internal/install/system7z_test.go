@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,7 +149,8 @@ Size = 4
 	}
 
 	extractor := NewSystem7zExtractor("tool.7z", "tool", NewBinaryChooser("tool"), "7z")
-	file, candidates, err := extractor.Extract([]byte("archive"), false)
+	data := []byte("archive")
+	file, candidates, err := extractor.Extract(bytes.NewReader(data), int64(len(data)), false)
 	if err != nil {
 		t.Fatalf("extract candidate: %v", err)
 	}
@@ -160,7 +162,7 @@ Size = 4
 	if err := file.Extract(out); err != nil {
 		t.Fatalf("extract selected file: %v", err)
 	}
-	data, err := os.ReadFile(out)
+	data, err = os.ReadFile(out)
 	if err != nil {
 		t.Fatalf("read extracted file: %v", err)
 	}
@@ -219,7 +221,8 @@ Size = 3
 		t.Fatalf("new chooser: %v", err)
 	}
 	extractor := NewSystem7zExtractor("setup.exe", "setup", chooser, "7z")
-	_, files, err := extractor.Extract([]byte("archive"), true)
+	data := []byte("archive")
+	_, files, err := extractor.Extract(bytes.NewReader(data), int64(len(data)), true)
 	if err != nil && len(files) == 0 {
 		t.Fatalf("extract candidates: %v", err)
 	}
@@ -278,14 +281,15 @@ func TestSystem7zExtractorExtractAllToSkipsListAndRunsSevenZipOnce(t *testing.T)
 		t.Fatalf("new chooser: %v", err)
 	}
 	extractor := NewSystem7zExtractor("setup.exe", "setup", chooser, "7z")
-	files, err := extractor.ExtractAllTo([]byte("archive"), tmp)
+	data := []byte("archive")
+	files, err := extractor.ExtractAllTo(bytes.NewReader(data), int64(len(data)), tmp)
 	if err != nil {
 		t.Fatalf("extract all: %v", err)
 	}
 
 	assert.Eq(t, 2, len(files))
 	assert.Eq(t, 1, extractCalls)
-	data, err := os.ReadFile(filepath.Join(tmp, "$PLUGINSDIR", "modern-wizard.bmp"))
+	data, err = os.ReadFile(filepath.Join(tmp, "$PLUGINSDIR", "modern-wizard.bmp"))
 	if err != nil {
 		t.Fatalf("read extracted file: %v", err)
 	}
@@ -328,13 +332,14 @@ func TestSystem7zExtractorExtractAllToWithOptionsStripsComponents(t *testing.T) 
 		t.Fatalf("new chooser: %v", err)
 	}
 	extractor := NewSystem7zExtractor("ventoy.zip", "ventoy", chooser, "7z")
-	files, err := extractor.ExtractAllToWithOptions([]byte("archive"), tmp, ArchiveExtractOptions{StripComponents: 1})
+	data := []byte("archive")
+	files, err := extractor.ExtractAllToWithOptions(bytes.NewReader(data), int64(len(data)), tmp, ArchiveExtractOptions{StripComponents: 1})
 	if err != nil {
 		t.Fatalf("extract all with strip: %v", err)
 	}
 
 	assert.Eq(t, 2, len(files))
-	data, err := os.ReadFile(filepath.Join(tmp, "Ventoy2Disk.exe"))
+	data, err = os.ReadFile(filepath.Join(tmp, "Ventoy2Disk.exe"))
 	if err != nil {
 		t.Fatalf("read stripped file: %v", err)
 	}
@@ -377,13 +382,14 @@ func TestSystem7zExtractorExtractAllToFiltersChooserMatches(t *testing.T) {
 		t.Fatalf("new chooser: %v", err)
 	}
 	extractor := NewSystem7zExtractor("ffmpeg.7z", "ffmpeg", chooser, "7z")
-	files, err := extractor.ExtractAllToWithOptions([]byte("archive"), tmp, ArchiveExtractOptions{StripComponents: 2})
+	data := []byte("archive")
+	files, err := extractor.ExtractAllToWithOptions(bytes.NewReader(data), int64(len(data)), tmp, ArchiveExtractOptions{StripComponents: 2})
 	if err != nil {
 		t.Fatalf("extract all with chooser: %v", err)
 	}
 
 	assert.Eq(t, 1, len(files))
-	data, err := os.ReadFile(filepath.Join(tmp, "ffmpeg.exe"))
+	data, err = os.ReadFile(filepath.Join(tmp, "ffmpeg.exe"))
 	if err != nil {
 		t.Fatalf("read filtered exe: %v", err)
 	}

@@ -23,7 +23,7 @@ func validateInstallAction(opts Options) error {
 	return nil
 }
 
-func (r *InstallRunner) materializeRunAsset(body []byte, url string, opts Options) (string, error) {
+func (r *InstallRunner) materializeRunAsset(source io.Reader, url string, opts Options) (string, error) {
 	if IsLocalFile(url) {
 		return url, nil
 	}
@@ -38,8 +38,23 @@ func (r *InstallRunner) materializeRunAsset(body []byte, url string, opts Option
 	if runtime.GOOS != "windows" {
 		mode = 0o755
 	}
-	if err := os.WriteFile(target, body, mode); err != nil {
+	if file, ok := source.(*os.File); ok && file.Name() == target {
+		if runtime.GOOS != "windows" {
+			_ = os.Chmod(target, mode)
+		}
+		return target, nil
+	}
+	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
 		return "", err
+	}
+	_, copyErr := io.Copy(out, source)
+	closeErr := out.Close()
+	if copyErr != nil {
+		return "", copyErr
+	}
+	if closeErr != nil {
+		return "", closeErr
 	}
 	if runtime.GOOS != "windows" {
 		_ = os.Chmod(target, 0o755)

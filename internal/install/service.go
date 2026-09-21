@@ -31,7 +31,7 @@ type VersionFallbackFinder interface {
 type Detector = detect.Detector
 
 type Verifier interface {
-	Verify(b []byte) error
+	Verify(r io.Reader) error
 }
 
 type DirectAssetFinder struct {

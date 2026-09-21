@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +56,7 @@ func TestOutputPathKeepsExecutableNameWhenPreferredNameDoesNotMatchPlatformSuffi
 
 func TestOutputPathUsesPreferredNameForRenamedSingleFileAsset(t *testing.T) {
 	extractor := NewExtractor("omp-darwin-arm64", "oh-my-pi", nil)
-	file, _, err := extractor.Extract(nil, false)
+	file, _, err := extractor.Extract(bytes.NewReader(nil), 0, false)
 	assert.NoErr(t, err)
 	assert.Eq(t, "oh-my-pi", file.Name)
 

@@ -1,8 +1,6 @@
 package install
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"runtime"
 	"time"
@@ -48,7 +46,12 @@ func NewDefaultService(githubGetter sourcegithub.HTTPGetter, binaryModTime func(
 					if err != nil {
 						return nil, err
 					}
-					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(downloaded.Body))}, nil
+					file, err := downloaded.Open()
+					if err != nil {
+						_ = downloaded.Close()
+						return nil, err
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: &downloadedResponseBody{ReadCloser: file, cleanup: downloaded.Close}}, nil
 				})
 			} else if getter == nil {
 				getter = NewHTTPGetter(opts)

@@ -54,7 +54,7 @@ type InstallRunner struct {
 }
 
 type directAllExtractorWithOptions interface {
-	ExtractAllToWithOptions([]byte, string, ArchiveExtractOptions) ([]string, error)
+	ExtractAllToWithOptions(io.ReadSeeker, int64, string, ArchiveExtractOptions) ([]string, error)
 }
 
 func NewRunner(service *Service) *InstallRunner {
@@ -149,6 +149,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, fmt.Errorf("%s (URL: %s)", err, url)
 	}
+	defer downloaded.Close()
 
 	sumAsset := checksumAsset(url, assets)
 
@@ -157,7 +158,16 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		return RunResult{}, err
 	}
 	verbosef("verifier: checksum_asset=%t verify_arg=%t", sumAsset != "", opts.Verify != "")
-	if err := verifier.Verify(downloaded.Body); err != nil {
+	verified, err := downloaded.Open()
+	if err != nil {
+		return RunResult{}, err
+	}
+	err = verifier.Verify(verified)
+	closeErr := verified.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err != nil {
 		return RunResult{}, err
 	}
 	if opts.Verify == "" && sumAsset != "" {
@@ -177,7 +187,15 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	}
 
 	if opts.URLTemplate.InstallAction == InstallActionRunAsset {
-		assetPath, err := r.materializeRunAsset(downloaded.Body, url, opts)
+		source, err := downloaded.Open()
+		if err != nil {
+			return RunResult{}, err
+		}
+		assetPath, err := r.materializeRunAsset(source, url, opts)
+		closeErr := source.Close()
+		if err == nil {
+			err = closeErr
+		}
 		if err != nil {
 			return RunResult{}, err
 		}
@@ -241,6 +259,11 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		return RunResult{}, err
 	}
 	verbosef("extractor selected for tool=%s", tool)
+	source, err := downloaded.Open()
+	if err != nil {
+		return RunResult{}, err
+	}
+	defer source.Close()
 
 	if opts.All && len(opts.RenameFiles) == 0 {
 		if direct, ok := extractor.(DirectAllExtractor); ok && effectiveOutput(opts) != "-" {
@@ -251,7 +274,7 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 				IsGUI:       opts.IsGUI,
 				InstallMode: opts.InstallMode,
 			}
-			paths, err := extractAllTo(direct, downloaded.Body, effectiveOutput(opts), opts.StripComponents)
+			paths, err := extractAllTo(direct, source, downloaded.Size, effectiveOutput(opts), opts.StripComponents)
 			if err != nil {
 				return RunResult{}, err
 			}
@@ -266,7 +289,7 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		}
 	}
 
-	bin, bins, err := extractor.Extract(downloaded.Body, opts.All)
+	bin, bins, err := extractor.Extract(source, downloaded.Size, opts.All)
 	if len(bins) != 0 && err != nil && !opts.All {
 		if selected, ok := autoExtractCurrentPlatformExecutables(bins, opts); ok {
 			bins = selected
@@ -309,7 +332,7 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 	}
 	if opts.InstallMode == InstallModeInstaller {
 		directAsset := path.Base(bin.ArchiveName) == path.Base(assetName)
-		installerPath, err := r.materializeInstallerFile(downloaded.Body, url, bin, opts, directAsset)
+		installerPath, err := r.materializeInstallerFile(source, url, bin, opts, directAsset)
 		if err != nil {
 			return RunResult{}, err
 		}

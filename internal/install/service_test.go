@@ -26,7 +26,7 @@ type fakeVerifier struct {
 	name string
 }
 
-func (f *fakeVerifier) Verify(b []byte) error {
+func (f *fakeVerifier) Verify(b io.Reader) error {
 	return nil
 }
 
@@ -42,7 +42,7 @@ type fakeExtractor struct {
 	name string
 }
 
-func (f *fakeExtractor) Extract([]byte, bool) (ExtractedFile, []ExtractedFile, error) {
+func (f *fakeExtractor) Extract(io.ReadSeeker, int64, bool) (ExtractedFile, []ExtractedFile, error) {
 	return ExtractedFile{}, nil, nil
 }
 
@@ -89,7 +89,7 @@ func TestNewDefaultServiceWiring(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SelectVerifier(default): %v", err)
 	}
-	if err := verifier.Verify([]byte("test")); err != nil {
+	if err := verifier.Verify(strings.NewReader("test")); err != nil {
 		t.Fatalf("Verify(default): %v", err)
 	}
 
@@ -128,6 +128,6 @@ func TestDefaultChecksumVerifierUsesCacheMirror(t *testing.T) {
 			Enable: true, URL: mirror.URL, Fallback: false,
 		},
 	})
-	assert.NoErr(t, verifier.Verify([]byte("test")))
+	assert.NoErr(t, verifier.Verify(strings.NewReader("test")))
 	assert.False(t, originHit)
 }

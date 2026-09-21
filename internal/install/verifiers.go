@@ -29,7 +29,7 @@ type sha256AssetVerifier struct {
 	Getter   sourcegithub.HTTPGetter
 }
 
-func (n *noVerifier) Verify(b []byte) error {
+func (n *noVerifier) Verify(r io.Reader) error {
 	return nil
 }
 
@@ -45,21 +45,28 @@ func newSha256Verifier(expectedHex string) (*sha256Verifier, error) {
 	return &sha256Verifier{Expected: expected}, nil
 }
 
-func (s *sha256Verifier) Verify(b []byte) error {
-	sum := sha256.Sum256(b)
-	if bytes.Equal(sum[:], s.Expected) {
+func (s *sha256Verifier) Verify(r io.Reader) error {
+	hash := sha256.New()
+	if _, err := io.Copy(hash, r); err != nil {
+		return err
+	}
+	sum := hash.Sum(nil)
+	if bytes.Equal(sum, s.Expected) {
 		return nil
 	}
-	return &sha256Error{Expected: s.Expected, Got: sum[:]}
+	return &sha256Error{Expected: s.Expected, Got: sum}
 }
 
-func (s *sha256Printer) Verify(b []byte) error {
-	sum := sha256.Sum256(b)
-	fmt.Printf("%x\n", sum)
+func (s *sha256Printer) Verify(r io.Reader) error {
+	hash := sha256.New()
+	if _, err := io.Copy(hash, r); err != nil {
+		return err
+	}
+	fmt.Printf("%x\n", hash.Sum(nil))
 	return nil
 }
 
-func (s *sha256AssetVerifier) Verify(b []byte) error {
+func (s *sha256AssetVerifier) Verify(r io.Reader) error {
 	if s.Getter == nil {
 		return fmt.Errorf("github getter is required")
 	}
@@ -84,11 +91,15 @@ func (s *sha256AssetVerifier) Verify(b []byte) error {
 	if len(expected) < sha256.Size {
 		return fmt.Errorf("sha256sum (%s) too small: %d bytes decoded", checksum, len(expected))
 	}
-	sum := sha256.Sum256(b)
-	if bytes.Equal(sum[:], expected[:sha256.Size]) {
+	hash := sha256.New()
+	if _, err := io.Copy(hash, r); err != nil {
+		return err
+	}
+	sum := hash.Sum(nil)
+	if bytes.Equal(sum, expected[:sha256.Size]) {
 		return nil
 	}
-	return &sha256Error{Expected: expected[:sha256.Size], Got: sum[:]}
+	return &sha256Error{Expected: expected[:sha256.Size], Got: sum}
 }
 
 func firstSHA256ChecksumField(fields []string) string {

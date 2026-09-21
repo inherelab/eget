@@ -25,11 +25,18 @@ func (r *InstallRunner) downloadBody(url string, opts Options) (downloadBodyResu
 	if output == nil || opts.Quiet {
 		output = io.Discard
 	}
+	if IsLocalFile(url) {
+		info, err := os.Stat(url)
+		if err != nil {
+			return downloadBodyResult{}, err
+		}
+		return downloadBodyResult{Path: url, Size: info.Size(), ModTime: info.ModTime(), Filename: assetFilename(url)}, nil
+	}
 	if cachePath != "" && !IsLocalFile(url) {
-		if data, err := os.ReadFile(cachePath); err == nil {
-			if !isInvalidCachedDownload(cachePath, data) {
+		if info, err := os.Stat(cachePath); err == nil {
+			if !isInvalidCachedDownload(cachePath) {
 				ccolor.Fprintf(output, " - Using cached file <cyan>%s</>\n", filepath.Base(cachePath))
-				return downloadBodyResult{Body: data, ModTime: fileModTime(cachePath), Filename: assetFilename(url)}, nil
+				return downloadBodyResult{Path: cachePath, Size: info.Size(), ModTime: info.ModTime(), Filename: assetFilename(url)}, nil
 			}
 			verbosef("discard invalid cached archive: %s", cachePath)
 		}
@@ -44,12 +51,12 @@ func (r *InstallRunner) downloadBody(url string, opts Options) (downloadBodyResu
 				return downloadBodyResult{}, err
 			}
 		} else if hit {
-			data, err := os.ReadFile(cachePath)
+			info, err := os.Stat(cachePath)
 			if err != nil {
 				return downloadBodyResult{}, err
 			}
-			if !isInvalidCachedDownload(cachePath, data) {
-				return downloadBodyResult{Body: data, ModTime: fileModTime(cachePath), Filename: assetFilename(url)}, nil
+			if !isInvalidCachedDownload(cachePath) {
+				return downloadBodyResult{Path: cachePath, Size: info.Size(), ModTime: info.ModTime(), Filename: assetFilename(url)}, nil
 			}
 			if !opts.CacheMirror.Fallback {
 				return downloadBodyResult{}, fmt.Errorf("cache mirror returned invalid archive: %s", filepath.Base(cachePath))
@@ -65,29 +72,37 @@ func (r *InstallRunner) downloadBody(url string, opts Options) (downloadBodyResu
 		if !modTime.IsZero() {
 			_ = applyModTime(cachePath, modTime)
 		}
-		data, err := os.ReadFile(cachePath)
+		info, err := os.Stat(cachePath)
 		if err != nil {
 			return downloadBodyResult{}, err
 		}
 		if modTime.IsZero() {
 			modTime = fileModTime(cachePath)
 		}
-		return downloadBodyResult{Body: data, ModTime: modTime, Filename: firstNonEmpty(result.Filename, assetFilename(url))}, nil
+		return downloadBodyResult{Path: cachePath, Size: info.Size(), ModTime: modTime, Filename: firstNonEmpty(result.Filename, assetFilename(url))}, nil
 	}
 
-	buf := &bytes.Buffer{}
-	result, err := DownloadWithResult(url, buf, r.downloadProgress(opts), opts)
+	temp, err := os.CreateTemp("", "eget-download-*")
 	if err != nil {
 		return downloadBodyResult{}, err
 	}
-
-	body := buf.Bytes()
-	if cachePath != "" && !IsLocalFile(url) {
-		if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err == nil {
-			_ = os.WriteFile(cachePath, body, 0o644)
-		}
+	tempPath := temp.Name()
+	result, err := DownloadWithResult(url, temp, r.downloadProgress(opts), opts)
+	closeErr := temp.Close()
+	if err != nil {
+		_ = os.Remove(tempPath)
+		return downloadBodyResult{}, err
 	}
-	return downloadBodyResult{Body: body, ModTime: parseHTTPTime(result.LastModified), Filename: firstNonEmpty(result.Filename, assetFilename(url))}, nil
+	if closeErr != nil {
+		_ = os.Remove(tempPath)
+		return downloadBodyResult{}, closeErr
+	}
+	info, err := os.Stat(tempPath)
+	if err != nil {
+		_ = os.Remove(tempPath)
+		return downloadBodyResult{}, err
+	}
+	return downloadBodyResult{Path: tempPath, Size: info.Size(), ModTime: parseHTTPTime(result.LastModified), Filename: firstNonEmpty(result.Filename, assetFilename(url)), Temp: true}, nil
 }
 
 func cacheMetaFromOptions(opts Options) CacheMeta {
@@ -145,14 +160,24 @@ func printCacheMirrorFallback(output io.Writer, err error) {
 	ccolor.Fprintf(output, " - Cache mirror failed, fallback to origin: <yellow>%v</>\n", err)
 }
 
-func isInvalidCachedDownload(cachePath string, data []byte) bool {
+func isInvalidCachedDownload(cachePath string) bool {
 	ext := strings.ToLower(filepath.Ext(cachePath))
 	switch ext {
 	case ".zip", ".gz", ".tgz", ".xz", ".bz2", ".zst", ".7z", ".rar":
 	default:
 		return false
 	}
-	trimmed := bytes.TrimSpace(data)
+	f, err := os.Open(cachePath)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	data := make([]byte, 64)
+	n, err := f.Read(data)
+	if err != nil && err != io.EOF {
+		return false
+	}
+	trimmed := bytes.TrimSpace(data[:n])
 	lowerPrefix := strings.ToLower(string(trimmed[:min(len(trimmed), 64)]))
 	return strings.HasPrefix(lowerPrefix, "<!doctype html") || strings.HasPrefix(lowerPrefix, "<html")
 }

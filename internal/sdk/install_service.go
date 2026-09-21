@@ -3,6 +3,7 @@ package sdk
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +81,12 @@ func (s Service) Install(ctx context.Context, rawTarget string, opts InstallOpti
 	if !ok {
 		return InstallResult{}, fmt.Errorf("sdk archive extractor does not support direct extraction")
 	}
-	data, err := os.ReadFile(downloadResult.Path)
+	source, err := os.Open(downloadResult.Path)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	defer source.Close()
+	info, err := source.Stat()
 	if err != nil {
 		return InstallResult{}, err
 	}
@@ -88,13 +94,13 @@ func (s Service) Install(ctx context.Context, rawTarget string, opts InstallOpti
 		opts.OnExtractStart(downloadResult.Path, installPath)
 	}
 	if withOptions, ok := direct.(interface {
-		ExtractAllToWithOptions([]byte, string, install.ArchiveExtractOptions) ([]string, error)
+		ExtractAllToWithOptions(io.ReadSeeker, int64, string, install.ArchiveExtractOptions) ([]string, error)
 	}); ok {
-		if _, err := withOptions.ExtractAllToWithOptions(data, tmpDir, install.ArchiveExtractOptions{StripComponents: cfg.StripComponents}); err != nil {
+		if _, err := withOptions.ExtractAllToWithOptions(source, info.Size(), tmpDir, install.ArchiveExtractOptions{StripComponents: cfg.StripComponents}); err != nil {
 			return InstallResult{}, err
 		}
 	} else {
-		if _, err := direct.ExtractAllTo(data, tmpDir); err != nil {
+		if _, err := direct.ExtractAllTo(source, info.Size(), tmpDir); err != nil {
 			return InstallResult{}, err
 		}
 	}

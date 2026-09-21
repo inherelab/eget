@@ -2,23 +2,23 @@ package install
 
 import (
 	"bufio"
-	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
 	"io"
 	"io/fs"
 	"strings"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 )
 
 type Extractor interface {
-	Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error)
+	Extract(source io.ReadSeeker, size int64, multiple bool) (ExtractedFile, []ExtractedFile, error)
 }
 
 type DirectAllExtractor interface {
-	ExtractAllTo(data []byte, output string) ([]string, error)
+	ExtractAllTo(source io.ReadSeeker, size int64, output string) ([]string, error)
 }
 
 type ExtractedFile struct {
@@ -91,23 +91,21 @@ func NewDownloadOnlyExtractor(name string) *SingleFileExtractor {
 	}
 }
 
-func (s *SingleFileExtractor) Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error) {
+func (s *SingleFileExtractor) Extract(source io.ReadSeeker, size int64, multiple bool) (ExtractedFile, []ExtractedFile, error) {
 	name := rename(s.Name, s.Rename)
 	return ExtractedFile{
 		Name:        name,
 		ArchiveName: s.Name,
 		mode:        0o666,
 		Extract: func(to string) error {
-			r := bytes.NewReader(data)
-			dr, err := s.Decompress(r)
+			if _, err := source.Seek(0, io.SeekStart); err != nil {
+				return err
+			}
+			dr, err := s.Decompress(source)
 			if err != nil {
 				return err
 			}
-			decdata, err := io.ReadAll(dr)
-			if err != nil {
-				return err
-			}
-			return writeFile(decdata, to, modeFrom(name, 0o666))
+			return writeReaderWithModTime(dr, to, modeFrom(name, 0o666), time.Time{})
 		},
 	}, nil, nil
 }

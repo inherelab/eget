@@ -18,6 +18,15 @@ import (
 	"github.com/inherelab/eget/internal/cachemirror"
 )
 
+func downloadedData(t *testing.T, result downloadBodyResult) []byte {
+	t.Helper()
+	data, err := os.ReadFile(result.Path)
+	if err != nil {
+		t.Fatalf("read downloaded source: %v", err)
+	}
+	return data
+}
+
 func TestCacheFilePath(t *testing.T) {
 	cacheDir := t.TempDir()
 	got := CacheFilePath(cacheDir, "https://github.com/babarot/gomi/releases/download/v1.6.3/gomi_Linux_x86_64.tar.gz")
@@ -137,8 +146,8 @@ func TestDownloadBodyUsesCacheWhenAvailable(t *testing.T) {
 		t.Fatalf("download body: %v", err)
 	}
 
-	if string(downloaded.Body) != "cached-data" {
-		t.Fatalf("expected cached data, got %q", string(downloaded.Body))
+	if string(downloadedData(t, downloaded)) != "cached-data" {
+		t.Fatalf("expected cached data, got %q", string(downloadedData(t, downloaded)))
 	}
 	if calls != 0 {
 		t.Fatalf("expected no network calls, got %d", calls)
@@ -185,12 +194,52 @@ func TestDownloadBodyUsesCachedFileWithoutRemoteProbe(t *testing.T) {
 		t.Fatalf("download body: %v", err)
 	}
 
-	assert.Eq(t, "cached-data", string(downloaded.Body))
+	assert.Eq(t, "cached-data", string(downloadedData(t, downloaded)))
 	assert.Eq(t, localTime, downloaded.ModTime.UTC())
 	assert.Eq(t, localTime, fileModTime(cachePath).UTC())
 	if got := stdout.String(); !strings.Contains(got, "Using cached file") {
 		t.Fatalf("expected cached-file notice, got %q", got)
 	}
+}
+
+func TestDownloadBodyUsesDiskSource(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tool.zip")
+	if err := os.WriteFile(path, []byte("local-data"), 0o644); err != nil {
+		t.Fatalf("write local file: %v", err)
+	}
+
+	downloaded, err := (&InstallRunner{}).downloadBody(path, Options{})
+	assert.NoErr(t, err)
+	assert.Eq(t, path, downloaded.Path)
+	assert.Eq(t, int64(len("local-data")), downloaded.Size)
+	assert.False(t, downloaded.Temp)
+
+	data, err := os.ReadFile(downloaded.Path)
+	assert.NoErr(t, err)
+	assert.Eq(t, "local-data", string(data))
+}
+
+func TestDownloadBodyCleansTemporarySource(t *testing.T) {
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("remote-data")),
+		}, nil
+	}
+
+	downloaded, err := (&InstallRunner{}).downloadBody("https://example.com/tool.zip", Options{})
+	assert.NoErr(t, err)
+	assert.True(t, downloaded.Temp)
+	assert.Eq(t, int64(len("remote-data")), downloaded.Size)
+
+	data, err := os.ReadFile(downloaded.Path)
+	assert.NoErr(t, err)
+	assert.Eq(t, "remote-data", string(data))
+	assert.NoErr(t, downloaded.Close())
+	_, err = os.Stat(downloaded.Path)
+	assert.True(t, os.IsNotExist(err))
 }
 
 func TestDownloadBodyRedownloadsHTMLCachedArchive(t *testing.T) {
@@ -223,7 +272,7 @@ func TestDownloadBodyRedownloadsHTMLCachedArchive(t *testing.T) {
 		t.Fatalf("download body: %v", err)
 	}
 
-	assert.Eq(t, "zip-data", string(downloaded.Body))
+	assert.Eq(t, "zip-data", string(downloadedData(t, downloaded)))
 	assert.Eq(t, 1, calls)
 	saved, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -252,8 +301,8 @@ func TestDownloadBodyWritesCacheAfterDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("download body: %v", err)
 	}
-	if string(downloaded.Body) != "network-data" {
-		t.Fatalf("expected network data, got %q", string(downloaded.Body))
+	if string(downloadedData(t, downloaded)) != "network-data" {
+		t.Fatalf("expected network data, got %q", string(downloadedData(t, downloaded)))
 	}
 
 	saved, err := os.ReadFile(cachePath)
@@ -314,7 +363,7 @@ func TestDownloadBodyUsesCacheMirrorBeforeOrigin(t *testing.T) {
 	})
 
 	assert.NoErr(t, err)
-	assert.Eq(t, "mirror", string(got.Body))
+	assert.Eq(t, "mirror", string(downloadedData(t, got)))
 	assert.False(t, originHit)
 	output := stdout.String()
 	noticeAt := strings.Index(output, "Use cache mirror")
@@ -347,7 +396,7 @@ func TestDownloadBodyFallsBackWhenCacheMirrorMisses(t *testing.T) {
 	})
 
 	assert.NoErr(t, err)
-	assert.Eq(t, "origin", string(got.Body))
+	assert.Eq(t, "origin", string(downloadedData(t, got)))
 }
 
 func TestDownloadBodyPrintsCacheMirrorFallbackError(t *testing.T) {
@@ -371,7 +420,7 @@ func TestDownloadBodyPrintsCacheMirrorFallbackError(t *testing.T) {
 	})
 
 	assert.NoErr(t, err)
-	assert.Eq(t, "origin", string(got.Body))
+	assert.Eq(t, "origin", string(downloadedData(t, got)))
 	assert.Contains(t, stdout.String(), "Cache mirror failed")
 	assert.Contains(t, stdout.String(), "fallback to origin")
 	assert.Contains(t, stdout.String(), "500")
@@ -422,8 +471,8 @@ func TestDownloadBodyUsesCacheMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("download body: %v", err)
 	}
-	if string(downloaded.Body) != "cached-data" {
-		t.Fatalf("expected cached data, got %q", string(downloaded.Body))
+	if string(downloadedData(t, downloaded)) != "cached-data" {
+		t.Fatalf("expected cached data, got %q", string(downloadedData(t, downloaded)))
 	}
 	if calls != 0 {
 		t.Fatalf("expected no network calls, got %d", calls)
@@ -488,7 +537,7 @@ func TestDownloadBodyResumesLargeCachedDownload(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Eq(t, fmt.Sprintf("bytes=%d-%d", chunkStart, chunkEnd), gotRange.Load())
-	assert.Eq(t, body, got.Body)
+	assert.Eq(t, body, downloadedData(t, got))
 	saved, readErr := os.ReadFile(cachePath)
 	assert.Nil(t, readErr)
 	assert.Eq(t, body, saved)

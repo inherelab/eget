@@ -319,7 +319,7 @@ func TestRunTreatsConfiguredOutputAsDirectoryWhenMissing(t *testing.T) {
 
 type failingVerifier struct{}
 
-func (failingVerifier) Verify([]byte) error {
+func (failingVerifier) Verify(io.Reader) error {
 	return errors.New("checksum failed")
 }
 
@@ -327,7 +327,7 @@ type fakeInstallExtractor struct {
 	file ExtractedFile
 }
 
-func (f fakeInstallExtractor) Extract([]byte, bool) (ExtractedFile, []ExtractedFile, error) {
+func (f fakeInstallExtractor) Extract(io.ReadSeeker, int64, bool) (ExtractedFile, []ExtractedFile, error) {
 	return f.file, nil, nil
 }
 
@@ -337,18 +337,18 @@ type fakeDirectAllExtractor struct {
 	strip         int
 }
 
-func (f *fakeDirectAllExtractor) Extract([]byte, bool) (ExtractedFile, []ExtractedFile, error) {
+func (f *fakeDirectAllExtractor) Extract(io.ReadSeeker, int64, bool) (ExtractedFile, []ExtractedFile, error) {
 	f.extractCalled = true
 	return ExtractedFile{}, nil, nil
 }
 
-func (f *fakeDirectAllExtractor) ExtractAllTo([]byte, string) ([]string, error) {
+func (f *fakeDirectAllExtractor) ExtractAllTo(io.ReadSeeker, int64, string) ([]string, error) {
 	return f.files, nil
 }
 
-func (f *fakeDirectAllExtractor) ExtractAllToWithOptions(data []byte, output string, opts ArchiveExtractOptions) ([]string, error) {
+func (f *fakeDirectAllExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size int64, output string, opts ArchiveExtractOptions) ([]string, error) {
 	f.strip = opts.StripComponents
-	return f.ExtractAllTo(data, output)
+	return f.ExtractAllTo(source, size, output)
 }
 
 func TestRunAutoExtractsMultipleWindowsExecutables(t *testing.T) {

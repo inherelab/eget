@@ -55,7 +55,7 @@ func (r *InstallRunner) launchGUIInstaller(path string, file ExtractedFile, opts
 	}, nil
 }
 
-func (r *InstallRunner) materializeInstallerFile(body []byte, url string, file ExtractedFile, opts Options, directAsset bool) (string, error) {
+func (r *InstallRunner) materializeInstallerFile(source io.Reader, url string, file ExtractedFile, opts Options, directAsset bool) (string, error) {
 	if IsLocalFile(url) {
 		return url, nil
 	}
@@ -75,8 +75,17 @@ func (r *InstallRunner) materializeInstallerFile(body []byte, url string, file E
 		}
 		return target, nil
 	}
-	if err := os.WriteFile(target, body, 0o755); err != nil {
+	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	if err != nil {
 		return "", err
+	}
+	_, copyErr := io.Copy(out, source)
+	closeErr := out.Close()
+	if copyErr != nil {
+		return "", copyErr
+	}
+	if closeErr != nil {
+		return "", closeErr
 	}
 	return target, nil
 }

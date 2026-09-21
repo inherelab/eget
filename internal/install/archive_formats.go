@@ -3,12 +3,12 @@ package install
 import (
 	"archive/tar"
 	"archive/zip"
-	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
 	"path"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -32,6 +32,20 @@ type SevenZipArchive struct {
 	idx int
 }
 
+type seekableReaderAt struct {
+	io.ReadSeeker
+	mu sync.Mutex
+}
+
+func (r *seekableReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, err := r.Seek(off, io.SeekStart); err != nil {
+		return 0, err
+	}
+	return io.ReadFull(r, p)
+}
+
 func tarft(typ byte) FileType {
 	switch typ {
 	case tar.TypeReg:
@@ -47,9 +61,11 @@ func tarft(typ byte) FileType {
 	}
 }
 
-func NewTarArchive(data []byte, decompress DecompFn) (Archive, error) {
-	r := bytes.NewReader(data)
-	dr, err := decompress(r)
+func NewTarArchive(source io.ReadSeeker, size int64, decompress DecompFn) (Archive, error) {
+	if _, err := source.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
+	dr, err := decompress(source)
 	if err != nil {
 		return nil, err
 	}
@@ -88,21 +104,27 @@ func (t *TarArchive) WriteTo(w io.Writer) (int64, error) {
 	return io.Copy(w, t.r)
 }
 
-func NewZipArchive(data []byte, d DecompFn) (Archive, error) {
-	r := bytes.NewReader(data)
-	zr, err := zip.NewReader(r, int64(len(data)))
+func NewZipArchive(source io.ReadSeeker, size int64, d DecompFn) (Archive, error) {
+	readerAt := &seekableReaderAt{ReadSeeker: source}
+	zr, err := zip.NewReader(readerAt, size)
 	if err == zip.ErrFormat {
 		// Some release assets contain a valid tar archive despite a .zip filename.
-		if _, tarErr := tar.NewReader(bytes.NewReader(data)).Next(); tarErr == nil {
-			return &TarArchive{r: tar.NewReader(bytes.NewReader(data))}, nil
+		if _, seekErr := source.Seek(0, io.SeekStart); seekErr != nil {
+			return nil, seekErr
+		}
+		if _, tarErr := tar.NewReader(source).Next(); tarErr == nil {
+			if _, seekErr := source.Seek(0, io.SeekStart); seekErr != nil {
+				return nil, seekErr
+			}
+			return &TarArchive{r: tar.NewReader(source)}, nil
 		}
 	}
 	return &ZipArchive{r: zr, idx: -1}, err
 }
 
-func NewSevenZipArchive(data []byte, d DecompFn) (Archive, error) {
-	r := bytes.NewReader(data)
-	szr, err := sevenzip.NewReader(r, int64(len(data)))
+func NewSevenZipArchive(source io.ReadSeeker, size int64, d DecompFn) (Archive, error) {
+	readerAt := &seekableReaderAt{ReadSeeker: source}
+	szr, err := sevenzip.NewReader(readerAt, size)
 	return &SevenZipArchive{r: szr, idx: -1}, err
 }
 

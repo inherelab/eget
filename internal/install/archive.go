@@ -41,7 +41,12 @@ type archiveEntryWriter interface {
 	WriteTo(w io.Writer) (int64, error)
 }
 
-type ArchiveFn func(data []byte, decomp DecompFn) (Archive, error)
+func archiveWriter(ar Archive) archiveEntryWriter {
+	writer, _ := ar.(archiveEntryWriter)
+	return writer
+}
+
+type ArchiveFn func(source io.ReadSeeker, size int64, decomp DecompFn) (Archive, error)
 type DecompFn func(r io.Reader) (io.Reader, error)
 
 type ArchiveExtractor struct {
@@ -58,13 +63,14 @@ func NewArchiveExtractor(file Chooser, ar ArchiveFn, decompress DecompFn) *Archi
 	return &ArchiveExtractor{File: file, Ar: ar, Decompress: decompress}
 }
 
-func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error) {
+func (a *ArchiveExtractor) Extract(source io.ReadSeeker, size int64, multiple bool) (ExtractedFile, []ExtractedFile, error) {
 	var candidates []ExtractedFile
 	var dirs []string
-	ar, err := a.Ar(data, a.Decompress)
+	ar, err := a.Ar(source, size, a.Decompress)
 	if err != nil {
 		return ExtractedFile{}, nil, err
 	}
+	entryIndex := 0
 	for {
 		f, err := ar.Next()
 		if err == io.EOF {
@@ -73,6 +79,8 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 		if err != nil {
 			return ExtractedFile{}, nil, fmt.Errorf("extract: %w", err)
 		}
+		currentIndex := entryIndex
+		entryIndex++
 		var hasdir bool
 		for _, d := range dirs {
 			if strings.HasPrefix(f.Name, d) {
@@ -86,19 +94,34 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 		direct, possible := a.File.Choose(f.Name, f.Dir(), f.Mode)
 		if direct || possible {
 			name := rename(f.Name, f.Name)
-			fdata, err := ar.ReadAll()
-			if err != nil {
-				return ExtractedFile{}, nil, fmt.Errorf("extract: %w", err)
-			}
 			var extract func(to string) error
 			if !f.Dir() {
 				extract = func(to string) error {
-					return writeFileWithModTime(fdata, to, modeFrom(name, f.Mode), f.ModTime)
+					if _, err := source.Seek(0, io.SeekStart); err != nil {
+						return err
+					}
+					subAr, err := a.Ar(source, size, a.Decompress)
+					if err != nil {
+						return err
+					}
+					for i := 0; i <= currentIndex; i++ {
+						entry, nextErr := subAr.Next()
+						if nextErr != nil {
+							return nextErr
+						}
+						if i == currentIndex {
+							return writeArchiveEntry(subAr, archiveWriter(subAr), to, modeFrom(name, entry.Mode), entry.ModTime)
+						}
+					}
+					return io.ErrUnexpectedEOF
 				}
 			} else {
 				dirs = append(dirs, f.Name)
 				extract = func(to string) error {
-					subAr, err := a.Ar(data, a.Decompress)
+					if _, err := source.Seek(0, io.SeekStart); err != nil {
+						return err
+					}
+					subAr, err := a.Ar(source, size, a.Decompress)
 					if err != nil {
 						return err
 					}
@@ -166,15 +189,11 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 							})
 							continue
 						}
-						subData, err := subAr.ReadAll()
-						if err != nil {
-							return fmt.Errorf("extract: %w", err)
-						}
 						name, err := safeArchiveOutputPath(to, rel)
 						if err != nil {
 							return fmt.Errorf("extract: %w", err)
 						}
-						if err := writeFileWithModTime(subData, name, subf.Mode, subf.ModTime); err != nil {
+						if err := writeArchiveEntry(subAr, archiveWriter(subAr), name, subf.Mode, subf.ModTime); err != nil {
 							return fmt.Errorf("extract: %w", err)
 						}
 					}
@@ -219,19 +238,19 @@ func (a *ArchiveExtractor) Extract(data []byte, multiple bool) (ExtractedFile, [
 	return ExtractedFile{}, candidates, fmt.Errorf("%d candidates for target %v found", len(candidates), a.File)
 }
 
-func (a *ArchiveExtractor) ExtractAllTo(data []byte, output string) ([]string, error) {
-	return a.ExtractAllToWithOptions(data, output, ArchiveExtractOptions{})
+func (a *ArchiveExtractor) ExtractAllTo(source io.ReadSeeker, size int64, output string) ([]string, error) {
+	return a.ExtractAllToWithOptions(source, size, output, ArchiveExtractOptions{})
 }
 
-func (a *ArchiveExtractor) ExtractAllToWithOptions(data []byte, output string, opts ArchiveExtractOptions) ([]string, error) {
+func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size int64, output string, opts ArchiveExtractOptions) ([]string, error) {
 	if output == "" {
 		output = "."
 	}
-	ar, err := a.Ar(data, a.Decompress)
+	ar, err := a.Ar(source, size, a.Decompress)
 	if err != nil {
 		return nil, err
 	}
-	writer, _ := ar.(archiveEntryWriter)
+	writer := archiveWriter(ar)
 	var extracted []string
 	var dirs []File
 	var links []struct {

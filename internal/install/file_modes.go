@@ -1,12 +1,36 @@
 package install
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+func writeReaderWithModTime(r io.Reader, rename string, mode fs.FileMode, modTime time.Time) error {
+	if rename[0] == '-' {
+		_, err := io.Copy(os.Stdout, r)
+		return err
+	}
+	os.Remove(rename)
+	if err := os.MkdirAll(filepath.Dir(rename), 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(rename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(f, r); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	return applyModTime(rename, modTime)
+}
 
 func writeFile(data []byte, rename string, mode fs.FileMode) error {
 	return writeFileWithModTime(data, rename, mode, time.Time{})

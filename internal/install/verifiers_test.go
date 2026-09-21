@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"strings"
@@ -20,7 +21,7 @@ func TestSha256AssetVerifierRejectsInvalidHex(t *testing.T) {
 		}),
 	}
 
-	err := verifier.Verify([]byte("test"))
+	err := verifier.Verify(bytes.NewReader([]byte("test")))
 	if err == nil || !strings.Contains(err.Error(), "invalid checksum") {
 		t.Fatalf("expected invalid checksum error, got %v", err)
 	}
@@ -39,5 +40,5 @@ CertUtil: -hashfile command completed successfully.`)),
 		}),
 	}
 
-	assert.NoErr(t, verifier.Verify([]byte("test")))
+	assert.NoErr(t, verifier.Verify(bytes.NewReader([]byte("test"))))
 }

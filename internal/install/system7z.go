@@ -63,8 +63,8 @@ func NewSystem7zExtractor(filename, tool string, chooser Chooser, exe string) *S
 	return &System7zExtractor{Filename: filename, Tool: tool, Chooser: chooser, Exe: exe}
 }
 
-func (e *System7zExtractor) Extract(data []byte, multiple bool) (ExtractedFile, []ExtractedFile, error) {
-	archivePath, cleanup, err := writeTempArchive(data, e.Filename)
+func (e *System7zExtractor) Extract(source io.ReadSeeker, size int64, multiple bool) (ExtractedFile, []ExtractedFile, error) {
+	archivePath, cleanup, err := sourceArchivePath(source, e.Filename)
 	if err != nil {
 		return ExtractedFile{}, nil, err
 	}
@@ -99,9 +99,9 @@ func (e *System7zExtractor) Extract(data []byte, multiple bool) (ExtractedFile, 
 			Dir:         file.Dir(),
 			Extract: func(to string) error {
 				if shared != nil {
-					return e.extractSharedMember(shared, data, archiveName, to, mode)
+					return e.extractSharedMember(shared, source, e.Filename, archiveName, to, mode)
 				}
-				return e.extractMember(data, archiveName, to, mode)
+				return e.extractMember(source, e.Filename, archiveName, to, mode)
 			},
 		}
 		if direct && !multiple {
@@ -133,9 +133,9 @@ type system7zExtractAllState struct {
 	remaining int
 }
 
-func (e *System7zExtractor) extractSharedMember(state *system7zExtractAllState, data []byte, archiveName, to string, mode fs.FileMode) error {
+func (e *System7zExtractor) extractSharedMember(state *system7zExtractAllState, source io.ReadSeeker, filename, archiveName, to string, mode fs.FileMode) error {
 	state.once.Do(func() {
-		state.tempDir, state.err = e.extractAllToTempDir(data)
+		state.tempDir, state.err = e.extractAllToTempDir(source, filename)
 	})
 	if state.err != nil {
 		return state.err
@@ -159,8 +159,8 @@ func (s *system7zExtractAllState) release() {
 	}
 }
 
-func (e *System7zExtractor) extractAllToTempDir(data []byte) (string, error) {
-	archivePath, cleanupArchive, err := writeTempArchive(data, e.Filename)
+func (e *System7zExtractor) extractAllToTempDir(source io.ReadSeeker, filename string) (string, error) {
+	archivePath, cleanupArchive, err := sourceArchivePath(source, filename)
 	if err != nil {
 		return "", err
 	}
@@ -178,12 +178,12 @@ func (e *System7zExtractor) extractAllToTempDir(data []byte) (string, error) {
 	return tempDir, nil
 }
 
-func (e *System7zExtractor) ExtractAllTo(data []byte, output string) ([]string, error) {
-	return e.ExtractAllToWithOptions(data, output, ArchiveExtractOptions{})
+func (e *System7zExtractor) ExtractAllTo(source io.ReadSeeker, size int64, output string) ([]string, error) {
+	return e.ExtractAllToWithOptions(source, size, output, ArchiveExtractOptions{})
 }
 
-func (e *System7zExtractor) ExtractAllToWithOptions(data []byte, output string, opts ArchiveExtractOptions) ([]string, error) {
-	tempDir, err := e.extractAllToTempDir(data)
+func (e *System7zExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size int64, output string, opts ArchiveExtractOptions) ([]string, error) {
+	tempDir, err := e.extractAllToTempDir(source, e.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func (e *System7zExtractor) ExtractAllToWithOptions(data []byte, output string, 
 	return extracted, nil
 }
 
-func (e *System7zExtractor) extractMember(data []byte, archiveName, to string, mode fs.FileMode) error {
-	archivePath, cleanupArchive, err := writeTempArchive(data, e.Filename)
+func (e *System7zExtractor) extractMember(source io.ReadSeeker, filename, archiveName, to string, mode fs.FileMode) error {
+	archivePath, cleanupArchive, err := sourceArchivePath(source, filename)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,14 @@ func parseSystem7zListOutput(output []byte) ([]File, error) {
 	return files, nil
 }
 
-func writeTempArchive(data []byte, filename string) (string, func(), error) {
+func sourceArchivePath(source io.ReadSeeker, filename string) (string, func(), error) {
+	if file, ok := source.(*os.File); ok && file.Name() != "" {
+		return file.Name(), func() {}, nil
+	}
+	return writeTempArchive(source, filename)
+}
+
+func writeTempArchive(source io.ReadSeeker, filename string) (string, func(), error) {
 	ext := filepath.Ext(filename)
 	if ext == "" {
 		ext = ".archive"
@@ -327,7 +334,12 @@ func writeTempArchive(data []byte, filename string) (string, func(), error) {
 		return "", nil, err
 	}
 	cleanup := func() { _ = os.Remove(file.Name()) }
-	if _, err := file.Write(data); err != nil {
+	if _, err := source.Seek(0, io.SeekStart); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", nil, err
+	}
+	if _, err := io.Copy(file, source); err != nil {
 		_ = file.Close()
 		cleanup()
 		return "", nil, err

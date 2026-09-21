@@ -55,7 +55,7 @@ func TestArchiveDirectoryExtractRejectsPathTraversal(t *testing.T) {
 		t.Fatalf("NewFileChooser: %v", err)
 	}
 	extractor := NewArchiveExtractor(chooser, NewZipArchive, nil)
-	file, _, err := extractor.Extract(buf.Bytes(), true)
+	file, _, err := extractor.Extract(bytes.NewReader(buf.Bytes()), int64(buf.Len()), true)
 	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
 		t.Fatalf("expected unsafe archive path error, got %v", err)
 	}
@@ -140,7 +140,7 @@ func TestArchiveExtractorExtractAllToPreservesEmptyDirsAndTimestamps(t *testing.
 	}
 	extractor := NewArchiveExtractor(chooser, NewZipArchive, nil)
 	root := t.TempDir()
-	files, err := extractor.ExtractAllTo(buf.Bytes(), root)
+	files, err := extractor.ExtractAllTo(bytes.NewReader(buf.Bytes()), int64(buf.Len()), root)
 	if err != nil {
 		t.Fatalf("extract all: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestNewZipArchive(t *testing.T) {
 		assert.Require(t, assert.NoErr(t, tw.WriteHeader(&tar.Header{Name: "Hiddify/app.exe", Mode: 0o755})))
 		assert.Require(t, assert.NoErr(t, tw.Close()))
 
-		ar, err := NewZipArchive(buf.Bytes(), nil)
+		ar, err := NewZipArchive(bytes.NewReader(buf.Bytes()), int64(buf.Len()), nil)
 		assert.Require(t, assert.NoErr(t, err))
 		file, err := ar.Next()
 		assert.Require(t, assert.NoErr(t, err))
@@ -190,7 +190,8 @@ func TestNewZipArchive(t *testing.T) {
 	})
 
 	t.Run("rejects invalid archive data", func(t *testing.T) {
-		_, err := NewZipArchive([]byte("not an archive"), nil)
+		data := []byte("not an archive")
+		_, err := NewZipArchive(bytes.NewReader(data), int64(len(data)), nil)
 		assert.Err(t, err)
 	})
 }
@@ -218,7 +219,7 @@ func assertZipArchiveDecodesLegacyName(t *testing.T, encoded []byte, decoded str
 	}
 	extractor := NewArchiveExtractor(chooser, NewZipArchive, nil)
 	output := t.TempDir()
-	paths, err := extractor.ExtractAllTo(buf.Bytes(), output)
+	paths, err := extractor.ExtractAllTo(bytes.NewReader(buf.Bytes()), int64(buf.Len()), output)
 	if err != nil {
 		t.Fatalf("extract all: %v", err)
 	}
@@ -247,7 +248,7 @@ func TestArchiveExtractorExtractPreservesFileTimestamp(t *testing.T) {
 	}
 
 	extractor := NewArchiveExtractor(NewBinaryChooser("tool"), NewZipArchive, nil)
-	file, candidates, err := extractor.Extract(buf.Bytes(), false)
+	file, candidates, err := extractor.Extract(bytes.NewReader(buf.Bytes()), int64(buf.Len()), false)
 	if err != nil {
 		t.Fatalf("extract candidate: %v", err)
 	}
@@ -308,7 +309,7 @@ func TestArchiveExtractorExtractPreservesSelectedDirectoryTimestamp(t *testing.T
 		t.Fatalf("NewFileChooser: %v", err)
 	}
 	extractor := NewArchiveExtractor(chooser, NewZipArchive, nil)
-	file, candidates, err := extractor.Extract(buf.Bytes(), true)
+	file, candidates, err := extractor.Extract(bytes.NewReader(buf.Bytes()), int64(buf.Len()), true)
 	if err != nil {
 		t.Fatalf("extract candidate: %v", err)
 	}
@@ -341,7 +342,7 @@ type streamArchive struct {
 
 func TestArchiveExtractorExtractAllToStreamsArchiveOnce(t *testing.T) {
 	opens := 0
-	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, func(data []byte, d DecompFn) (Archive, error) {
+	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, func(source io.ReadSeeker, size int64, d DecompFn) (Archive, error) {
 		opens++
 		return &streamArchive{entries: []streamArchiveEntry{
 			{file: File{Name: "docs", Mode: 0o755, Type: TypeDir}},
@@ -351,7 +352,8 @@ func TestArchiveExtractorExtractAllToStreamsArchiveOnce(t *testing.T) {
 	}, nil)
 
 	tmp := t.TempDir()
-	files, err := extractor.ExtractAllTo([]byte("archive"), tmp)
+	data := []byte("archive")
+	files, err := extractor.ExtractAllTo(bytes.NewReader(data), int64(len(data)), tmp)
 	if err != nil {
 		t.Fatalf("extract all: %v", err)
 	}
@@ -362,7 +364,7 @@ func TestArchiveExtractorExtractAllToStreamsArchiveOnce(t *testing.T) {
 	if len(files) != 2 {
 		t.Fatalf("expected 2 extracted files, got %#v", files)
 	}
-	data, err := os.ReadFile(filepath.Join(tmp, "docs", "readme.txt"))
+	data, err = os.ReadFile(filepath.Join(tmp, "docs", "readme.txt"))
 	if err != nil {
 		t.Fatalf("read extracted file: %v", err)
 	}
@@ -402,7 +404,7 @@ func TestArchiveExtractorExtractAllToWithOptionsStripsComponents(t *testing.T) {
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewZipArchive, nil)
 	root := t.TempDir()
-	filesOut, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 1})
+	filesOut, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), root, ArchiveExtractOptions{StripComponents: 1})
 	if err != nil {
 		t.Fatalf("extract all with strip: %v", err)
 	}
@@ -437,7 +439,7 @@ func TestArchiveExtractorExtractAllToWithOptionsStripsAbsoluteEntryRoot(t *testi
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
 	root := t.TempDir()
-	filesOut, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 5})
+	filesOut, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), root, ArchiveExtractOptions{StripComponents: 5})
 	if err != nil {
 		t.Fatalf("extract all with strip: %v", err)
 	}
@@ -469,7 +471,7 @@ func TestArchiveExtractorExtractAllToWithOptionsAllowsSafeRelativeHardlinkTarget
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
 	root := t.TempDir()
-	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 1})
+	_, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), root, ArchiveExtractOptions{StripComponents: 1})
 	assert.NoErr(t, err)
 
 	data, err := os.ReadFile(filepath.Join(root, "legal", "java.desktop", "LICENSE"))
@@ -495,7 +497,7 @@ func TestArchiveExtractorExtractAllToWithOptionsRewritesAbsoluteSymlinkTarget(t 
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
 	root := t.TempDir()
-	files, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 1})
+	files, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), root, ArchiveExtractOptions{StripComponents: 1})
 	if err != nil {
 		t.Fatalf("extract all with unsafe symlink: %v", err)
 	}
@@ -525,7 +527,7 @@ func TestArchiveExtractorExtractAllToWithOptionsSkipsUnmappedAbsoluteSymlinkTarg
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
 	root := t.TempDir()
-	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), root, ArchiveExtractOptions{StripComponents: 1})
+	_, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), root, ArchiveExtractOptions{StripComponents: 1})
 	assert.NoErr(t, err)
 	if _, err := os.Lstat(filepath.Join(root, "bin", "env")); !os.IsNotExist(err) {
 		t.Fatalf("expected unmapped absolute symlink to be skipped, stat err=%v", err)
@@ -555,7 +557,7 @@ func TestArchiveExtractorExtractAllToWithOptionsRejectsAbsoluteHardlinkTarget(t 
 	}
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
-	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
+	_, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
 	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
 		t.Fatalf("expected unsafe archive path error, got %v", err)
 	}
@@ -572,7 +574,7 @@ func TestArchiveExtractorExtractAllToWithOptionsRejectsEscapingRelativeHardlinkT
 	}
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
-	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
+	_, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
 	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
 		t.Fatalf("expected unsafe archive path error, got %v", err)
 	}
@@ -591,7 +593,7 @@ func TestArchiveExtractorExtractAllToWithOptionsRejectsAllSkippedEntries(t *test
 	}
 
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewZipArchive, nil)
-	_, err := extractor.ExtractAllToWithOptions(buf.Bytes(), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
+	_, err := extractor.ExtractAllToWithOptions(bytes.NewReader(buf.Bytes()), int64(buf.Len()), t.TempDir(), ArchiveExtractOptions{StripComponents: 1})
 	if err == nil {
 		t.Fatal("expected extract all with strip to fail when all entries are skipped")
 	}
@@ -616,7 +618,7 @@ func TestArchiveExtractorExtractAllSkipsTarRootDirectoryEntry(t *testing.T) {
 
 	output := t.TempDir()
 	extractor := NewArchiveExtractor(&GlobChooser{all: true, expr: "*"}, NewTarArchive, func(r io.Reader) (io.Reader, error) { return r, nil })
-	extracted, err := extractor.ExtractAllTo(buf.Bytes(), output)
+	extracted, err := extractor.ExtractAllTo(bytes.NewReader(buf.Bytes()), int64(buf.Len()), output)
 	if err != nil {
 		t.Fatalf("extract all: %v", err)
 	}
@@ -641,7 +643,8 @@ func TestTarArchiveNextRejectsPathTraversal(t *testing.T) {
 		t.Fatalf("close tar: %v", err)
 	}
 
-	ar, err := NewTarArchive(buf.Bytes(), func(r io.Reader) (io.Reader, error) { return r, nil })
+	tarData := buf.Bytes()
+	ar, err := NewTarArchive(bytes.NewReader(tarData), int64(len(tarData)), func(r io.Reader) (io.Reader, error) { return r, nil })
 	if err != nil {
 		t.Fatalf("NewTarArchive: %v", err)
 	}
@@ -665,7 +668,8 @@ func TestZipArchiveNextRejectsPathTraversal(t *testing.T) {
 		t.Fatalf("close zip: %v", err)
 	}
 
-	ar, err := NewZipArchive(buf.Bytes(), nil)
+	zipData := buf.Bytes()
+	ar, err := NewZipArchive(bytes.NewReader(zipData), int64(len(zipData)), nil)
 	if err != nil {
 		t.Fatalf("NewZipArchive: %v", err)
 	}
