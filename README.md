@@ -253,6 +253,31 @@ eget update --self
 eget update --self --check
 ```
 
+### External Manager Examples
+
+Packages installed by other tools (npm, pnpm, uv, pipx, cargo, bun) stay out of
+`list` and `update` unless you ask for them.
+
+```bash
+# show eget's packages plus the ones npm owns
+eget list --with-managers npm
+# show only what the configured managers own
+eget list --managers all
+# check outdated packages including two managers
+eget list --outdated --with-managers npm,uv
+eget update --check --with-managers npm
+# update only npm's outdated packages
+eget update --managers npm
+# update eget's packages plus npm's
+eget update --all --with-managers npm
+# update one external package (works without any flag)
+eget update npm:agent-browser
+# managers, their binary, availability and package count
+eget managers list
+# upgrade one manager as a whole
+eget managers upgrade uv
+```
+
 ### Config Examples
 
 ```bash
@@ -311,6 +336,7 @@ The target argument accepted by `install` and `download` can be:
 - Use `--all` / `-a` to list the union of local managed packages and installed-store entries.
 - Use `--no-installed` / `--ni` to list packages configured in `[packages]` but not installed.
 - Use `--gui` to filter the current list view to GUI applications.
+- Use `--with-managers all|npm,bun` to also list packages owned by those external managers, or `--managers ...` to list only theirs. Nothing external runs unless one of these is given or `global.managers_mode = "on"`.
 
 `show`
 
@@ -333,6 +359,12 @@ The target argument accepted by `install` and `download` can be:
 - `update --self` checks `inherelab/eget` releases, selects the raw executable asset for the current OS/arch, and replaces the running executable. On Windows, replacement is deferred until the current process exits.
 - `update --self --check` prints the self-update check host before requesting the latest version, so it is clear whether the check uses GitHub or a private source.
 - `update --self --self-source <url>` updates from an internal source that exposes `latest.yaml` plus raw platform files such as `eget-linux-amd64` and `eget-windows-amd64.exe`. `<url>` may be either the base directory or the `latest.yaml` URL. You can also set `EGET_SELF_UPDATE_SOURCE`.
+- `--with-managers all|npm,bun` also updates packages owned by those external managers (`--all`, `--interactive` or `--check` needed); `--managers ...` updates only theirs. `eget update npm:typescript` updates one external package without any of these flags.
+
+`managers` (alias: `mgr`)
+
+- `managers list` prints each configured manager with its binary, whether it is available, whether it can detect outdated packages, and how many packages it owns.
+- `managers upgrade <name> [pkg...]` upgrades every package of one manager, or only the named ones.
 
 `sdk`
 
@@ -457,6 +489,7 @@ Supported config sections:
 - `[packages.<name>]`
 - `[pkg_templates.<name>]`
 - `[sdk.<name>]`
+- `[managers.<name>]`
 
 Minimal example:
 
@@ -540,6 +573,52 @@ eget sdk config add --all
 eget sdk config add --all --mirror mirror
 eget sdk config add jdk --mirror zulu
 ```
+
+### External Managers
+
+Packages installed by npm, pnpm, uv, pipx, cargo or bun can take part in
+`eget list` and `eget update`. They are never written to eget's install store:
+each check asks the manager itself, so nothing can go stale.
+
+Nothing external runs by default. Turn it on per command, or change the default:
+
+```toml
+[global]
+# off (default) = external packages are only shown when explicitly selected
+# on            = list and update include every configured manager
+managers_mode = "off"
+```
+
+```bash
+eget list --with-managers npm,bun   # eget packages + npm/bun
+eget list --managers all            # only manager packages
+eget update --managers npm          # only npm's outdated packages
+```
+
+Manager adapters are built in and can be extended or overridden. `enabled =
+false` removes one, a new name adds one:
+
+```toml
+[managers.npm]
+bin           = "npm"
+list_args     = ["ls", "-g", "--depth=0", "--json"]
+outdated_args = ["outdated", "-g", "--json"]
+upgrade_args  = ["update", "-g"]
+
+# a tool eget does not know about
+[managers.scoop]
+bin            = "scoop"
+list_args      = ["list"]
+outdated_args  = ["status"]
+upgrade_args   = ["update"]
+parser         = "lines-regex"
+list_regex     = '^(?P<name>\S+)\s+(?P<version>\S+)'
+outdated_regex = '^(?P<name>\S+)\s+(?P<version>\S+)\s+(?P<latest>\S+)'
+```
+
+`parser` is one of `npm-json`, `pnpm-json`, `pipx-json`, `uv-tool-text`,
+`cargo-text`, `bun-text` or `lines-regex`. Set `bin` to an absolute path when a
+tool is installed but not on `PATH` (common for `pipx` and `cargo`).
 
 Create a default config:
 

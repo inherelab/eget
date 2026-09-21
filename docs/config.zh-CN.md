@@ -98,6 +98,7 @@ eget config import --force portable.toml
 - `[packages.<name>]`: 命名 package 配置。
 - `[pkg_templates.<name>]`: 可复用的 package URL template 配置。
 - `[sdk.<name>]`: SDK 下载和 index 配置。
+- `[managers.<name>]`: 外部包管理器配置。
 
 ## Global 配置
 
@@ -116,6 +117,7 @@ batch_concurrency = 0
 ignore_update_packages = []
 sdk_target = "~/.local/sdks"
 sdk_ext_map = { windows = "zip", linux = "tar.gz", darwin = "tar.gz" }
+managers_mode = "off"
 ```
 
 字段说明：
@@ -132,6 +134,7 @@ sdk_ext_map = { windows = "zip", linux = "tar.gz", darwin = "tar.gz" }
 - `ignore_update_packages`: 在 `list --outdated`、`update --check`、`update --all` 中跳过的 package 名称。
 - `sdk_target`: SDK 安装根目录。SDK 配置里的相对 `target` 会基于该目录解析。
 - `sdk_ext_map`: SDK 默认归档扩展名映射，key 使用 Go OS 名称。SDK 级别 `ext_map` 会覆盖它。
+- `managers_mode`: 外部管理器安装的包是否参与 `list` / `update`。`off`（默认）保持现有行为且不启动任何管理器进程；`on` 让两个命令默认包含全部已配置管理器，等价于默认带 `--with-managers all`。其他取值会报错。
 
 目录语义：
 
@@ -442,6 +445,45 @@ HTML index 支持两种常见结构：
 - 版本目录链接，例如 `v20.11.1/`。配置了 `url_template` 后，eget 会从目录名提取版本号，并生成当前平台归档 URL。
 
 SDK 使用细节见 [sdk-usage.md](sdk-usage.md)。
+
+## Manager 配置
+
+`[managers.<name>]` 描述如何驱动一个外部包管理器，从而让它的包参与 `list` 与 `update`。内置 6 个适配器（npm、pnpm、uv、pipx、cargo、bun）；同名配置块会覆盖内置项，`enabled = false` 移除它，新名字则新增一个管理器。
+
+```toml
+[managers.npm]
+bin           = "npm"
+list_args     = ["ls", "-g", "--depth=0", "--json"]
+outdated_args = ["outdated", "-g", "--json"]
+upgrade_args  = ["update", "-g"]
+upgrade_all_args = ["update", "-g"]
+parser        = "npm-json"
+enabled       = true
+timeout       = 60
+
+[managers.scoop]
+bin            = "scoop"
+list_args      = ["list"]
+outdated_args  = ["status"]
+upgrade_args   = ["update"]
+parser         = "lines-regex"
+list_regex     = '^(?P<name>\S+)\s+(?P<version>\S+)'
+outdated_regex = '^(?P<name>\S+)\s+(?P<version>\S+)\s+(?P<latest>\S+)'
+```
+
+字段说明：
+
+- `bin`: 可执行文件名或绝对路径。工具装了但不在 `PATH` 时用绝对路径。
+- `list_args`: 列出已安装包的参数。留空表示不支持列出。
+- `outdated_args`: 列出过期包的参数。留空表示该管理器无法检测过期（例如 cargo）：它仍会出现在 `list`，但不参与 `--outdated` 与 `update --all`。
+- `upgrade_args`: 升级指定包名的参数。
+- `upgrade_all_args`: 整体升级的参数。未指定包名时使用，例如 `tool upgrade --all`、`upgrade-all`。
+- `parser`: 取值 `npm-json`、`pnpm-json`、`pipx-json`、`uv-tool-text`、`cargo-text`、`bun-text`、`lines-regex`。
+- `list_regex` / `outdated_regex`: 配合 `lines-regex` 解析器使用，支持命名分组 `name`、`version`、`latest`。
+- `enabled`: 设为 `false` 移除该管理器。
+- `timeout`: 单条命令超时秒数，默认 60。
+
+外部包不会写入安装记录。`eget list` 以 `manager:package` 展示，Source 列为管理器名；`eget managers list` 展示各管理器的可执行文件、可用性与包数量。
 
 ## 安装记录文件
 

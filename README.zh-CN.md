@@ -253,6 +253,30 @@ eget update --self
 eget update --self --check
 ```
 
+### 外部管理器示例
+
+其他工具（npm、pnpm、uv、pipx、cargo、bun）安装的包默认不参与 `list` / `update`，需要显式选择。
+
+```bash
+# eget 的包 + npm 的包
+eget list --with-managers npm
+# 只看各管理器安装的包
+eget list --managers all
+# 过期检查包含两个管理器
+eget list --outdated --with-managers npm,uv
+eget update --check --with-managers npm
+# 只更新 npm 的过期包
+eget update --managers npm
+# eget 的包 + npm 的包一起更新
+eget update --all --with-managers npm
+# 更新单个外部包（不需要任何选择开关）
+eget update npm:agent-browser
+# 查看管理器：可执行文件、是否可用、包数量
+eget managers list
+# 按管理器整体升级
+eget managers upgrade uv
+```
+
 ### 配置命令示例
 
 ```bash
@@ -311,6 +335,7 @@ eget config set global.target ~/.local/bin
 - 使用 `--all` / `-a` 列出本地 managed packages 与 installed store 的并集。
 - 使用 `--no-installed` / `--ni` 列出 `[packages]` 中已配置但未安装的包。
 - 使用 `--gui` 只显示当前列表视图中的 GUI 应用。
+- 使用 `--with-managers all|npm,bun` 一并列出这些外部管理器的包，或用 `--managers ...` 只列出它们的包。未使用这两个选项且 `global.managers_mode` 为默认 `off` 时，不会启动任何外部管理器进程。
 
 `show`
 
@@ -333,6 +358,12 @@ eget config set global.target ~/.local/bin
 - `update --self` 会检查 `inherelab/eget` release，选择当前 OS/arch 对应的原始可执行文件 asset，并替换当前正在运行的 eget 可执行文件。Windows 下替换会延迟到当前进程退出后执行。
 - `update --self --check` 会在请求最新版本前输出自更新检查来源 host，方便确认使用的是 GitHub 还是私有源。
 - `update --self --self-source <url>` 会从内部源更新 eget。内部源需要提供 `latest.yaml`，以及同目录下的原始平台文件，例如 `eget-linux-amd64` 和 `eget-windows-amd64.exe`。`<url>` 可以是目录地址，也可以直接是 `latest.yaml` 地址；也可通过 `EGET_SELF_UPDATE_SOURCE` 设置默认内部源。
+- `--with-managers all|npm,bun` 会一并更新这些外部管理器的包（需配合 `--all` / `--interactive` / `--check`）；`--managers ...` 则只更新它们的包。`eget update npm:typescript` 可以直接更新单个外部包，不需要任何选择开关。
+
+`managers`(alias: `mgr`)
+
+- `managers list` 输出每个已配置管理器的可执行文件、是否可用、是否支持过期检测，以及它拥有的包数量。
+- `managers upgrade <name> [pkg...]` 升级某个管理器的全部包，或只升级指定包。
 
 `sdk`
 
@@ -453,6 +484,7 @@ SourceForge 查询目标使用 `sourceforge:<project>`、`sourceforge:<project>/
 - `[packages.<name>]`
 - `[pkg_templates.<name>]`
 - `[sdk.<name>]`
+- `[managers.<name>]`
 
 最小示例：
 
@@ -536,6 +568,47 @@ eget sdk config add --all
 eget sdk config add --all --mirror mirror
 eget sdk config add jdk --mirror zulu
 ```
+
+### 外部管理器配置
+
+npm、pnpm、uv、pipx、cargo、bun 安装的包可以参与 `eget list` 与 `eget update`。这些包**不写入** eget 的安装记录：每次检查都直接询问对应管理器，因此不会有过期快照。
+
+默认不处理它们。可以按命令开启，或修改默认行为：
+
+```toml
+[global]
+# off（默认）= 只有显式选择时才展示外部包
+# on         = list 与 update 默认带上全部可用管理器
+managers_mode = "off"
+```
+
+```bash
+eget list --with-managers npm,bun   # eget 的包 + npm/bun 的包
+eget list --managers all            # 只看管理器安装的包
+eget update --managers npm          # 只更新 npm 的过期包
+```
+
+管理器适配器内置，可覆盖或扩展；`enabled = false` 移除，新名字则新增：
+
+```toml
+[managers.npm]
+bin           = "npm"
+list_args     = ["ls", "-g", "--depth=0", "--json"]
+outdated_args = ["outdated", "-g", "--json"]
+upgrade_args  = ["update", "-g"]
+
+# eget 未内置的工具
+[managers.scoop]
+bin            = "scoop"
+list_args      = ["list"]
+outdated_args  = ["status"]
+upgrade_args   = ["update"]
+parser         = "lines-regex"
+list_regex     = '^(?P<name>\S+)\s+(?P<version>\S+)'
+outdated_regex = '^(?P<name>\S+)\s+(?P<version>\S+)\s+(?P<latest>\S+)'
+```
+
+`parser` 可选 `npm-json`、`pnpm-json`、`pipx-json`、`uv-tool-text`、`cargo-text`、`bun-text`、`lines-regex`。工具装了但不在 `PATH`（pipx、cargo 常见）时，把 `bin` 写成绝对路径。
 
 创建默认配置：
 
