@@ -4,8 +4,6 @@
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/inherelab/eget)](https://github.com/inherelab/eget)
 [![Unit-Tests](https://github.com/inherelab/eget/actions/workflows/go.yml/badge.svg)](https://github.com/inherelab/eget)
 
----
-
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
 `eget` 用于从 GitHub、GitLab、Gitea/Forgejo 和 SourceForge 查找、下载并提取预构建二进制。
