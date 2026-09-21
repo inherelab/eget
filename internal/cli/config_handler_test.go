@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gookit/cliui/cutypes"
 	"github.com/gookit/goutil/x/assert"
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
@@ -450,4 +451,55 @@ func TestHandleConfigPathCheckPrintsExistsStatus(t *testing.T) {
 	err := svc.handleConfig(&ConfigOptions{Action: "path", Target: "cache_dir", Check: true})
 	assert.NoErr(t, err)
 	assert.Eq(t, filepath.ToSlash(cacheDir)+", exists: true\n", filepath.ToSlash(out.String()))
+}
+
+func TestHandleConfigListShowsManagers(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+	writeCLIFile(t, configPath, `
+[global]
+managers_mode = "on"
+
+[managers.npm]
+bin = "npm"
+parser = "npm-json"
+list_args = ["ls", "-g", "--json"]
+
+[managers.scoop]
+bin = "scoop"
+enabled = true
+`)
+	svc := &cliService{
+		cfgService: app.ConfigService{
+			ConfigPath: configPath,
+			Load: func() (*cfgpkg.File, error) {
+				return cfgpkg.LoadFile(configPath)
+			},
+		},
+	}
+
+	origStdout := os.Stdout
+	reader, writer, err := os.Pipe()
+	assert.NoErr(t, err)
+	os.Stdout = writer
+	ccolor.SetOutput(writer)
+	cutypes.SetOutput(writer)
+	defer func() {
+		os.Stdout = origStdout
+		ccolor.SetOutput(os.Stdout)
+		cutypes.ResetOutput()
+	}()
+
+	assert.NoErr(t, svc.handleConfig(&ConfigOptions{Action: "list"}))
+	assert.NoErr(t, writer.Close())
+	body, readErr := io.ReadAll(reader)
+	assert.NoErr(t, readErr)
+	assert.NoErr(t, reader.Close())
+
+	got := string(body)
+	assert.Contains(t, got, "Configed Managers")
+	assert.Contains(t, got, "npm")
+	assert.Contains(t, got, "scoop")
+	assert.Contains(t, got, "npm-json")
+	assert.Contains(t, got, "managers_mode")
 }

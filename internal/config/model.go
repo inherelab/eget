@@ -14,6 +14,7 @@ type Section struct {
 	GuiTarget            *string           `toml:"gui_target" mapstructure:"gui_target"`
 	IgnoreUpdatePackages []string          `toml:"ignore_update_packages,omitempty" mapstructure:"ignore_update_packages"`
 	IsGUI                *bool             `toml:"is_gui" mapstructure:"is_gui"`
+	ManagersMode         *string           `toml:"managers_mode,omitempty" mapstructure:"managers_mode"`
 	Name                 *string           `toml:"name" mapstructure:"name"`
 	Quiet                *bool             `toml:"quiet" mapstructure:"quiet"`
 	RenameFiles          map[string]string `toml:"rename_files,omitempty" mapstructure:"rename_files"`
@@ -67,6 +68,19 @@ type SDKSection struct {
 	ExtMap          map[string]string `toml:"ext_map" mapstructure:"ext_map"`
 }
 
+type ManagerSection struct {
+	Bin            *string  `toml:"bin" mapstructure:"bin"`
+	Enabled        *bool    `toml:"enabled" mapstructure:"enabled"`
+	ListArgs       []string `toml:"list_args" mapstructure:"list_args"`
+	OutdatedArgs   []string `toml:"outdated_args" mapstructure:"outdated_args"`
+	UpgradeArgs    []string `toml:"upgrade_args" mapstructure:"upgrade_args"`
+	UpgradeAllArgs []string `toml:"upgrade_all_args" mapstructure:"upgrade_all_args"`
+	Parser         *string  `toml:"parser" mapstructure:"parser"`
+	ListRegex      *string  `toml:"list_regex" mapstructure:"list_regex"`
+	OutdatedRegex  *string  `toml:"outdated_regex" mapstructure:"outdated_regex"`
+	Timeout        *int     `toml:"timeout" mapstructure:"timeout"`
+}
+
 type APICacheSection struct {
 	Enable    *bool `toml:"enable" mapstructure:"enable"`
 	CacheTime *int  `toml:"cache_time" mapstructure:"cache_time"`
@@ -103,9 +117,10 @@ type File struct {
 	Ghproxy      GhproxySection     `toml:"ghproxy" mapstructure:"ghproxy"`
 	CacheMirror  CacheMirrorSection `toml:"cache_mirror" mapstructure:"cache_mirror"`
 	Repos        map[string]Section
-	Packages     map[string]Section    `toml:"packages" mapstructure:"packages"`
-	PkgTemplates map[string]Section    `toml:"pkg_templates" mapstructure:"pkg_templates"`
-	SDK          map[string]SDKSection `toml:"sdk" mapstructure:"sdk"`
+	Packages     map[string]Section        `toml:"packages" mapstructure:"packages"`
+	PkgTemplates map[string]Section        `toml:"pkg_templates" mapstructure:"pkg_templates"`
+	SDK          map[string]SDKSection     `toml:"sdk" mapstructure:"sdk"`
+	Managers     map[string]ManagerSection `toml:"managers" mapstructure:"managers"`
 }
 
 type Merged struct {

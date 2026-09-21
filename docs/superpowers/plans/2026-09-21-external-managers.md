@@ -32,13 +32,13 @@
 
 ### 2. 配置模型
 
-- [ ] `internal/config/model.go`：`ManagerSection`（`bin` / `list_args` / `outdated_args` / `upgrade_args` / `upgrade_all_args` / `parser` / `list_regex` / `outdated_regex` / `enabled` / `timeout`）+ `File.Managers`；`Section` 增全局键 `managers_mode`（`off` | `on`）。
-- [ ] `internal/config/loader.go`：`NewFile()` 初始化 `Managers`。
-- [ ] `internal/config/gookit.go`：`decodeConfigFile` 增 `MapOnExists("managers", ...)`；`encodeConfigFile` 增 `"managers"` 段 + `managerSectionToMap()`；`sectionToMap` 增 `managers_mode`；`isReservedConfigRootKey` 增 `"managers"`。
-- [ ] `internal/config/gookit.go`：`preserveUnchangedRawValues()` 根层跳过列表增 `"managers"`。
-- [ ] `internal/config/gookit.go`：`normalizePathValue()` 增 `enabled` bool 与 `list_args` / `outdated_args` / `upgrade_args` / `upgrade_all_args` 的 `splitAndTrim`。
-- [ ] `internal/cli/config_handler.go`：`config list` 增 `managers` 段。
-- [ ] 测试：`[managers.*]` 与 `global.managers_mode` round-trip、保留键、保存不丢字段、`config list` 显示。
+- [x] `internal/config/model.go`：`ManagerSection`（`bin` / `list_args` / `outdated_args` / `upgrade_args` / `upgrade_all_args` / `parser` / `list_regex` / `outdated_regex` / `enabled` / `timeout`）+ `File.Managers`；`Section` 增全局键 `managers_mode`（`off` | `on`）。
+- [x] `internal/config/loader.go`：`NewFile()` 初始化 `Managers`。
+- [x] `internal/config/gookit.go`：`decodeConfigFile` 增 `MapOnExists("managers", ...)`；`encodeConfigFile` 增 `"managers"` 段 + `managerSectionToMap()`；`sectionToMap` 增 `managers_mode`；`isReservedConfigRootKey` 增 `"managers"`。
+- [x] `internal/config/gookit.go`：`preserveUnchangedRawValues()` 根层跳过列表增 `"managers"`。
+- [x] `internal/config/gookit.go`：`normalizePathValue()` 增 `enabled` bool 与 `list_args` / `outdated_args` / `upgrade_args` / `upgrade_all_args` 的 `splitAndTrim`。
+- [x] `internal/cli/config_handler.go`：`config list` 增 `managers` 段。
+- [x] 测试：`[managers.*]` 与 `global.managers_mode` round-trip、保留键、保存不丢字段、`config list` 显示（`internal/config/loader_managers_test.go`、`internal/cli/config_handler_test.go`）。
 
 ### 3. `internal/extpkg` 包
 
