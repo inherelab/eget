@@ -175,6 +175,26 @@ func TestZipArchiveDecodesCP1251CyrillicNames(t *testing.T) {
 	assertZipArchiveDecodesLegacyName(t, []byte{0xd0, 0xf3, 0xf1, 0xf1, 0xea, 0xe8, 0xe9}, "Русский")
 }
 
+func TestNewZipArchive(t *testing.T) {
+	t.Run("falls back to tar for a mislabeled asset", func(t *testing.T) {
+		var buf bytes.Buffer
+		tw := tar.NewWriter(&buf)
+		assert.Require(t, assert.NoErr(t, tw.WriteHeader(&tar.Header{Name: "Hiddify/app.exe", Mode: 0o755})))
+		assert.Require(t, assert.NoErr(t, tw.Close()))
+
+		ar, err := NewZipArchive(buf.Bytes(), nil)
+		assert.Require(t, assert.NoErr(t, err))
+		file, err := ar.Next()
+		assert.Require(t, assert.NoErr(t, err))
+		assert.Eq(t, filepath.Join("Hiddify", "app.exe"), file.Name)
+	})
+
+	t.Run("rejects invalid archive data", func(t *testing.T) {
+		_, err := NewZipArchive([]byte("not an archive"), nil)
+		assert.Err(t, err)
+	})
+}
+
 func assertZipArchiveDecodesLegacyName(t *testing.T, encoded []byte, decoded string) {
 	t.Helper()
 	var buf bytes.Buffer

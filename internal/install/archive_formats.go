@@ -91,6 +91,12 @@ func (t *TarArchive) WriteTo(w io.Writer) (int64, error) {
 func NewZipArchive(data []byte, d DecompFn) (Archive, error) {
 	r := bytes.NewReader(data)
 	zr, err := zip.NewReader(r, int64(len(data)))
+	if err == zip.ErrFormat {
+		// Some release assets contain a valid tar archive despite a .zip filename.
+		if _, tarErr := tar.NewReader(bytes.NewReader(data)).Next(); tarErr == nil {
+			return &TarArchive{r: tar.NewReader(bytes.NewReader(data))}, nil
+		}
+	}
 	return &ZipArchive{r: zr, idx: -1}, err
 }
 
