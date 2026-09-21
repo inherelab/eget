@@ -53,6 +53,19 @@ func TestOutputPathKeepsExecutableNameWhenPreferredNameDoesNotMatchPlatformSuffi
 	}
 }
 
+func TestOutputPathUsesPreferredNameForRenamedSingleFileAsset(t *testing.T) {
+	extractor := NewExtractor("omp-darwin-arm64", "oh-my-pi", nil)
+	file, _, err := extractor.Extract(nil, false)
+	assert.NoErr(t, err)
+	assert.Eq(t, "oh-my-pi", file.Name)
+
+	got, err := outputPath(file, "bin", false, "omp", false)
+	if err != nil {
+		t.Fatalf("outputPath(): %v", err)
+	}
+	assert.Eq(t, filepath.Join("bin", "omp"), got)
+}
+
 func TestOutputPathUsesPreferredNameWithExplicitExtension(t *testing.T) {
 	file := ExtractedFile{Name: "chlog-windows-amd64.exe", mode: 0o666}
 	got, err := outputPath(file, "", false, "custom-name.exe", false)

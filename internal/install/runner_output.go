@@ -44,7 +44,7 @@ func isExtractAllArchiveAsset(assetURL string) bool {
 func outputPath(file ExtractedFile, output string, all bool, preferredName string, outputExplicit bool, renameFiles ...map[string]string) (string, error) {
 	mode := file.Mode()
 	renamed := renamedOutputName(file, firstRenameMap(renameFiles))
-	out := resolvedOutputName(firstNonEmpty(renamed, file.Name), mode, preferredName)
+	out := resolvedPreferredOutputName(file, renamed, mode, preferredName)
 	if all && output != "-" && file.Name != "" {
 		if renamed != "" {
 			return safeArchiveOutputPath(output, renamed)
@@ -134,6 +134,27 @@ func resolvedOutputName(name string, mode os.FileMode, preferredName string) str
 		return applyPreferredName(base, preferredName)
 	}
 	return heuristicExecutableName(base)
+}
+
+// resolvedPreferredOutputName resolves the output name for the extracted file.
+// Single-file downloads are renamed to the repo/tool name during extraction, which
+// drops the platform and arch tokens carried by the asset name. When the preferred
+// (--name) value only matches the original asset name, fall back to it so platform
+// suffixed assets like `omp-darwin-arm64` can still be renamed to `omp`.
+func resolvedPreferredOutputName(file ExtractedFile, renamed string, mode os.FileMode, preferredName string) string {
+	primary := firstNonEmpty(renamed, file.Name)
+	out := resolvedOutputName(primary, mode, preferredName)
+	if preferredName == "" || renamed != "" || out != filepath.Base(primary) {
+		return out
+	}
+	assetBase := filepath.Base(file.ArchiveName)
+	if assetBase == "." || assetBase == filepath.Base(primary) {
+		return out
+	}
+	if alt := resolvedOutputName(file.ArchiveName, mode, preferredName); alt != assetBase {
+		return alt
+	}
+	return out
 }
 
 func applyPreferredName(originalName, preferredName string) string {
