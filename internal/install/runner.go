@@ -165,7 +165,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 			return RunResult{}, err
 		}
 	} else if opts.Verify != "" {
-		ccolor.Fprintln(output, "<error>Checksum verified</>")
+		ccolor.Fprintln(output, "<success>Checksum verified</>")
 	}
 
 	if opts.DownloadOnly && opts.ExtractFile == "" && !opts.All {
