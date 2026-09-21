@@ -135,6 +135,9 @@ type ManagersSelection struct {
 | `--with-managers` + `--no-installed` / `--gui` | 报错（这两个视图没有“已安装的 eget 包”这一集合） |
 | `--with-managers` + `--info <name>` | 允许，用于给裸名解析确定作用域 |
 | `--managers` / `--with-managers` + `--outdated` | 允许（`list` 与 `update` 都适用） |
+| `update --with-managers` 无 `--all` / `--interactive` / `--check` / target | 报错（没有可执行的选择） |
+| `update --with-managers` + `--check` | 允许，`--check` 是只读的，不需要再指定执行范围 |
+| `update --self` + `--managers` / `--with-managers` | 报错 |
 
 **`eget managers` 与选择模型的关系**：`eget managers ...` 是管理器维度的显式命令，always 生效，不受 `--managers` / `--with-managers` 影响。
 
@@ -557,7 +560,7 @@ pnpm add -g is-number@1.0.0
 - `UpdateService` 增 `External ExternalProvider`（含 `Outdated` 与 `Upgrade`）与 `Managers ManagersSelection`。
 - `ListUpdateCandidates()` 追加外部过期候选：`OutdatedItem{Manager: "npm", Name: "typescript", Repo: "npm:typescript", InstalledTag, LatestTag}`；外部候选由 `externalOutdatedItems` 一次性批量取得（每个管理器一条命令，不是每个包一条）；`Mode == "off"` 时不追加。`ListUpdateCandidatesForTargets()` 对显式的 `manager:pkg` 目标也走同一条检查。
 - `UpdateCandidates()` 按 `item.Manager` 分派，**不经过名字解析**：`item.Manager != ""` → `s.External.Upgrade(ctx, item.Manager, []string{item.Name})`；其余沿用原 `s.UpdatePackage(item.Name, cli)`。这样彻底避开重名歧义。
-- `update --interactive` 的候选展示改用 `item.Repo`（形如 `npm:typescript`）而非 `item.Name`，否则不同管理器的同名包无法区分。
+- `update --interactive` 的候选展示：**外部**项用 `Repo`（形如 `npm:typescript`），eget 项仍用 `Name`（保持既有交互不变，也让不同管理器的同名包可区分）。
 - **候选里含外部项时强制串行（batch = 1）**，避免多个管理器进程互相抢锁（npm/pnpm 会争同一目录）。
 - 单包路径 `eget update <target>` 的优先级（实现时收敛，为的是不给普通用法增加开销）：`<manager>:<pkg>` 显式引用**始终可用**；否则先按 eget 目标解析（`findUpdateTarget`），命中就走原有流程且**不调用**外部服务；只有在"不是 eget 目标"时才按裸名在选定作用域内查外部包（命中多个管理器同名则报错，要求写显式引用）。这样 `eget update rg` 不会因为装了 npm 的同名包而多跑一次 `npm ls`。
 - 外部单包更新：管理器支持 outdated 时**先比对**再升级（未落后就返回 `Updated=false` 与当前版本，像 eget 自己那样提示"已是最新"）；不支持 outdated 的（cargo）按请求直接升级。`findUpdateTarget()` 内部自建的 `ListService` 不带 `External`，所以这套判断在 `UpdatePackageStatus` 开头显式做。

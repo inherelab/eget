@@ -13,6 +13,13 @@ import (
 )
 
 func (s *cliService) handleUpdate(opts *UpdateOptions) error {
+	selection, err := s.updateManagersSelection(opts)
+	if err != nil {
+		return err
+	}
+	restoreSelection := s.applyManagersSelection(selection)
+	defer restoreSelection()
+
 	if opts.Self {
 		if opts.All {
 			return fmt.Errorf("update --self cannot be used with --all")
@@ -50,13 +57,21 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		if len(opts.Targets) > 0 {
 			return s.handleUpdateCheckTargets(opts.Targets)
 		}
-		return s.handleList(&ListOptions{Outdated: true})
+		// Carry the manager selection over: the list path resolves it again
+		// from its own flags.
+		return s.handleList(&ListOptions{
+			Outdated:     true,
+			Managers:     opts.Managers,
+			WithManagers: opts.WithManagers,
+		})
 	}
 	if opts.DryRun {
 		return fmt.Errorf("update --dry-run is not implemented")
 	}
 	installOpts := s.applyGlobalFlags(installOptionsFromUpdate(opts))
-	if opts.All || opts.Interactive {
+	// --managers already names the whole set, so it implies --all over it.
+	runCandidates := opts.All || opts.Interactive || selection.OnlyManagers()
+	if runCandidates {
 		var targets []string
 		if opts.Interactive && !opts.All {
 			targets = opts.Targets
@@ -169,7 +184,13 @@ func (s *cliService) updateCandidatesForPrompt(targets []string) ([]app.Outdated
 func selectInteractiveUpdateCandidates(items []app.OutdatedItem) ([]app.OutdatedItem, error) {
 	choices := make([]string, 0, len(items))
 	for _, item := range items {
-		choices = append(choices, fmt.Sprintf("%s  %s -> %s", item.Name, item.InstalledTag, item.LatestTag))
+		// External packages show their full reference so same-named packages
+		// from different managers stay distinguishable.
+		name := item.Name
+		if item.Manager != "" {
+			name = item.Repo
+		}
+		choices = append(choices, fmt.Sprintf("%s  %s -> %s", name, item.InstalledTag, item.LatestTag))
 	}
 	indexes, err := prompts.MultiSelect("Select packages to update", "Filter packages", choices)
 	if err != nil {

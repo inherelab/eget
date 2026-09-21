@@ -70,15 +70,16 @@
 
 ### 6. `cli` 层
 
-- [ ] `list_cmd.go` / `update_cmd.go`：增带值 flag `--managers` / `--with-managers`。
-- [ ] 新增 `resolveManagersSelection(opts, cfg)`：`flag > [global] managers_mode > off`；`managers_mode = "on"` → `{Mode: "with", Managers: nil}`（全部）；`--managers <sel>` → `{Mode: "only", ...}`；`--with-managers <sel>` → `{Mode: "with", ...}`；`all` 或逗号列表，未知名字报错；互斥与视图组合校验（矩阵见设计"选择模型"）。
-- [ ] `app.go`：`commandFlagSpecs` 给 `list` / `update` 增 `values: setOf("managers","with-managers")`，并增 `managers` 的 subs；`app.add(newManagersCmd(handler))`。
-- [ ] `service.go` 增 `extService`；`wiring.go` 构造 `extpkg.Service` 并注入。
-- [ ] `list_handler.go`：`packageSource()` 增 `Manager` 分支；按选择设置 `Managers`。
-- [ ] `update_handler.go`：按选择设置 `Managers`；`--interactive` 展示用 `Repo`。
-- [ ] 新增 `managers_cmd.go` / `managers_handler.go`（`managers.list`、`managers.upgrade`）；`handlers.go` 增两个 case。
-- [ ] `render.go`：`ListItemToDisplay` 增 `Manager`。
-- [ ] 测试：组合矩阵、解析优先级、未知名字报错、`Source=npm`、`managers` 分派、flagSpec 登记、`config list`。
+- [x] `list_cmd.go` / `update_cmd.go`：增带值 flag `--managers` / `--with-managers`。
+- [x] 新增 `managers_selection.go` 的 `resolveManagersSelection`：`flag > [global] managers_mode > off`；`on` → `{with, 全部}`；`--managers` → `only`；`--with-managers` → `with`；`all` 或逗号列表（未知名字报错并列出可用项）；互斥与视图组合校验（矩阵见设计"选择模型"，`update --with-managers --check` 允许）。
+- [x] `app.go`：`commandFlagSpecs` 给 `list` / `update` 增 `values: setOf("managers","with-managers")`，并增 `managers` 的 subs；`app.add(newManagersCmd(handler))`。
+- [x] `service.go` 增 `extService app.ExternalProvider`；`wiring.go` 用 `extpkg.NewService(cfg)` 构造并注入 list/update 服务。
+- [x] `list_handler.go`：`packageSource()` 增 `Manager` 分支；按选择设置 `Managers`；`OnExternalFailure` 打印 `check_failed`；组合校验。
+- [x] `update_handler.go`：按选择设置 `Managers`；`--managers` 隐含 `--all`；`--check` 透传 managers flags；`--interactive` 只对外部项用 `Repo` 展示。
+- [x] 新增 `managers_cmd.go` / `managers_handler.go`（`managers.list`、`managers.upgrade`）；`handlers.go` 增两个 case。
+- [x] `render.go`：`ListItemToDisplay` 增 `Manager`。
+- [x] 测试：组合矩阵、解析优先级、未知名字报错、`Source=npm`、默认 off 不出现外部包、`managers` 分派与参数校验（`internal/cli/managers_selection_test.go`）。
+- [x] 本机端到端验证（构建 `eget-dev.exe`，验证后已删除）：默认 `list` 41 包（与改动前一致、无外部包）；`--with-managers npm` → 51 包且 `Source=npm`；`--managers all` → 只 12 个管理器包；`--managers npm --all` 与未知名字报错正常；`list --outdated --with-managers npm` 与 `update --check --with-managers npm` 含外部过期项；`update --check npm:agent-browser` 正常；`update typescript` 在默认作用域下报未找到（未被劫持）；`update rg` 走原路径；`managers list` 显示 6 个管理器（cargo/pipx 正确显示 Available=no）；`managers_mode="on"`（临时配置）下默认 `list` 带上 12 个外部包；`config list` 显示 Managers 段。
 
 ### 7. 文档与交付
 

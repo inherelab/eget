@@ -138,6 +138,11 @@ func (s *cliService) handle(name string, options any) error {
 	case "cache.serve":
 		opts := options.(*CacheServeOptions)
 		return s.handleCacheServe(opts)
+	case "managers.list":
+		return s.handleManagersList()
+	case "managers.upgrade":
+		opts := options.(*ManagersOptions)
+		return s.handleManagersUpgrade(opts)
 	default:
 		return ErrNotImplemented
 	}

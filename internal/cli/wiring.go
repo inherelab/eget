@@ -12,6 +12,7 @@ import (
 	"github.com/inherelab/eget/internal/cli/prompts"
 	"github.com/inherelab/eget/internal/client"
 	cfgpkg "github.com/inherelab/eget/internal/config"
+	"github.com/inherelab/eget/internal/extpkg"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	forge "github.com/inherelab/eget/internal/source/forge"
@@ -229,6 +230,9 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 	if err != nil {
 		return nil, err
 	}
+	extService := extpkg.NewService(cfg)
+	listService.External = extService
+	updService.External = extService
 	return &cliService{
 		appService:        appService,
 		cfgService:        cfgService,
@@ -241,6 +245,7 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 		selfUpdateService: selfUpdateService,
 		sdkService:        sdkService,
 		cacheService:      cacheService,
+		extService:        extService,
 		stderr:            os.Stderr,
 		proxyURL:          defaultOpts.ProxyURL,
 		proxyExclude:      append([]string(nil), defaultOpts.ProxyExclude...),

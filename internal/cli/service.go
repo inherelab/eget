@@ -41,6 +41,8 @@ type cliService struct {
 	selfUpdateService selfUpdateCLIService
 	sdkService        sdkCLIService
 	cacheService      appcache.Service
+	// extService drives packages owned by external managers (npm, uv, ...).
+	extService app.ExternalProvider
 
 	stderr             io.Writer
 	configPathResolver func() (string, error)

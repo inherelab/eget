@@ -41,6 +41,9 @@ type listItemDisplay struct {
 	IsGUI        bool   `mapstructure:"IsGUI"`
 	InstallMode  string `mapstructure:"InstallMode"`
 	IgnoreUpdate bool   `mapstructure:"IgnoreUpdate"`
+	// Manager is the external package manager owning the package, empty for
+	// packages eget installed itself.
+	Manager string `mapstructure:"Manager"`
 }
 
 type showResultDisplay struct {
@@ -199,6 +202,7 @@ func ListItemToDisplay(item app.ListItem) listItemDisplay {
 		IsGUI:        item.IsGUI,
 		InstallMode:  item.InstallMode,
 		IgnoreUpdate: item.IgnoreUpdate,
+		Manager:      item.Manager,
 	}
 }
 

@@ -19,6 +19,8 @@ type UpdateOptions struct {
 	Retries          int
 	ChunkConcurrency int
 	BatchConcurrency int
+	Managers         string
+	WithManagers     string
 	Targets          []string
 }
 
@@ -43,6 +45,8 @@ func newUpdateCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.IntOpt(&opts.BatchConcurrency, "batch", "", -1, "Concurrent package tasks for --all: 0 auto, 1 serial")
+		c.StrOpt(&opts.Managers, "managers", "", "", "Only update packages of these managers: all or npm,bun")
+		c.StrOpt(&opts.WithManagers, "with-managers", "", "", "Also update packages of these managers: all or npm,bun")
 		c.AddArg("target", "Target(s) to update", false, true)
 	}
 	cmd.Func = func(c *gcli.Command, args []string) error {

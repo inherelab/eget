@@ -23,6 +23,14 @@ func (s *cliService) handleList(opts *ListOptions) error {
 	if opts != nil && opts.NoInstalled && opts.Info != "" {
 		return fmt.Errorf("list --no-installed and --info cannot be used together")
 	}
+
+	selection, err := s.listManagersSelection(opts)
+	if err != nil {
+		return err
+	}
+	restoreSelection := s.applyListManagersSelection(selection)
+	defer restoreSelection()
+
 	if opts != nil && opts.Info != "" {
 		item, err := s.listService.FindPackage(opts.Info)
 		if err != nil {
@@ -71,7 +79,6 @@ func (s *cliService) handleList(opts *ListOptions) error {
 	}
 
 	var items []app.ListItem
-	var err error
 	if opts != nil && opts.NoInstalled {
 		items, err = s.listService.ListPackages()
 		items = filterNoInstalledListItems(items)
@@ -175,6 +182,10 @@ func listPackageVersion(item app.ListItem) string {
 }
 
 func packageSource(item app.ListItem) string {
+	// Packages owned by an external manager show the manager name.
+	if item.Manager != "" {
+		return item.Manager
+	}
 	switch install.DetectTargetKind(item.Repo) {
 	case install.TargetRepo, install.TargetGitHubURL:
 		return "github"
