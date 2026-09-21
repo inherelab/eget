@@ -83,10 +83,10 @@
 
 ### 7. 文档与交付
 
-- [ ] `README.md`、`README.zh-CN.md`、`docs/config.md`、`docs/config.zh-CN.md` 补 `[managers.*]`、`[global] managers_mode`、`eget managers`、`--managers` / `--with-managers`。
-- [ ] 运行 `go test ./...`（`internal/cli`、`internal/sdk` 有与本改动无关的既有环境相关失败，需逐一确认不是本改动引入）。
-- [ ] 本机端到端实测（见"验证"）。
-- [ ] 更新本计划 checkbox 与 `AGENTS.md` 登记，提交并 push。
+- [x] `README.md`、`README.zh-CN.md`、`docs/config.md`、`docs/config.zh-CN.md` 补 `[managers.<name>]`、`[global] managers_mode`、`eget managers`、`--managers` / `--with-managers`，含各字段说明与"`bin` 可用绝对路径"的提示。
+- [x] 运行 `go test ./...`：`internal/app`、`internal/config`、`internal/extpkg`、`internal/install` 等全部通过；`internal/cli` 与 `internal/sdk` 各有一批**与本改动无关**的既有环境相关失败（本机 `EGET_CONFIG_DIR` 指向 `D:/work/inhere/config/win-env/eget` 且 `.env` 里设了自更新镜像），在干净工作区上可复现同样的失败。
+- [x] 本机端到端实测（见阶段 6 记录），构建产物已删除，无遗留后台进程。
+- [x] 更新本计划 checkbox；分阶段提交（config / extpkg / app / cli / docs 各一次）并 push。
 
 ## 已知偏差风险与对策
 
