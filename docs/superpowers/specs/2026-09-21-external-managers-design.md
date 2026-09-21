@@ -544,7 +544,8 @@ pnpm add -g is-number@1.0.0
 - `ListPackages()`：`Managers.Mode == "off"` 时**完全不碰外部包**（不启动任何管理器进程、零额外耗时）；否则在合并 installed 之后追加所选管理器的包：`Name = 包名`、`Repo = "npm:typescript"`、`Manager = "npm"`、`Version = InstalledTag = 版本`、`Installed = true`、`IgnoreUpdate = ignoredUpdates[name]`。
 - `Mode == "only"` 时只输出管理器包（丢弃 eget 侧的 item）；`Mode == "with"` 时追加。
 - `Managers` 由 CLI 按调用点解析（flag > `[global]` 配置 > 默认 off），**不用** wiring 里的静态默认值。
-- `ListOutdatedPackages()` 内部会新建一个 `ListService`（只透传 `LoadConfig` / `LoadInstalled` / `LatestInfo`）——必须把 `External` / `Managers` 一并透传，否则外部检测在两处调用点丢失。
+- `ListOutdatedPackages()`：内部新建的 `ListService` **故意不带** `External`（这样 `checkOutdatedItems` 永远看不到外部项），外部检查由外层服务单独调一次 `External.Outdated`（不是每个包一次）；`Mode == only` 时跳过 eget 侧的检查，避免白跑网络。`checked` 计入外部包。
+- `list` 没有 failure 返回通道，因此 `ListService` 增 `OnExternalFailure func(extpkg.Failure)` 回调，CLI 用它打印 `check_failed`（否则"npm 离线"会表现为静默没有包）。
 - `checkOutdatedItems()` 增加过滤：`item.Manager != ""` 一律跳过，外部过期检测**不走** `LatestInfoFunc`（否则会落到 GitHub 分支报错）。
 - 外部过期检测在 repo 检查之后调用 `External.Outdated(ctx)` 合并：同样应用 `ignore_update_packages`；失败项转成现有 `OutdatedCheckFailure`（`Name` 与 `Repo` 都填管理器名，避免现有 `check_failed %s (%s)` 输出出现空括号）；`checked` 计数要把外部包算进去，否则 “Checked N packages” 与实际不符。
 - `internal/cli/list_handler.go` 的 `packageSource()` 增分支：`item.Manager != ""` 返回管理器名（否则 `DetectTargetKind("npm:x")` 落到 `TargetUnknown`，会显示成 `unknown`）。
@@ -554,11 +555,12 @@ pnpm add -g is-number@1.0.0
 ### 6. `update` 集成
 
 - `UpdateService` 增 `External ExternalProvider`（含 `Outdated` 与 `Upgrade`）与 `Managers ManagersSelection`。
-- `ListUpdateCandidates()` 追加外部过期候选：`OutdatedItem{Manager: "npm", Name: "typescript", Repo: "npm:typescript", InstalledTag, LatestTag}`。它内部新建的 `ListService` 同样需要透传 `External` / `Managers`；`Mode == "off"` 时不追加。
-- `UpdateCandidates()` 按 `item.Manager` 分派，**不经过名字解析**：`item.Manager != ""` → `s.External.Upgrade(ctx, item.Repo, []string{item.Name})`；其余沿用原 `s.UpdatePackage(item.Name, cli)`。这样彻底避开重名歧义。
+- `ListUpdateCandidates()` 追加外部过期候选：`OutdatedItem{Manager: "npm", Name: "typescript", Repo: "npm:typescript", InstalledTag, LatestTag}`；外部候选由 `externalOutdatedItems` 一次性批量取得（每个管理器一条命令，不是每个包一条）；`Mode == "off"` 时不追加。`ListUpdateCandidatesForTargets()` 对显式的 `manager:pkg` 目标也走同一条检查。
+- `UpdateCandidates()` 按 `item.Manager` 分派，**不经过名字解析**：`item.Manager != ""` → `s.External.Upgrade(ctx, item.Manager, []string{item.Name})`；其余沿用原 `s.UpdatePackage(item.Name, cli)`。这样彻底避开重名歧义。
 - `update --interactive` 的候选展示改用 `item.Repo`（形如 `npm:typescript`）而非 `item.Name`，否则不同管理器的同名包无法区分。
 - **候选里含外部项时强制串行（batch = 1）**，避免多个管理器进程互相抢锁（npm/pnpm 会争同一目录）。
-- 单包路径 `eget update <target>` 分三档：`<manager>:<pkg>` 显式引用**始终可用**（不受选择模型影响）；裸名只在选定作用域内解析（`Mode != off` 时才查外部包）；命中多个、或多个管理器同名，则报错并列出候选要求写显式引用；都不命中才走原有 repo 流程。`findUpdateTarget()` 内部自建的 `ListService` 不带 `External`，所以这套判断要在 `UpdatePackageStatus` 开头显式做。
+- 单包路径 `eget update <target>` 的优先级（实现时收敛，为的是不给普通用法增加开销）：`<manager>:<pkg>` 显式引用**始终可用**；否则先按 eget 目标解析（`findUpdateTarget`），命中就走原有流程且**不调用**外部服务；只有在"不是 eget 目标"时才按裸名在选定作用域内查外部包（命中多个管理器同名则报错，要求写显式引用）。这样 `eget update rg` 不会因为装了 npm 的同名包而多跑一次 `npm ls`。
+- 外部单包更新：管理器支持 outdated 时**先比对**再升级（未落后就返回 `Updated=false` 与当前版本，像 eget 自己那样提示"已是最新"）；不支持 outdated 的（cargo）按请求直接升级。`findUpdateTarget()` 内部自建的 `ListService` 不带 `External`，所以这套判断在 `UpdatePackageStatus` 开头显式做。
 - 外部包不受 `InstalledTag == ""` 限制（该检查只对 repo 类 item 有意义）。
 - `--managers npm` / `--managers all` 隐含对该集合执行 `--all`（只更新所选管理器的过期项，不含 eget 包）；`--with-managers` 需与 `--all` 或显式 target 联用。
 

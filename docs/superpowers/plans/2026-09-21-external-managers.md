@@ -59,14 +59,14 @@
 
 ### 5. `app` 层（含选择模型）
 
-- [ ] `internal/app/list.go`：`ListItem.Manager`、`OutdatedItem.Manager`、`ManagersSelection{Mode, Managers}`、`ListService.External` + `ListService.Managers`。
-- [ ] `Mode == "off"` 时不调用 `External`（零子进程）；`only` 只输出外部项；`with` 追加外部项（`Repo = "npm:x"`、`Version = InstalledTag`、`IgnoreUpdate` 取 `ignore_update_packages`）。
-- [ ] `checkOutdatedItems()` 排除 `item.Manager != ""`。
-- [ ] `ListOutdatedPackages()` 透传 `External` / `Managers`，合并 `External.Outdated`，应用 `ignore_update_packages`，`checked` 计入外部包，失败转 `OutdatedCheckFailure{Name: 管理器名, Repo: 管理器名}`。
-- [ ] `internal/app/update.go`：`UpdateService.External` + `Managers`；`UpdatePackageStatus` 三分支（显式引用始终可用 / 裸名仅在选定作用域内解析 / 歧义报错）。
-- [ ] `internal/app/update_candidates.go`：`ListUpdateCandidates()` 透传并追加外部候选（off 时不追加）。
-- [ ] `internal/app/update_batch.go`：按 `item.Manager` 分派 `External.Upgrade`；含外部候选时强制 `batch = 1`。
-- [ ] 测试：假 `ExternalProvider` —— off 零调用、only/with 语义、跳过、透传、合并、分派、串行、三分支。
+- [x] `internal/app/list.go`：`ListItem.Manager`、`OutdatedItem.Manager`、`ManagersSelection{Mode, Managers}`（`off`/`with`/`only` + `Enabled()`/`OnlyManagers()`）、`ExternalProvider` 接口、`ListService.External` + `ListService.Managers` + `OnExternalFailure`。
+- [x] `Mode == "off"`（零值）时不调用 `External`（零子进程，测试断言调用次数为 0）；`only` 只输出外部项；`with` 追加外部项（`Repo = "npm:x"`、`Version = InstalledTag`、`IgnoreUpdate` 取 `ignore_update_packages`，同时匹配名字与 `manager:name`）。
+- [x] `checkOutdatedItems()` 排除 `item.Manager != ""`。
+- [x] `ListOutdatedPackages()`：内部 ListService 故意不带 External（外部项永不进 repo 检查），外部过期由外层一次性批量取；`only` 时跳过 repo 检查；应用 `ignore_update_packages`；`checked` 计入外部包；失败转 `OutdatedCheckFailure{Name: 管理器名, Repo: 管理器名}`。
+- [x] `internal/app/update.go`：`UpdateService.External` + `Managers`；`UpdatePackageStatus` 三分支（显式引用始终可用 / eget 目标优先且不调用外部服务 / 不是 eget 目标时才按裸名在作用域内解析）；外部单包更新先比对 outdated 再升级。
+- [x] `internal/app/update_candidates.go`：`ListUpdateCandidates()` 批量追加外部候选（off 时不追加）；`ListUpdateCandidatesForTargets()` 支持显式 `manager:pkg`。
+- [x] `internal/app/update_batch.go`：按 `item.Manager` 分派 `External.Upgrade`；含外部候选时强制 `batch = 1`。
+- [x] 测试：假 `ExternalProvider` —— off 零调用、only/with 语义、`ignore_update_packages`、跳过、合并外部过期与失败、分派、外部升级串行、裸名作用域、已是最新、未安装报错（`internal/app/external_test.go`）。
 
 ### 6. `cli` 层
 

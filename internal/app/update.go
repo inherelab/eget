@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
@@ -19,6 +21,11 @@ type UpdateService struct {
 	LatestInfo    LatestInfoFunc
 	OnCheckDone   func(checked, total int)
 	OnUpdateStart func(index, total int, name string)
+	// External and Managers let updates reach packages owned by external
+	// managers. Both are optional: with a zero ManagersSelection only explicit
+	// "manager:pkg" targets work.
+	External ExternalProvider
+	Managers ManagersSelection
 }
 
 type UpdateResult struct {
@@ -53,6 +60,12 @@ func (s UpdateService) UpdatePackageStatus(nameOrRepo string, cli install.Option
 
 	item, entry, managed, ok := findUpdateTarget(cfg, installed, nameOrRepo)
 	if !ok {
+		// Not an eget target: an explicit "manager:pkg" reference still works,
+		// and a bare name resolves to an external package only when external
+		// packages are selected at all.
+		if managerName, pkgName, found := s.resolveExternalTarget(nameOrRepo); found {
+			return s.updateExternalPackage(managerName, pkgName)
+		}
 		return UpdatePackageResult{}, fmt.Errorf("update target %q is not configured or installed; use install first", nameOrRepo)
 	}
 	if !item.Installed {
@@ -110,6 +123,107 @@ func (s UpdateService) loadConfig() (*cfgpkg.File, error) {
 		return s.LoadConfig()
 	}
 	return cfgpkg.Load()
+}
+
+// resolveExternalTarget resolves an external update target. A "manager:pkg"
+// reference is always valid; a bare name only resolves when external packages
+// are selected, and only to a package exactly one manager owns.
+func (s UpdateService) resolveExternalTarget(target string) (string, string, bool) {
+	if s.External == nil {
+		return "", "", false
+	}
+	if managerName, pkgName, ok := strings.Cut(target, ":"); ok {
+		if managerName == "" || pkgName == "" {
+			return "", "", false
+		}
+		if _, found := s.External.Manager(managerName); !found {
+			return "", "", false
+		}
+		return managerName, pkgName, true
+	}
+	if !s.Managers.Enabled() {
+		return "", "", false
+	}
+
+	packages, _, err := s.External.List(context.Background(), s.Managers.Managers...)
+	if err != nil {
+		return "", "", false
+	}
+	managerName := ""
+	for _, pkg := range packages {
+		if pkg.Name != target {
+			continue
+		}
+		if managerName != "" && managerName != pkg.Manager {
+			// Owned by more than one manager: require an explicit reference.
+			return "", "", false
+		}
+		managerName = pkg.Manager
+	}
+	if managerName == "" {
+		return "", "", false
+	}
+	return managerName, target, true
+}
+
+// updateExternalPackage updates one package through its manager. When the
+// manager can detect outdated packages the update only runs if the package is
+// actually behind, so an up-to-date package reports its version instead of
+// being upgraded blindly.
+func (s UpdateService) updateExternalPackage(managerName, pkgName string) (UpdatePackageResult, error) {
+	manager, ok := s.External.Manager(managerName)
+	if !ok {
+		return UpdatePackageResult{}, fmt.Errorf("unknown manager %q", managerName)
+	}
+	status := UpdatePackageResult{Name: pkgName, Target: managerName + ":" + pkgName}
+
+	latest := ""
+	if manager.SupportsOutdated() {
+		outdated, _, err := s.External.Outdated(context.Background(), managerName)
+		if err != nil {
+			return status, err
+		}
+		for _, pkg := range outdated {
+			if pkg.Name == pkgName {
+				status.InstalledTag, latest = pkg.Version, pkg.Latest
+				break
+			}
+		}
+	}
+
+	if status.InstalledTag == "" {
+		packages, _, err := s.External.List(context.Background(), managerName)
+		if err != nil {
+			return status, err
+		}
+		found := false
+		for _, pkg := range packages {
+			if pkg.Name == pkgName {
+				status.InstalledTag, found = pkg.Version, true
+				break
+			}
+		}
+		if !found {
+			return status, fmt.Errorf("package %q is not installed by %s", pkgName, managerName)
+		}
+	}
+
+	if latest == "" {
+		if manager.SupportsOutdated() {
+			// The manager knows how to compare versions and did not report it.
+			status.LatestTag = status.InstalledTag
+			return status, nil
+		}
+		// No outdated support (cargo): upgrade on request.
+	} else {
+		status.LatestTag = latest
+	}
+
+	if _, err := s.External.Upgrade(context.Background(), managerName, []string{pkgName}); err != nil {
+		return status, err
+	}
+	status.Updated = true
+	return status, nil
 }
 
 func (s UpdateService) loadInstalled() (*storepkg.Config, error) {

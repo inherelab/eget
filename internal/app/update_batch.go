@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -32,6 +33,11 @@ func (s UpdateService) UpdateCandidates(candidates []OutdatedItem, cli install.O
 		return nil, err
 	}
 	batch := effectiveBatchConcurrency(rawBatch, len(candidates))
+	// External upgrades never run concurrently: npm and pnpm contend for the same
+	// global directories, and several managers may share a global store.
+	if hasExternalCandidates(candidates) {
+		batch = 1
+	}
 	if batch > 1 {
 		return s.updateCandidatesConcurrent(candidates, cli, batch)
 	}
@@ -42,7 +48,7 @@ func (s UpdateService) UpdateCandidates(candidates []OutdatedItem, cli install.O
 		if s.OnUpdateStart != nil {
 			s.OnUpdateStart(index, len(candidates), item.Name)
 		}
-		result, err := s.UpdatePackage(item.Name, cli)
+		result, err := s.updateCandidate(item, cli)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", item.Name, err))
 			continue
@@ -54,6 +60,35 @@ func (s UpdateService) UpdateCandidates(candidates []OutdatedItem, cli install.O
 		})
 	}
 	return results, updateCandidatesError(failures)
+}
+
+func hasExternalCandidates(candidates []OutdatedItem) bool {
+	for _, item := range candidates {
+		if item.Manager != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// updateCandidate updates one candidate: external packages go through their own
+// manager, everything else through the installer.
+func (s UpdateService) updateCandidate(item OutdatedItem, cli install.Options) (RunResult, error) {
+	if item.Manager == "" {
+		return s.UpdatePackage(item.Name, cli)
+	}
+	if s.External == nil {
+		return RunResult{}, fmt.Errorf("external manager service is required")
+	}
+	result, err := s.External.Upgrade(context.Background(), item.Manager, []string{item.Name})
+	if err != nil {
+		return RunResult{}, err
+	}
+	return RunResult{
+		Tool:    item.Name,
+		Asset:   item.Repo,
+		Version: result.To,
+	}, nil
 }
 
 func isAppInstallService(installer Installer) bool {
@@ -82,7 +117,7 @@ func (s UpdateService) updateCandidatesConcurrent(candidates []OutdatedItem, cli
 		go func() {
 			defer wg.Done()
 			for work := range jobs {
-				result, err := s.UpdatePackage(work.item.Name, cli)
+				result, err := s.updateCandidate(work.item, cli)
 				if err != nil {
 					mu.Lock()
 					failures = append(failures, fmt.Errorf("%s: %w", work.item.Name, err))

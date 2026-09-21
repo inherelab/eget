@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
+	"github.com/inherelab/eget/internal/extpkg"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	"github.com/inherelab/eget/internal/util"
@@ -38,6 +40,9 @@ type ListItem struct {
 	InstallMode    string
 	Prerelease     bool
 	IgnoreUpdate   bool
+	// Manager is the external package manager that owns this package, empty for
+	// packages eget installed itself.
+	Manager string
 }
 
 type OutdatedItem struct {
@@ -48,6 +53,45 @@ type OutdatedItem struct {
 	LatestTag    string
 	InstalledAt  time.Time
 	PublishedAt  time.Time
+	// Manager is set for packages owned by an external package manager.
+	Manager string
+}
+
+// Managers modes decide which external packages take part in list and update.
+// The zero value (or "off") keeps eget's behavior unchanged.
+const (
+	ManagersModeOff  = "off"
+	ManagersModeWith = "with"
+	ManagersModeOnly = "only"
+)
+
+// ManagersSelection is the resolved choice of which external managers take part
+// in list/update. It is produced by the CLI from its flags and [global]
+// managers_mode, so config can only yield off and with.
+type ManagersSelection struct {
+	Mode string
+	// Managers restricts the selection to these manager names. Empty while Mode
+	// is not off means "every configured manager".
+	Managers []string
+}
+
+// Enabled reports whether any external manager takes part.
+func (s ManagersSelection) Enabled() bool {
+	return s.Mode == ManagersModeWith || s.Mode == ManagersModeOnly
+}
+
+// OnlyManagers reports whether eget's own packages are excluded.
+func (s ManagersSelection) OnlyManagers() bool { return s.Mode == ManagersModeOnly }
+
+// ExternalProvider lists and upgrades packages owned by external managers. It
+// is implemented by extpkg.Service; the manager name list filters the work so a
+// single-manager selection does not run every manager.
+type ExternalProvider interface {
+	List(ctx context.Context, only ...string) ([]extpkg.Package, []extpkg.Failure, error)
+	Outdated(ctx context.Context, only ...string) ([]extpkg.Package, []extpkg.Failure, error)
+	Upgrade(ctx context.Context, managerName string, names []string) (extpkg.UpgradeResult, error)
+	Manager(name string) (extpkg.Manager, bool)
+	Names() []string
 }
 
 type OutdatedCheckFailure struct {
@@ -83,6 +127,13 @@ type ListService struct {
 	LoadInstalled func() (*storepkg.Config, error)
 	LatestInfo    LatestInfoFunc
 	OnCheckDone   func(checked, total int)
+	// External and Managers add packages owned by external managers. Both are
+	// optional: with a zero ManagersSelection nothing external runs at all.
+	External ExternalProvider
+	Managers ManagersSelection
+	// OnExternalFailure reports a manager-level failure while listing. It is a
+	// callback because list has no failure channel of its own.
+	OnExternalFailure func(extpkg.Failure)
 }
 
 func (s ListService) ListPackages() ([]ListItem, error) {
@@ -192,7 +243,96 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 	for _, name := range names {
 		items = append(items, byName[name])
 	}
+
+	external := s.externalItems(ignoredUpdates)
+	if s.Managers.OnlyManagers() {
+		return external, nil
+	}
+	if len(external) == 0 {
+		return items, nil
+	}
+	items = append(items, external...)
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Name != items[j].Name {
+			return items[i].Name < items[j].Name
+		}
+		return items[i].Manager < items[j].Manager
+	})
 	return items, nil
+}
+
+// externalItems lists the packages of the selected external managers. With a
+// zero ManagersSelection nothing is run and no process is started.
+func (s ListService) externalItems(ignored map[string]bool) []ListItem {
+	if !s.Managers.Enabled() || s.External == nil {
+		return nil
+	}
+	packages, failures, err := s.External.List(context.Background(), s.Managers.Managers...)
+	for _, failure := range failures {
+		if s.OnExternalFailure != nil {
+			s.OnExternalFailure(failure)
+		}
+	}
+	if err != nil {
+		if s.OnExternalFailure != nil {
+			s.OnExternalFailure(extpkg.Failure{Err: err})
+		}
+		return nil
+	}
+
+	items := make([]ListItem, 0, len(packages))
+	for _, pkg := range packages {
+		ref := pkg.Manager + ":" + pkg.Name
+		items = append(items, ListItem{
+			Name:         pkg.Name,
+			Repo:         ref,
+			Manager:      pkg.Manager,
+			Version:      pkg.Version,
+			InstalledTag: pkg.Version,
+			Installed:    true,
+			IgnoreUpdate: ignored[pkg.Name] || ignored[ref],
+		})
+	}
+	return items
+}
+
+// externalOutdatedItems collects the outdated packages of the selected external
+// managers, honouring ignore_update_packages the same way the repo checks do.
+func (s ListService) externalOutdatedItems(ignored map[string]bool) ([]OutdatedItem, []OutdatedCheckFailure, int) {
+	if !s.Managers.Enabled() || s.External == nil {
+		return nil, nil, 0
+	}
+	packages, failures, err := s.External.Outdated(context.Background(), s.Managers.Managers...)
+	if err != nil {
+		return nil, []OutdatedCheckFailure{{Name: "managers", Error: err}}, 0
+	}
+
+	outdated := make([]OutdatedItem, 0, len(packages))
+	for _, pkg := range packages {
+		ref := pkg.Manager + ":" + pkg.Name
+		if ignored[pkg.Name] || ignored[ref] {
+			continue
+		}
+		outdated = append(outdated, OutdatedItem{
+			Name:         pkg.Name,
+			Repo:         ref,
+			InstalledTag: pkg.Version,
+			LatestTag:    pkg.Latest,
+			Manager:      pkg.Manager,
+		})
+	}
+
+	// A manager-level failure names the manager in both fields so the existing
+	// "check_failed %s (%s)" output does not render empty parentheses.
+	checkFailures := make([]OutdatedCheckFailure, 0, len(failures))
+	for _, failure := range failures {
+		checkFailures = append(checkFailures, OutdatedCheckFailure{
+			Name:  failure.Manager,
+			Repo:  failure.Manager,
+			Error: failure.Err,
+		})
+	}
+	return outdated, checkFailures, len(packages)
 }
 
 func resolveListItemPackageTemplate(cfg *cfgpkg.File, item ListItem) ListItem {
@@ -304,7 +444,27 @@ func (s ListService) ListOutdatedPackages() ([]OutdatedItem, []OutdatedCheckFail
 		return nil, nil, 0, err
 	}
 
-	outdated, failures, checked := checkOutdatedItems(items, s.LatestInfo, nil, batchConcurrencyFromConfig(cfg, install.Options{}), s.OnCheckDone)
+	var outdated []OutdatedItem
+	var failures []OutdatedCheckFailure
+	checked := 0
+	if !s.Managers.OnlyManagers() {
+		batch := batchConcurrencyFromConfig(cfg, install.Options{})
+		outdated, failures, checked = checkOutdatedItems(items, s.LatestInfo, nil, batch, s.OnCheckDone)
+	}
+
+	// External packages are checked by their own manager, in one batched call
+	// per selected manager rather than one check per package.
+	externalOutdated, externalFailures, externalChecked := s.externalOutdatedItems(ignoreUpdatePackageSet(cfg))
+	outdated = append(outdated, externalOutdated...)
+	failures = append(failures, externalFailures...)
+	checked += externalChecked
+
+	sort.SliceStable(outdated, func(i, j int) bool {
+		if outdated[i].Name != outdated[j].Name {
+			return outdated[i].Name < outdated[j].Name
+		}
+		return outdated[i].Manager < outdated[j].Manager
+	})
 	return outdated, failures, checked, nil
 }
 
@@ -318,6 +478,11 @@ func checkOutdatedItems(items []ListItem, latestInfo LatestInfoFunc, include fun
 			continue
 		}
 		if item.IgnoreUpdate {
+			continue
+		}
+		// External packages are checked by their own manager, never through
+		// LatestInfoFunc (which would treat "npm:x" as a GitHub repo).
+		if item.Manager != "" {
 			continue
 		}
 		eligible = append(eligible, item)

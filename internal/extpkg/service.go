@@ -75,10 +75,11 @@ func (s Service) Path(manager Manager) (string, bool) {
 	return path, true
 }
 
-// List returns the packages installed by every available manager. Managers that
-// are missing or fail are reported as failures instead of aborting the rest.
-func (s Service) List(ctx context.Context) ([]Package, []Failure, error) {
-	return s.collect(ctx, func(manager Manager) ([]string, error) {
+// List returns the packages installed by the given managers (all of them when
+// only is empty). Managers that are missing or fail are reported as failures
+// instead of aborting the rest.
+func (s Service) List(ctx context.Context, only ...string) ([]Package, []Failure, error) {
+	return s.collect(ctx, only, func(manager Manager) ([]string, error) {
 		if !manager.SupportsList() {
 			return nil, errNoListArgs
 		}
@@ -88,8 +89,8 @@ func (s Service) List(ctx context.Context) ([]Package, []Failure, error) {
 
 // Outdated returns the packages that are behind, using only the managers that
 // can detect it.
-func (s Service) Outdated(ctx context.Context) ([]Package, []Failure, error) {
-	return s.collect(ctx, func(manager Manager) ([]string, error) {
+func (s Service) Outdated(ctx context.Context, only ...string) ([]Package, []Failure, error) {
+	return s.collect(ctx, only, func(manager Manager) ([]string, error) {
 		if !manager.SupportsOutdated() {
 			return nil, errNoOutdatedSupport
 		}
@@ -106,9 +107,9 @@ var (
 type commandFunc func(manager Manager) ([]string, error)
 type parseFunc func(manager Manager, res CommandResult) ([]Package, error)
 
-// collect runs one command per available manager concurrently and merges the
-// results in name order.
-func (s Service) collect(ctx context.Context, argsFor commandFunc, parse parseFunc) ([]Package, []Failure, error) {
+// collect runs one command per selected, available manager concurrently and
+// merges the results in name order.
+func (s Service) collect(ctx context.Context, only []string, argsFor commandFunc, parse parseFunc) ([]Package, []Failure, error) {
 	if s.Runner == nil {
 		return nil, nil, fmt.Errorf("manager runner is required")
 	}
@@ -118,9 +119,17 @@ func (s Service) collect(ctx context.Context, argsFor commandFunc, parse parseFu
 		failure  *Failure
 	}
 
+	selected := make(map[string]bool, len(only))
+	for _, name := range only {
+		selected[name] = true
+	}
+
 	managers := make([]Manager, 0, len(s.Managers))
 	paths := make(map[string]string, len(s.Managers))
 	for _, manager := range s.Managers {
+		if len(only) > 0 && !selected[manager.Name] {
+			continue
+		}
 		path, ok := s.Path(manager)
 		if !ok {
 			// Not installed (or not on PATH) is not a failure: skip quietly.
