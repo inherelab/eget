@@ -113,8 +113,18 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		s.updService.OnUpdateStart = func(index, total int, name string) {
 			printUpdateSeparator(index)
 		}
+		prevOnUpdateDone := s.updService.OnUpdateDone
+		s.updService.OnUpdateDone = func(item app.OutdatedItem, _ app.RunResult, err error) {
+			// Eget packages print their own install progress; external ones
+			// would stay silent.
+			if err != nil || item.Manager == "" {
+				return
+			}
+			printExternalUpdateDone(item.Repo, item.InstalledTag, item.LatestTag)
+		}
 		defer func() {
 			s.updService.OnUpdateStart = prevOnUpdateStart
+			s.updService.OnUpdateDone = prevOnUpdateDone
 		}()
 		_, err = s.updService.UpdateCandidates(items, installOpts)
 		return err
@@ -138,6 +148,10 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		}
 		if !result.Updated {
 			ccolor.Cyanf("%s is already up to date: %s\n", target, result.InstalledTag)
+			continue
+		}
+		if result.Manager != "" {
+			printExternalUpdateDone(result.Target, result.InstalledTag, result.LatestTag)
 		}
 	}
 	if len(failures) > 0 {
@@ -145,6 +159,16 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		return fmt.Errorf("%d update failed: %s", len(failures), strings.Join(failedTargets, ", "))
 	}
 	return nil
+}
+
+// printExternalUpdateDone reports one package upgraded through its external
+// manager, which prints nothing on its own.
+func printExternalUpdateDone(ref, from, to string) {
+	if to != "" && to != from {
+		ccolor.Successf("✅ updated %s %s -> %s\n", ref, from, to)
+		return
+	}
+	ccolor.Successf("✅ updated %s\n", ref)
 }
 
 func (s *cliService) updateCandidatesForPrompt(targets []string) ([]app.OutdatedItem, error) {

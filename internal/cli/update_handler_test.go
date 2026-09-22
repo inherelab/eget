@@ -12,6 +12,7 @@ import (
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/app"
 	cfgpkg "github.com/inherelab/eget/internal/config"
+	"github.com/inherelab/eget/internal/extpkg"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	"github.com/inherelab/eget/internal/util"
 )
@@ -166,6 +167,33 @@ func TestHandleUpdateNamesEveryFailedTarget(t *testing.T) {
 
 	assert.Err(t, err)
 	assert.Eq(t, "2 update failed: codex, uv", err.Error())
+}
+
+func TestHandleUpdatePrintsExternalUpdateDone(t *testing.T) {
+	ext := newFakeExtService()
+	ext.packages = []extpkg.Package{{Manager: "npm", Name: "typescript", Version: "5.8.0"}}
+	ext.outdated = []extpkg.Package{{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"}}
+	svc := &cliService{
+		stderr:     &bytes.Buffer{},
+		extService: ext,
+		cfgService: app.ConfigService{Load: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil }},
+		updService: app.UpdateService{
+			LoadConfig: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil },
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{}}, nil
+			},
+			External: ext,
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	err := svc.handleUpdate(&UpdateOptions{Targets: []string{"npm:typescript"}})
+
+	assert.NoErr(t, err)
+	assert.Contains(t, ccolor.ClearCode(out.String()), "✅ updated npm:typescript 5.8.0 -> 5.9.2")
 }
 
 func TestHandleUpdatePrintsAlreadyUpToDateTarget(t *testing.T) {

@@ -49,6 +49,9 @@ func (s UpdateService) UpdateCandidates(candidates []OutdatedItem, cli install.O
 			s.OnUpdateStart(index, len(candidates), item.Name)
 		}
 		result, err := s.updateCandidate(item, cli)
+		if s.OnUpdateDone != nil {
+			s.OnUpdateDone(item, result, err)
+		}
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", item.Name, err))
 			continue
@@ -118,6 +121,9 @@ func (s UpdateService) updateCandidatesConcurrent(candidates []OutdatedItem, cli
 			defer wg.Done()
 			for work := range jobs {
 				result, err := s.updateCandidate(work.item, cli)
+				if s.OnUpdateDone != nil {
+					s.OnUpdateDone(work.item, result, err)
+				}
 				if err != nil {
 					mu.Lock()
 					failures = append(failures, fmt.Errorf("%s: %w", work.item.Name, err))

@@ -21,6 +21,11 @@ type UpdateService struct {
 	LatestInfo    LatestInfoFunc
 	OnCheckDone   func(checked, total int)
 	OnUpdateStart func(index, total int, name string)
+	// OnUpdateDone reports every finished candidate update. External
+	// candidates are silent otherwise: their manager output is captured, not
+	// printed like the installer's own progress. Concurrent batch updates
+	// call it from several goroutines.
+	OnUpdateDone func(item OutdatedItem, result RunResult, err error)
 	// External and Managers let updates reach packages owned by external
 	// managers. Both are optional: with a zero ManagersSelection only explicit
 	// "manager:pkg" targets work.
@@ -35,8 +40,10 @@ type UpdateResult struct {
 }
 
 type UpdatePackageResult struct {
-	Name         string
-	Target       string
+	Name   string
+	Target string
+	// Manager is set for packages owned by an external package manager.
+	Manager      string
 	InstalledTag string
 	LatestTag    string
 	Updated      bool
@@ -175,7 +182,7 @@ func (s UpdateService) updateExternalPackage(managerName, pkgName string) (Updat
 	if !ok {
 		return UpdatePackageResult{}, fmt.Errorf("unknown manager %q", managerName)
 	}
-	status := UpdatePackageResult{Name: pkgName, Target: managerName + ":" + pkgName}
+	status := UpdatePackageResult{Name: pkgName, Target: managerName + ":" + pkgName, Manager: managerName}
 
 	latest := ""
 	if manager.SupportsOutdated() {

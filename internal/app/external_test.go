@@ -277,6 +277,27 @@ func TestListOutdatedPackagesOnlySkipsRepoChecks(t *testing.T) {
 	assert.Eq(t, "typescript", outdated[0].Name)
 }
 
+func TestUpdateCandidatesCallsOnUpdateDone(t *testing.T) {
+	external := newFakeExternal()
+	var done []string
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil },
+		External:   external,
+		Managers:   ManagersSelection{Mode: ManagersModeWith},
+		OnUpdateDone: func(item OutdatedItem, _ RunResult, err error) {
+			assert.NoErr(t, err)
+			done = append(done, item.Repo)
+		},
+	}
+
+	_, err := svc.UpdateCandidates([]OutdatedItem{
+		{Name: "typescript", Repo: "npm:typescript", Manager: "npm"},
+	}, install.Options{})
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"npm:typescript"}, done)
+	assert.Eq(t, []string{"npm:typescript"}, external.upgraded)
+}
+
 func TestListOutdatedPackagesOffDoesNotTouchExternal(t *testing.T) {
 	external := newFakeExternal()
 	svc := repoListService(map[string]storepkg.Entry{})
