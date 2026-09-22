@@ -342,9 +342,10 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		}
 		result.URL = url
 		result.Tool = tool
-		if result.Asset == "" {
-			result.Asset = assetName
-		}
+		// Keep the published asset name: the previous selection on the next run is
+		// matched against the release asset list, and a cache/archive file name
+		// would never match.
+		result.Asset = assetName
 		return result, nil
 	}
 

@@ -47,8 +47,10 @@ func (r *InstallRunner) launchGUIInstaller(path string, file ExtractedFile, opts
 	if err := launcher.LaunchInstaller(path, kind); err != nil {
 		return RunResult{}, err
 	}
+	// Asset is left for the caller: it must be the published asset name. The
+	// materialized path is a cache file name (with version and URL hash) or an
+	// archive member, neither of which matches the asset list later.
 	return RunResult{
-		Asset:         filepath.Base(path),
 		IsGUI:         true,
 		InstallMode:   InstallModeInstaller,
 		InstallerFile: path,

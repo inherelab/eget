@@ -237,7 +237,7 @@ func TestRunDirectInstallerUsesCacheFile(t *testing.T) {
 	runner.Stderr = io.Discard
 	runner.ConfirmLaunchInstaller = func(file string) (bool, error) { return true, nil }
 
-	_, err := runner.Run(assetURL, Options{
+	result, err := runner.Run(assetURL, Options{
 		CacheDir:    cacheDir,
 		IsGUI:       true,
 		InstallMode: InstallModeInstaller,
@@ -246,6 +246,9 @@ func TestRunDirectInstallerUsesCacheFile(t *testing.T) {
 	expected := CacheFilePathWithMeta(cacheDir, assetURL, CacheMeta{})
 	assert.Eq(t, expected, launcher.path)
 	assert.Eq(t, InstallerKindMSI, launcher.kind)
+	// Asset must stay the published name, not the cache file name: the previous
+	// selection is matched against the release asset list on the next run.
+	assert.Eq(t, "PowerShell-7.6.3-win-x64.msi", result.Asset)
 	_, statErr := os.Stat(filepath.Join(cacheDir, "installers"))
 	assert.True(t, os.IsNotExist(statErr))
 }
@@ -283,10 +286,13 @@ func TestRunInstallerArchiveMaterializesSelectedFile(t *testing.T) {
 	runner.Stderr = io.Discard
 	runner.ConfirmLaunchInstaller = func(file string) (bool, error) { return true, nil }
 
-	_, err := runner.Run(assetURL, Options{CacheDir: cacheDir})
+	result, err := runner.Run(assetURL, Options{CacheDir: cacheDir})
 	assert.NoErr(t, err)
 	assert.Eq(t, filepath.Join(cacheDir, "installers", "Setup.exe"), launcher.path)
 	assert.Eq(t, InstallerKindEXE, launcher.kind)
+	// Even though the launched file is the archive member, the recorded asset is
+	// the published archive.
+	assert.Eq(t, "tool.zip", result.Asset)
 }
 
 func TestDefaultConfirmLaunchInstallerTreatsBlankLineAsCancel(t *testing.T) {
