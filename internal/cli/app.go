@@ -10,6 +10,7 @@ import (
 	"github.com/gookit/color"
 	"github.com/gookit/gcli/v3"
 	clirender "github.com/inherelab/eget/internal/cli/render"
+	"github.com/inherelab/eget/internal/extpkg"
 )
 
 var (
@@ -105,7 +106,8 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 
 	inner := gcli.NewApp(gcli.NotExitOnEnd())
 	inner.Name = "eget"
-	inner.Desc = "Easy install and download tools from GitHub, SourceForge and more"
+	inner.Desc = "Easy install and download tools from GitHub, SourceForge and more" +
+		" (external package managers: " + strings.Join(extpkg.BuiltinNames(), ",") + ")"
 	inner.Version = buildVersionString()
 	verbose := false
 	noProxy := false
