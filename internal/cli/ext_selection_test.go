@@ -59,7 +59,7 @@ func selectionService(mode string) *cliService {
 			Load: func() (*cfgpkg.File, error) {
 				cfg := cfgpkg.NewFile()
 				if mode != "" {
-					cfg.Global.ExtMode = util.StringPtr(mode)
+					cfg.Global.ExtPackageMode = util.StringPtr(mode)
 				}
 				return cfg, nil
 			},
@@ -90,7 +90,7 @@ func TestResolveExtSelectionFromGlobalMode(t *testing.T) {
 func TestResolveExtSelectionRejectsUnknownMode(t *testing.T) {
 	_, err := selectionService("with").resolveExtSelection("", "")
 	assert.Err(t, err)
-	assert.Contains(t, err.Error(), "ext_mode")
+	assert.Contains(t, err.Error(), "ext_package_mode")
 }
 
 func TestResolveExtSelectionFlags(t *testing.T) {

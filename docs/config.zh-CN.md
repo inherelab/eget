@@ -117,7 +117,7 @@ batch_concurrency = 0
 ignore_update_packages = []
 sdk_target = "~/.local/sdks"
 sdk_ext_map = { windows = "zip", linux = "tar.gz", darwin = "tar.gz" }
-ext_mode = "off"
+ext_package_mode = "off"
 ```
 
 字段说明：
@@ -134,7 +134,7 @@ ext_mode = "off"
 - `ignore_update_packages`: 在 `list --outdated`、`update --check`、`update --all` 中跳过的 package 名称。
 - `sdk_target`: SDK 安装根目录。SDK 配置里的相对 `target` 会基于该目录解析。
 - `sdk_ext_map`: SDK 默认归档扩展名映射，key 使用 Go OS 名称。SDK 级别 `ext_map` 会覆盖它。
-- `ext_mode`: 外部管理器安装的包是否参与 `list` / `update`。`off`（默认）保持现有行为且不启动任何管理器进程；`on` 让两个命令默认包含全部已配置管理器，等价于默认带 `--with-ext all`。其他取值会报错。
+- `ext_package_mode`: 外部管理器安装的包是否参与 `list` / `update`。`off`（默认）保持现有行为且不启动任何管理器进程；`on` 让两个命令默认包含全部已配置管理器，等价于默认带 `--with-ext all`。其他取值会报错。
 
 目录语义：
 

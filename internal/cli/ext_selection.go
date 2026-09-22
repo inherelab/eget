@@ -17,13 +17,13 @@ import (
 // here.
 const extSelectAll = "all"
 
-// extModeOn is the only enabling value of [global] ext_mode.
-const extModeOn = "on"
+// extPackageModeOn is the only enabling value of [global] ext_package_mode.
+const extPackageModeOn = "on"
 
 // resolveExtSelection turns the --ext / --with-ext flags and the
-// [global] ext_mode default into the selection used by list and update.
+// [global] ext_package_mode default into the selection used by list and update.
 //
-// Precedence: flags > ext_mode > off. A zero selection is off and starts
+// Precedence: flags > ext_package_mode > off. A zero selection is off and starts
 // no manager process at all.
 func (s *cliService) resolveExtSelection(extFlag, withExtFlag string) (app.ManagersSelection, error) {
 	extFlag = strings.TrimSpace(extFlag)
@@ -47,11 +47,11 @@ func (s *cliService) resolveExtSelection(extFlag, withExtFlag string) (app.Manag
 		return app.ManagersSelection{Mode: app.ManagersModeWith, Managers: names}, nil
 	}
 
-	mode, err := s.configuredExtMode()
+	mode, err := s.configuredExtPackageMode()
 	if err != nil {
 		return app.ManagersSelection{}, err
 	}
-	if mode == extModeOn {
+	if mode == extPackageModeOn {
 		return app.ManagersSelection{Mode: app.ManagersModeWith}, nil
 	}
 	return app.ManagersSelection{Mode: app.ManagersModeOff}, nil
@@ -97,23 +97,23 @@ func (s *cliService) managerNames() []string {
 	return s.extService.Names()
 }
 
-// configuredExtMode reads [global] ext_mode, defaulting to off.
-func (s *cliService) configuredExtMode() (string, error) {
+// configuredExtPackageMode reads [global] ext_package_mode, defaulting to off.
+func (s *cliService) configuredExtPackageMode() (string, error) {
 	cfg, err := s.loadConfigFile()
 	if err != nil {
 		return "", err
 	}
-	if cfg == nil || cfg.Global.ExtMode == nil {
+	if cfg == nil || cfg.Global.ExtPackageMode == nil {
 		return app.ManagersModeOff, nil
 	}
-	mode := strings.ToLower(strings.TrimSpace(*cfg.Global.ExtMode))
+	mode := strings.ToLower(strings.TrimSpace(*cfg.Global.ExtPackageMode))
 	switch mode {
 	case "", app.ManagersModeOff:
 		return app.ManagersModeOff, nil
-	case extModeOn:
-		return extModeOn, nil
+	case extPackageModeOn:
+		return extPackageModeOn, nil
 	default:
-		return "", fmt.Errorf("invalid global.ext_mode %q, want %q or %q", mode, app.ManagersModeOff, extModeOn)
+		return "", fmt.Errorf("invalid global.ext_package_mode %q, want %q or %q", mode, app.ManagersModeOff, extPackageModeOn)
 	}
 }
 

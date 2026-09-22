@@ -458,7 +458,7 @@ func TestHandleConfigListShowsExt(t *testing.T) {
 	configPath := filepath.Join(tmp, "eget.toml")
 	writeCLIFile(t, configPath, `
 [global]
-ext_mode = "on"
+ext_package_mode = "on"
 
 [ext.npm]
 bin = "npm"
@@ -501,5 +501,5 @@ enabled = true
 	assert.Contains(t, got, "npm")
 	assert.Contains(t, got, "scoop")
 	assert.Contains(t, got, "npm-json")
-	assert.Contains(t, got, "ext_mode")
+	assert.Contains(t, got, "ext_package_mode")
 }

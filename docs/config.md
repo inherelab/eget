@@ -117,7 +117,7 @@ batch_concurrency = 0
 ignore_update_packages = []
 sdk_target = "~/.local/sdks"
 sdk_ext_map = { windows = "zip", linux = "tar.gz", darwin = "tar.gz" }
-ext_mode = "off"
+ext_package_mode = "off"
 ```
 
 Fields:
@@ -134,7 +134,7 @@ Fields:
 - `ignore_update_packages`: package names skipped by `list --outdated`, `update --check`, and `update --all`.
 - `sdk_target`: SDK installation root. Relative SDK `target` values are resolved under this root.
 - `sdk_ext_map`: default SDK archive extension map by Go OS name. SDK-level `ext_map` overrides it.
-- `ext_mode`: whether packages owned by external managers take part in `list` and `update`. `off` (default) keeps the current behavior and starts no manager process; `on` makes both commands include every configured manager, as if `--with-ext all` was passed. Any other value is an error.
+- `ext_package_mode`: whether packages owned by external managers take part in `list` and `update`. `off` (default) keeps the current behavior and starts no manager process; `on` makes both commands include every configured manager, as if `--with-ext all` was passed. Any other value is an error.
 
 Directory semantics:
 

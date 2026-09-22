@@ -10,7 +10,7 @@ import (
 
 const extConfigTOML = `
 [global]
-ext_mode = "on"
+ext_package_mode = "on"
 
 [ext.npm]
 bin = "npm"
@@ -40,7 +40,7 @@ func TestLoadFileReadsManagerSections(t *testing.T) {
 		t.Fatalf("load config: %v", err)
 	}
 
-	assert.Eq(t, "on", *cfg.Global.ExtMode)
+	assert.Eq(t, "on", *cfg.Global.ExtPackageMode)
 	assert.Eq(t, 2, len(cfg.Ext))
 
 	npm := cfg.Ext["npm"]
@@ -83,7 +83,7 @@ func TestSaveRoundTripsManagerSections(t *testing.T) {
 		t.Fatalf("reload config: %v", err)
 	}
 
-	assert.Eq(t, "on", *reloaded.Global.ExtMode)
+	assert.Eq(t, "on", *reloaded.Global.ExtPackageMode)
 	assert.Eq(t, 2, len(reloaded.Ext))
 	assert.Eq(t, []string{"ls", "-g", "--depth=0", "--json"}, reloaded.Ext["npm"].ListArgs)
 	assert.Eq(t, "npm-json", *reloaded.Ext["npm"].Parser)
@@ -95,7 +95,7 @@ func TestSaveRoundTripsManagerSections(t *testing.T) {
 func TestDumpConfigStringIncludesExt(t *testing.T) {
 	cfg := NewFile()
 	mode := "off"
-	cfg.Global.ExtMode = &mode
+	cfg.Global.ExtPackageMode = &mode
 	bin := "npm"
 	parser := "npm-json"
 	cfg.Ext["npm"] = ManagerSection{
@@ -111,7 +111,7 @@ func TestDumpConfigStringIncludesExt(t *testing.T) {
 		t.Fatalf("dump config string: %v", err)
 	}
 
-	assert.Contains(t, text, `ext_mode = "off"`)
+	assert.Contains(t, text, `ext_package_mode = "off"`)
 	assert.Contains(t, text, "[ext.npm]")
 	assert.Contains(t, text, `bin = "npm"`)
 	assert.Contains(t, text, `parser = "npm-json"`)

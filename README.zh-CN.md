@@ -335,7 +335,7 @@ eget config set global.target ~/.local/bin
 - 使用 `--all` / `-a` 列出本地 managed packages 与 installed store 的并集。
 - 使用 `--no-installed` / `--ni` 列出 `[packages]` 中已配置但未安装的包。
 - 使用 `--gui` 只显示当前列表视图中的 GUI 应用。
-- 使用 `--with-ext all|npm,bun` 一并列出这些外部管理器的包，或用 `--ext ...` 只列出它们的包。未使用这两个选项且 `global.ext_mode` 为默认 `off` 时，不会启动任何外部管理器进程。
+- 使用 `--with-ext all|npm,bun` 一并列出这些外部管理器的包，或用 `--ext ...` 只列出它们的包。未使用这两个选项且 `global.ext_package_mode` 为默认 `off` 时，不会启动任何外部管理器进程。
 
 `show`
 
@@ -579,7 +579,7 @@ npm、pnpm、uv、pipx、cargo、bun 安装的包可以参与 `eget list` 与 `e
 [global]
 # off（默认）= 只有显式选择时才展示外部包
 # on         = list 与 update 默认带上全部可用管理器
-ext_mode = "off"
+ext_package_mode = "off"
 ```
 
 ```bash

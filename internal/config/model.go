@@ -14,7 +14,7 @@ type Section struct {
 	GuiTarget            *string           `toml:"gui_target" mapstructure:"gui_target"`
 	IgnoreUpdatePackages []string          `toml:"ignore_update_packages,omitempty" mapstructure:"ignore_update_packages"`
 	IsGUI                *bool             `toml:"is_gui" mapstructure:"is_gui"`
-	ExtMode              *string           `toml:"ext_mode,omitempty" mapstructure:"ext_mode"`
+	ExtPackageMode       *string           `toml:"ext_package_mode,omitempty" mapstructure:"ext_package_mode"`
 	Name                 *string           `toml:"name" mapstructure:"name"`
 	Quiet                *bool             `toml:"quiet" mapstructure:"quiet"`
 	RenameFiles          map[string]string `toml:"rename_files,omitempty" mapstructure:"rename_files"`

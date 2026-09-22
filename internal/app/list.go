@@ -67,7 +67,7 @@ const (
 
 // ManagersSelection is the resolved choice of which external managers take part
 // in list/update. It is produced by the CLI from its flags and [global]
-// ext_mode, so config can only yield off and with.
+// ext_package_mode, so config can only yield off and with.
 type ManagersSelection struct {
 	Mode string
 	// Managers restricts the selection to these manager names. Empty while Mode

@@ -329,8 +329,8 @@ func sectionToMap(section Section) map[string]any {
 	if section.IsGUI != nil {
 		data["is_gui"] = *section.IsGUI
 	}
-	if section.ExtMode != nil && *section.ExtMode != "" {
-		data["ext_mode"] = *section.ExtMode
+	if section.ExtPackageMode != nil && *section.ExtPackageMode != "" {
+		data["ext_package_mode"] = *section.ExtPackageMode
 	}
 	if section.Name != nil {
 		data["name"] = *section.Name

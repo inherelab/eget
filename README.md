@@ -336,7 +336,7 @@ The target argument accepted by `install` and `download` can be:
 - Use `--all` / `-a` to list the union of local managed packages and installed-store entries.
 - Use `--no-installed` / `--ni` to list packages configured in `[packages]` but not installed.
 - Use `--gui` to filter the current list view to GUI applications.
-- Use `--with-ext all|npm,bun` to also list packages owned by those external managers, or `--ext ...` to list only theirs. Nothing external runs unless one of these is given or `global.ext_mode = "on"`.
+- Use `--with-ext all|npm,bun` to also list packages owned by those external managers, or `--ext ...` to list only theirs. Nothing external runs unless one of these is given or `global.ext_package_mode = "on"`.
 
 `show`
 
@@ -586,7 +586,7 @@ Nothing external runs by default. Turn it on per command, or change the default:
 [global]
 # off (default) = external packages are only shown when explicitly selected
 # on            = list and update include every configured manager
-ext_mode = "off"
+ext_package_mode = "off"
 ```
 
 ```bash

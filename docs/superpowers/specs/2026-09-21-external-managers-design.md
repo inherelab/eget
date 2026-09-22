@@ -1,6 +1,6 @@
 # 外部包管理器纳入管理设计
 
-> **命名更新（2026-09-22）**：本文写作时的 `managers` 命名已更名为 `ext`：`eget managers` → `eget ext`（别名 `external`）、`--managers` / `--with-managers` → `--ext` / `--with-ext`、`[managers.<name>]` → `[ext.<name>]`、`managers_mode` → `ext_mode`。正文保留当时的命名作为决策记录，实现与 README 以新名为准。
+> **命名更新（2026-09-22）**：本文写作时的 `managers` 命名已更名为 `ext`：`eget managers` → `eget ext`（别名 `external`）、`--managers` / `--with-managers` → `--ext` / `--with-ext`、`[managers.<name>]` → `[ext.<name>]`、`managers_mode` → `ext_package_mode`。正文保留当时的命名作为决策记录，实现与 README 以新名为准。
 
 ## 背景
 
