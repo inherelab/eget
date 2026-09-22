@@ -222,6 +222,57 @@ func TestParseOutdatedBunText(t *testing.T) {
 	})
 }
 
+func TestParseListScoopTable(t *testing.T) {
+	manager := Manager{Name: "scoop", Parser: ParserScoopTable}
+	packages, err := ParseList(manager, CommandResult{Stdout: readFixture(t, "scoop-list.txt")})
+	assert.NoErr(t, err)
+	assert.Eq(t, 9, len(packages))
+	byName := map[string]Package{}
+	for _, pkg := range packages {
+		byName[pkg.Name] = pkg
+	}
+	assert.Eq(t, "26.01", byName["7zip"].Version)
+	assert.Eq(t, "3.4.0", byName["CascadiaMono-NF-Mono"].Version)
+	assert.Eq(t, "14.51.36231.0", byName["vcredist2022"].Version)
+	if _, ok := byName["Name"]; ok {
+		t.Fatal("table header must not be parsed as a package")
+	}
+}
+
+func TestParseOutdatedScoopTable(t *testing.T) {
+	manager := Manager{Name: "scoop", Parser: ParserScoopTable}
+	packages, err := ParseOutdated(manager, CommandResult{Stdout: readFixture(t, "scoop-status.txt")})
+	assert.NoErr(t, err)
+	assert.Eq(t, 7, len(packages))
+	byName := map[string]Package{}
+	for _, pkg := range packages {
+		byName[pkg.Name] = pkg
+	}
+	// The leading WARN notice line must not become a package.
+	sevenZip := byName["7zip"]
+	assert.Eq(t, "26.01", sevenZip.Version)
+	assert.Eq(t, "26.03", sevenZip.Latest)
+	assert.Eq(t, "1.24.11911.0", byName["windows-terminal"].Latest)
+	if _, ok := byName["WARN"]; ok {
+		t.Fatal("notice lines must not be parsed as a package")
+	}
+}
+
+func TestParseOutdatedScoopTableStripsANSIColors(t *testing.T) {
+	// PowerShell's Format-Table colors header and separator cells (measured
+	// on scoop 0.5.3), so those rows arrive escape-prefixed.
+	manager := Manager{Name: "scoop", Parser: ParserScoopTable}
+	body := "\x1b[32;1mName                \x1b[0m \x1b[32;1m Installed Version\x1b[0m \x1b[32;1m Latest Version\x1b[0m\n" +
+		"\x1b[32;1m----                \x1b[0m \x1b[32;1m-----------------\x1b[0m \x1b[32;1m--------------\x1b[0m\n" +
+		"7zip                 26.01             26.03\n"
+	packages, err := ParseOutdated(manager, CommandResult{Stdout: []byte(body)})
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, len(packages))
+	assert.Eq(t, "7zip", packages[0].Name)
+	assert.Eq(t, "26.01", packages[0].Version)
+	assert.Eq(t, "26.03", packages[0].Latest)
+}
+
 func TestParseLinesRegex(t *testing.T) {
 	manager := Manager{
 		Name:          "scoop",

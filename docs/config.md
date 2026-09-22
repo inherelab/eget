@@ -449,8 +449,8 @@ For SDK usage details, see [sdk-usage.md](sdk-usage.md).
 ## Manager Sections
 
 `[ext.<name>]` describes how to drive one external package manager, so its
-packages can take part in `list` and `update`. Six adapters are built in (npm,
-pnpm, uv, pipx, cargo, bun); a section with the same name overrides the built-in,
+packages can take part in `list` and `update`. Seven adapters are built in (npm,
+pnpm, uv, pipx, cargo, bun, scoop); a section with the same name overrides the built-in,
 `enabled = false` removes it, and a new name adds a manager.
 
 ```toml

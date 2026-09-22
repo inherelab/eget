@@ -273,7 +273,7 @@ managers_mode = "off"    # off | on
 
 ### 4. 内置适配器（含本机实测）
 
-实测环境：Windows，2026-09-21。6 个内置管理器都已在**空态 + 已填充**两种状态下实测：npm 11.12.1、pnpm 12.4.2、uv 0.12.15、bun 1.4.2、pipx 1.17.5、cargo 1.98.1。唯一仍缺的是 **pnpm 的已填充样本**（原因见 §4.7）。
+实测环境：Windows，2026-09-21。6 个内置管理器都已在**空态 + 已填充**两种状态下实测：npm 11.12.1、pnpm 12.4.2、uv 0.12.15、bun 1.4.2、pipx 1.17.5、cargo 1.98.1。唯一仍缺的是 **pnpm 的已填充样本**（原因见 §4.7）。第 7 个内置管理器 **scoop**（0.5.3）于 2026-09-23 补测，实测记录见下表下方。
 
 ⚠️ 本机有 3 个管理器的可执行文件**不在 PATH**（pipx、cargo、pnpm 的 global bin 目录），这直接影响"管理器是否可用"的判定，详见 §4.3 第 9 条。
 
@@ -285,6 +285,31 @@ managers_mode = "off"    # off | on
 | pipx | pipx（常不在 PATH，见 §4.5） | `list --json` | `list --json --outdated` | `upgrade` | `upgrade-all` | pipx-json | ✅ |
 | cargo | cargo（rustup shim，需 `CARGO_HOME`/`RUSTUP_HOME`，见 §4.6） | `install --list` | *(空)* | `install` | *(空)* | cargo-text | ✅ |
 | bun | bun | `pm ls -g` | `outdated -g` | `update -g` | `update -g` | bun-text | ✅ |
+| scoop | `scoop` → `scoop.cmd`（shims） | `list` | `status` | `update` | `update *` | scoop-table | ✅（0.5.3，2026-09-23 补测） |
+
+scoop（0.5.3，2026-09-23 补测）：`scoop list` / `scoop status` 都是**空格对齐表格**（没有 JSON 输出选项），结构为表头 + 分隔线 + 数据行，另有 `Installed apps:`、`WARN ...` 之类的提示行；**PowerShell 的 Format-Table 会给表头/分隔线逐格加 ANSI 颜色**（`\x1b[32;1m...\x1b[0m`），解析前必须先剥转义，否则表头与分隔线会被当成数据行（实测翻车过一次）。`scoop.cmd` shim 可被 `exec.CommandContext` 直接执行（与 `npm.cmd` 同理）。升级单个 `scoop update <pkg>`，全部 `scoop update *`。`scoop status` 只列出有更新的行（Name / Installed Version / Latest Version / Missing Dependencies / Info），`scoop list` 的 Updated 列是"日期 时间"两段，取列时只认前两列。
+
+scoop `list`（原始输出节选）：
+
+```text
+Installed apps:
+
+Name                 Version       Source     Updated             Info
+----                 -------       ------     -------             ----
+7zip                 26.01         main       2026-06-24 15:36:15
+CascadiaMono-NF-Mono 3.4.0         nerd-fonts 2026-05-31 11:59:45
+```
+
+scoop `status`（原始输出节选，只列可更新项；WARN 行在前）：
+
+```text
+WARN  Scoop bucket(s) out of date. Run 'scoop update' to get the latest changes.
+
+Name                 Installed Version Latest Version Missing Dependencies Info
+----                 ----------------- -------------- -------------------- ----
+7zip                 26.01             26.03
+CascadiaMono-NF-Mono 3.4.0             3.5.1
+```
 
 耗时实测（热态，单次）：`npm ls -g` 710ms、`npm outdated -g` 805ms、`pnpm list -g` 37ms、`pnpm outdated -g` 25ms、`uv tool list` 17ms。即 npm 是绝对瓶颈，**按管理器并发后 `list` 的额外耗时 ≈ 最慢管理器（约 0.7~0.8s）**，可接受。
 

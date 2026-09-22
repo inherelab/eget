@@ -14,6 +14,7 @@ const (
 	ParserUVToolText = "uv-tool-text"
 	ParserCargoText  = "cargo-text"
 	ParserBunText    = "bun-text"
+	ParserScoopTable = "scoop-table"
 	ParserLinesRegex = "lines-regex"
 )
 

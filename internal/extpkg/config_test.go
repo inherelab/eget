@@ -32,7 +32,7 @@ func findManager(t *testing.T, managers []Manager, name string) Manager {
 func TestManagersReturnsBuiltins(t *testing.T) {
 	managers := Managers(cfgpkg.NewFile())
 
-	assert.Eq(t, []string{"bun", "cargo", "npm", "pipx", "pnpm", "uv"}, managerNames(managers))
+	assert.Eq(t, []string{"bun", "cargo", "npm", "pipx", "pnpm", "scoop", "uv"}, managerNames(managers))
 
 	npm := findManager(t, managers, "npm")
 	assert.Eq(t, []string{"ls", "-g", "--depth=0", "--json"}, npm.ListArgs)
@@ -90,15 +90,15 @@ func TestManagersDisabledSectionRemovesManager(t *testing.T) {
 			t.Fatalf("pnpm must be removed, got %v", names)
 		}
 	}
-	assert.Eq(t, 5, len(names))
+	assert.Eq(t, 6, len(names))
 }
 
 func TestManagersAddsConfiguredManager(t *testing.T) {
-	bin := "scoop"
+	bin := "winget"
 	parser := "lines-regex"
 	regex := `^(?P<name>\S+)\s+(?P<version>\S+)$`
 	cfg := cfgpkg.NewFile()
-	cfg.Ext["scoop"] = cfgpkg.ManagerSection{
+	cfg.Ext["winget"] = cfgpkg.ManagerSection{
 		Bin:       &bin,
 		Parser:    &parser,
 		ListArgs:  []string{"list"},
@@ -106,12 +106,12 @@ func TestManagersAddsConfiguredManager(t *testing.T) {
 	}
 
 	managers := Managers(cfg)
-	assert.Eq(t, 7, len(managers))
-	scoop := findManager(t, managers, "scoop")
-	assert.Eq(t, "scoop", scoop.Bin)
-	assert.Eq(t, []string{"list"}, scoop.ListArgs)
-	assert.Eq(t, DefaultTimeout, scoop.Timeout)
-	assert.False(t, scoop.SupportsOutdated())
+	assert.Eq(t, 8, len(managers))
+	winget := findManager(t, managers, "winget")
+	assert.Eq(t, "winget", winget.Bin)
+	assert.Eq(t, []string{"list"}, winget.ListArgs)
+	assert.Eq(t, DefaultTimeout, winget.Timeout)
+	assert.False(t, winget.SupportsOutdated())
 }
 
 // An explicit empty list must clear the builtin command, which is how a user

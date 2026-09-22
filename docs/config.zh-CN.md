@@ -448,7 +448,7 @@ SDK 使用细节见 [sdk-usage.md](sdk-usage.md)。
 
 ## Manager 配置
 
-`[ext.<name>]` 描述如何驱动一个外部包管理器，从而让它的包参与 `list` 与 `update`。内置 6 个适配器（npm、pnpm、uv、pipx、cargo、bun）；同名配置块会覆盖内置项，`enabled = false` 移除它，新名字则新增一个管理器。
+`[ext.<name>]` 描述如何驱动一个外部包管理器，从而让它的包参与 `list` 与 `update`。内置 7 个适配器（npm、pnpm、uv、pipx、cargo、bun、scoop）；同名配置块会覆盖内置项，`enabled = false` 移除它，新名字则新增一个管理器。
 
 ```toml
 [ext.npm]

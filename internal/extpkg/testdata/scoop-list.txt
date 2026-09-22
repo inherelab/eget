@@ -1,0 +1,13 @@
+Installed apps:
+
+Name                 Version       Source     Updated             Info
+----                 -------       ------     -------             ----
+7zip                 26.01         main       2026-06-24 15:36:15
+CascadiaMono-NF-Mono 3.4.0         nerd-fonts 2026-05-31 11:59:45
+ffmpeg               8.1.1         main       2026-06-24 15:36:36
+FiraCode-NF-Mono     3.4.0         nerd-fonts 2026-05-31 11:58:33
+JetBrainsMono-NF     3.4.0         nerd-fonts 2026-05-31 11:57:17
+make                 4.4.1         main       2026-05-30 16:14:54
+rustup-msvc          1.29.1        main       2026-09-21 23:48:58
+vcredist2022         14.51.36231.0 extras     2026-05-21 13:38:27
+windows-terminal     1.24.11321.0  extras     2026-05-21 13:35:33

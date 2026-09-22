@@ -67,5 +67,25 @@ func builtinManagers() []Manager {
 			Parser:         ParserBunText,
 			Enabled:        true,
 		},
+		{
+			Name:           "scoop",
+			Bin:            "scoop",
+			ListArgs:       []string{"list"},
+			OutdatedArgs:   []string{"status"},
+			UpgradeArgs:    []string{"update"},
+			UpgradeAllArgs: []string{"update", "*"},
+			Parser:         ParserScoopTable,
+			Enabled:        true,
+		},
 	}
+}
+
+// BuiltinNames lists the built-in manager names in display order.
+func BuiltinNames() []string {
+	managers := builtinManagers()
+	names := make([]string, 0, len(managers))
+	for _, manager := range managers {
+		names = append(names, manager.Name)
+	}
+	return names
 }

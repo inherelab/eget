@@ -255,7 +255,7 @@ eget update --self --check
 
 ### 外部管理器示例
 
-其他工具（npm、pnpm、uv、pipx、cargo、bun）安装的包默认不参与 `list` / `update`，需要显式选择。
+其他工具（npm、pnpm、uv、pipx、cargo、bun、scoop）安装的包默认不参与 `list` / `update`，需要显式选择。
 
 ```bash
 # eget 的包 + npm 的包
@@ -571,7 +571,7 @@ eget sdk config add jdk --mirror zulu
 
 ### 外部管理器配置
 
-npm、pnpm、uv、pipx、cargo、bun 安装的包可以参与 `eget list` 与 `eget update`。这些包**不写入** eget 的安装记录：每次检查都直接询问对应管理器，因此不会有过期快照。
+npm、pnpm、uv、pipx、cargo、bun、scoop 安装的包可以参与 `eget list` 与 `eget update`。这些包**不写入** eget 的安装记录：每次检查都直接询问对应管理器，因此不会有过期快照。
 
 默认不处理它们。可以按命令开启，或修改默认行为：
 

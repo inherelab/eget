@@ -1,0 +1,11 @@
+WARN  Scoop bucket(s) out of date. Run 'scoop update' to get the latest changes.
+
+Name                 Installed Version Latest Version Missing Dependencies Info
+----                 ----------------- -------------- -------------------- ----
+7zip                 26.01             26.03
+CascadiaMono-NF-Mono 3.4.0             3.5.1
+ffmpeg               8.1.1             9.0.2
+FiraCode-NF-Mono     3.4.0             3.5.1
+JetBrainsMono-NF     3.4.0             3.5.1
+vcredist2022         14.51.36231.0     14.51.36247.0
+windows-terminal     1.24.11321.0      1.24.11911.0

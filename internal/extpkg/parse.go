@@ -24,6 +24,8 @@ func ParseList(manager Manager, res CommandResult) ([]Package, error) {
 		return parseCargoList(manager, res)
 	case ParserBunText:
 		return parseBunList(manager, res)
+	case ParserScoopTable:
+		return parseScoopTable(manager, res, false)
 	case ParserLinesRegex:
 		return parseLinesRegex(manager, res, manager.ListRegex, false)
 	default:
@@ -45,6 +47,8 @@ func ParseOutdated(manager Manager, res CommandResult) ([]Package, error) {
 		return parseUVToolList(manager, res)
 	case ParserBunText:
 		return parseBunOutdated(manager, res)
+	case ParserScoopTable:
+		return parseScoopTable(manager, res, true)
 	case ParserCargoText, ParserLinesRegex:
 		return parseLinesRegex(manager, res, manager.OutdatedRegex, true)
 	default:
@@ -322,6 +326,52 @@ func bunHasNoPackages(res CommandResult) bool {
 		}
 	}
 	return false
+}
+
+// scoop list:   "Name / Version / Source / Updated / Info" aligned columns.
+// scoop status: "Name / Installed Version / Latest Version / ..." columns with
+// one row per outdated package. Both print a table header, a dashes separator
+// and notice lines like "Installed apps:" or "WARN ...".
+// ansiPattern matches SGR color escapes. PowerShell's Format-Table colors the
+// header and separator cells of scoop's output, which would otherwise defeat
+// the row classification below.
+var ansiPattern = regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+
+func parseScoopTable(manager Manager, res CommandResult, outdated bool) ([]Package, error) {
+	packages := []Package{}
+	for _, line := range outputLines(res.Stdout) {
+		line = ansiPattern.ReplaceAllString(line, "")
+		fields := strings.Fields(line)
+		if !isScoopDataRow(line, fields) {
+			continue
+		}
+		if outdated && len(fields) < 3 {
+			continue
+		}
+		pkg := Package{Manager: manager.Name, Name: fields[0], Version: fields[1]}
+		if outdated {
+			pkg.Latest = fields[2]
+		}
+		packages = append(packages, pkg)
+	}
+	return sortPackages(packages), nil
+}
+
+// isScoopDataRow keeps only the table rows of "scoop list" / "scoop status":
+// it drops the "Name ..." header, its dashes separator and notice lines like
+// "Installed apps:" or "WARN Scoop bucket(s) out of date.".
+func isScoopDataRow(line string, fields []string) bool {
+	if len(fields) < 2 {
+		return false
+	}
+	switch fields[0] {
+	case "Name", "WARN", "WARNING", "INFO", "ERROR":
+		return false
+	}
+	if strings.Trim(fields[0], "-") == "" || strings.HasSuffix(strings.TrimSpace(line), ":") {
+		return false
+	}
+	return true
 }
 
 // parseLinesRegex parses one package per line using named groups: name,

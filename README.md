@@ -255,7 +255,7 @@ eget update --self --check
 
 ### External Manager Examples
 
-Packages installed by other tools (npm, pnpm, uv, pipx, cargo, bun) stay out of
+Packages installed by other tools (npm, pnpm, uv, pipx, cargo, bun, scoop) stay out of
 `list` and `update` unless you ask for them.
 
 ```bash
@@ -576,7 +576,7 @@ eget sdk config add jdk --mirror zulu
 
 ### External Managers
 
-Packages installed by npm, pnpm, uv, pipx, cargo or bun can take part in
+Packages installed by npm, pnpm, uv, pipx, cargo, bun or scoop can take part in
 `eget list` and `eget update`. They are never written to eget's install store:
 each check asks the manager itself, so nothing can go stale.
 
