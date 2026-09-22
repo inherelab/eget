@@ -313,6 +313,59 @@ func TestListUpdateCandidatesOnlySkipsRepoChecks(t *testing.T) {
 	assert.Eq(t, "npm", items[0].Manager)
 }
 
+func TestListUpdateCandidatesForTargetsResolvesManagerPackage(t *testing.T) {
+	external := newFakeExternal()
+	external.packages = []extpkg.Package{{Manager: "npm", Name: "pnpm", Version: "10.0.0"}}
+	external.outdated = []extpkg.Package{{Manager: "npm", Name: "pnpm", Version: "10.0.0", Latest: "10.1.0"}}
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["fd"] = cfgpkg.Section{Repo: util.StringPtr("sharkdp/fd")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"sharkdp/fd": {Repo: "sharkdp/fd", Tag: "v10.0.0"},
+			}}, nil
+		},
+		LatestInfo: func(LatestCheckTarget) (LatestInfo, error) { return LatestInfo{Tag: "v10.1.0"}, nil },
+		External:   external,
+		Managers:   ManagersSelection{Mode: ManagersModeOnly, Managers: []string{"npm"}},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidatesForTargets([]string{"pnpm"})
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "pnpm", items[0].Name)
+	assert.Eq(t, "npm:pnpm", items[0].Repo)
+	assert.Eq(t, "npm", items[0].Manager)
+}
+
+func TestListUpdateCandidatesForTargetsRejectsEgetTargetUnderManagers(t *testing.T) {
+	external := newFakeExternal()
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["fd"] = cfgpkg.Section{Repo: util.StringPtr("sharkdp/fd")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"sharkdp/fd": {Repo: "sharkdp/fd", Tag: "v10.0.0"},
+			}}, nil
+		},
+		LatestInfo: func(LatestCheckTarget) (LatestInfo, error) { return LatestInfo{Tag: "v10.1.0"}, nil },
+		External:   external,
+		Managers:   ManagersSelection{Mode: ManagersModeOnly, Managers: []string{"npm"}},
+	}
+
+	_, _, _, err := svc.ListUpdateCandidatesForTargets([]string{"fd"})
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "--managers only covers manager packages")
+}
+
 func TestUpdateCandidatesCallsOnUpdateDone(t *testing.T) {
 	external := newFakeExternal()
 	var done []string

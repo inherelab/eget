@@ -201,40 +201,27 @@ func TestUpdateManagersSelectionCombos(t *testing.T) {
 	})
 }
 
-func TestUpdateManagersSelectionFoldsManagerNameTargets(t *testing.T) {
+func TestUpdateManagersSelectionKeepsTargetsUntouched(t *testing.T) {
 	svc := selectionService("")
 
-	t.Run("bare manager names join the selector", func(t *testing.T) {
-		opts := &UpdateOptions{Managers: "npm", Targets: []string{"uv", "npm"}}
+	t.Run("targets stay targets beside --managers", func(t *testing.T) {
+		// `--managers npm pnpm` updates the npm package named pnpm, like
+		// "npm update -g pnpm". The name must not be swallowed as a manager.
+		opts := &UpdateOptions{Managers: "npm", Targets: []string{"pnpm"}}
 		selection, err := svc.updateManagersSelection(opts)
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeOnly, selection.Mode)
-		assert.Eq(t, []string{"npm", "uv"}, selection.Managers)
-		assert.Eq(t, "npm,uv", opts.Managers)
-		assert.Eq(t, 0, len(opts.Targets))
-	})
-
-	t.Run("all drops bare manager names", func(t *testing.T) {
-		opts := &UpdateOptions{Managers: "all", Targets: []string{"uv"}}
-		selection, err := svc.updateManagersSelection(opts)
-		assert.NoErr(t, err)
-		assert.Eq(t, 0, len(selection.Managers))
-		assert.Eq(t, "all", opts.Managers)
-		assert.Eq(t, 0, len(opts.Targets))
-	})
-
-	t.Run("explicit external references stay targets", func(t *testing.T) {
-		opts := &UpdateOptions{Managers: "npm", Targets: []string{"npm:typescript"}}
-		selection, err := svc.updateManagersSelection(opts)
-		assert.NoErr(t, err)
 		assert.Eq(t, []string{"npm"}, selection.Managers)
-		assert.Eq(t, []string{"npm:typescript"}, opts.Targets)
+		assert.Eq(t, "npm", opts.Managers)
+		assert.Eq(t, []string{"pnpm"}, opts.Targets)
 	})
 
-	t.Run("eget targets are rejected", func(t *testing.T) {
-		_, err := svc.updateManagersSelection(&UpdateOptions{Managers: "npm", Targets: []string{"fd"}})
-		assert.Err(t, err)
-		assert.Contains(t, err.Error(), "--managers selects manager packages only")
+	t.Run("a target named like a manager stays a target", func(t *testing.T) {
+		opts := &UpdateOptions{Managers: "npm", Targets: []string{"uv"}}
+		_, err := svc.updateManagersSelection(opts)
+		assert.NoErr(t, err)
+		assert.Eq(t, "npm", opts.Managers)
+		assert.Eq(t, []string{"uv"}, opts.Targets)
 	})
 }
 

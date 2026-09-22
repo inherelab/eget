@@ -203,9 +203,6 @@ func (s *cliService) updateManagersSelection(opts *UpdateOptions) (app.ManagersS
 		}
 		return app.ManagersSelection{}, nil
 	}
-	if err := s.normalizeUpdateManagersTargets(opts); err != nil {
-		return app.ManagersSelection{}, err
-	}
 	selection, err := s.resolveManagersSelection(opts.Managers, opts.WithManagers)
 	if err != nil {
 		return app.ManagersSelection{}, err
@@ -214,46 +211,4 @@ func (s *cliService) updateManagersSelection(opts *UpdateOptions) (app.ManagersS
 		return app.ManagersSelection{}, fmt.Errorf("--with-managers requires --check, --all, --interactive or a target")
 	}
 	return selection, nil
-}
-
-// normalizeUpdateManagersTargets folds bare manager names taken from the update
-// targets into the --managers value, so `--managers npm pnpm` behaves like
-// `--managers npm,pnpm`. Explicit "manager:pkg" references stay targets and
-// anything else is rejected: --managers never covers eget's own packages.
-func (s *cliService) normalizeUpdateManagersTargets(opts *UpdateOptions) error {
-	selector := strings.TrimSpace(opts.Managers)
-	if selector == "" {
-		return nil
-	}
-	names, err := s.parseManagersSelector(selector)
-	if err != nil {
-		return err
-	}
-	selectAll := strings.EqualFold(selector, managersSelectAll)
-	rest := make([]string, 0, len(opts.Targets))
-	for _, target := range opts.Targets {
-		if strings.Contains(target, ":") {
-			rest = append(rest, target)
-			continue
-		}
-		if !s.hasManager(target) {
-			return fmt.Errorf("--managers selects manager packages only: %q is not a manager name or a manager:pkg reference; use --with-managers for eget packages", target)
-		}
-		if !selectAll {
-			names = append(names, target)
-		}
-	}
-	opts.Targets = rest
-	if selectAll {
-		return nil
-	}
-	sort.Strings(names)
-	uniq := make([]string, 0, len(names))
-	for i, name := range names {
-		if i == 0 || names[i-1] != name {
-			uniq = append(uniq, name)
-		}
-	}
-	opts.Managers = strings.Join(uniq, ",")
-	return nil
 }

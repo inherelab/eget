@@ -169,10 +169,12 @@ func TestHandleUpdateNamesEveryFailedTarget(t *testing.T) {
 	assert.Eq(t, "2 update failed: codex, uv", err.Error())
 }
 
-func TestHandleUpdateManagersOnlyUpdatesExternalAndPrints(t *testing.T) {
+func TestHandleUpdateManagersTargetUpdatesManagerPackage(t *testing.T) {
 	installer := &fakeUpdateInstallerForCLI{}
 	ext := newFakeExtService()
+	ext.packages = []extpkg.Package{{Manager: "npm", Name: "pnpm", Version: "10.0.0"}}
 	ext.outdated = []extpkg.Package{
+		{Manager: "npm", Name: "pnpm", Version: "10.0.0", Latest: "10.1.0"},
 		{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"},
 	}
 	svc := &cliService{
@@ -202,13 +204,16 @@ func TestHandleUpdateManagersOnlyUpdatesExternalAndPrints(t *testing.T) {
 	ccolor.SetOutput(&out)
 	defer ccolor.SetOutput(os.Stdout)
 
-	// "uv" is folded into the manager selector like `--managers npm,uv`.
-	err := svc.handleUpdate(&UpdateOptions{Managers: "npm", Targets: []string{"uv"}})
+	// `--managers npm pnpm` is "npm update -g pnpm": the flag names the
+	// manager, the target the package it owns.
+	err := svc.handleUpdate(&UpdateOptions{Managers: "npm", Targets: []string{"pnpm"}})
 
 	assert.NoErr(t, err)
 	assert.Eq(t, 0, len(installer.targets), "eget packages must not be updated")
 	assert.Eq(t, []string{"npm"}, ext.upgraded)
-	assert.Contains(t, ccolor.ClearCode(out.String()), "✅ updated npm:typescript 5.8.0 -> 5.9.2")
+	got := ccolor.ClearCode(out.String())
+	assert.Contains(t, got, "✅ updated npm:pnpm 10.0.0 -> 10.1.0")
+	assert.False(t, strings.Contains(got, "typescript"), "only the named target may be updated")
 }
 
 func TestHandleUpdatePrintsExternalUpdateDone(t *testing.T) {
