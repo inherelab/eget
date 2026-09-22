@@ -106,9 +106,9 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 
 	inner := gcli.NewApp(gcli.NotExitOnEnd())
 	inner.Name = "eget"
-	inner.Desc = "Easy install and download tools from GitHub, SourceForge and more" +
-		" (external package managers: " + strings.Join(extpkg.BuiltinNames(), ",") + ")"
+	inner.Desc = "Easy install and download tools from GitHub, SourceForge and more"
 	inner.Version = buildVersionString()
+	inner.HelpConfig.AfterCmdText = fmt.Sprintf("External package managers: %s\n\n", strings.Join(extpkg.BuiltinNames(), ", "))
 	verbose := false
 	noProxy := false
 	app := &App{inner: inner, verbose: &verbose, noProxy: &noProxy, stdout: stdout}
