@@ -126,12 +126,14 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		return fmt.Errorf("update target is required")
 	}
 	var failures []error
+	failedTargets := make([]string, 0, len(opts.Targets))
 	for index, target := range opts.Targets {
 		printUpdateSeparator(index)
 		result, err := s.updService.UpdatePackageStatus(target, installOpts)
 		if err != nil {
 			ccolor.Fprintf(s.stderrWriter(), "<yellow>update_failed</> %s: %v\n", target, err)
 			failures = append(failures, err)
+			failedTargets = append(failedTargets, target)
 			continue
 		}
 		if !result.Updated {
@@ -139,7 +141,8 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		}
 	}
 	if len(failures) > 0 {
-		return fmt.Errorf("%d update failed", len(failures))
+		// Name the targets so the last line alone shows what failed.
+		return fmt.Errorf("%d update failed: %s", len(failures), strings.Join(failedTargets, ", "))
 	}
 	return nil
 }
