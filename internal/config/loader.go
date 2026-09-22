@@ -40,7 +40,7 @@ func NewFile() *File {
 	cfg.Packages = make(map[string]Section)
 	cfg.PkgTemplates = make(map[string]Section)
 	cfg.SDK = make(map[string]SDKSection)
-	cfg.Managers = make(map[string]ManagerSection)
+	cfg.Ext = make(map[string]ManagerSection)
 	cfg.Global.SDKExtMap = defaultSDKExtMap()
 	return cfg
 }

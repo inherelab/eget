@@ -51,7 +51,7 @@ func decodeConfigFile(cfg *configutil.Manager) (*File, error) {
 	if err := cfg.MapOnExists("sdk", &conf.SDK); err != nil {
 		return nil, err
 	}
-	if err := cfg.MapOnExists("managers", &conf.Managers); err != nil {
+	if err := cfg.MapOnExists("ext", &conf.Ext); err != nil {
 		return nil, err
 	}
 
@@ -89,7 +89,7 @@ func encodeConfigFile(file *File) *configutil.Manager {
 		"packages":      map[string]any{},
 		"pkg_templates": map[string]any{},
 		"sdk":           map[string]any{},
-		"managers":      map[string]any{},
+		"ext":           map[string]any{},
 	}
 	for name, section := range file.Packages {
 		data["packages"].(map[string]any)[name] = sectionToMap(section)
@@ -100,8 +100,8 @@ func encodeConfigFile(file *File) *configutil.Manager {
 	for name, section := range file.SDK {
 		data["sdk"].(map[string]any)[name] = sdkSectionToMap(section)
 	}
-	for name, section := range file.Managers {
-		data["managers"].(map[string]any)[name] = managerSectionToMap(section)
+	for name, section := range file.Ext {
+		data["ext"].(map[string]any)[name] = managerSectionToMap(section)
 	}
 	cfg.SetData(data)
 	for name, section := range file.Repos {
@@ -152,7 +152,7 @@ func saveConfigFile(path string, file *File) error {
 
 func preserveUnchangedRawValues(current, resolved, original map[string]any, root bool) {
 	for key, originalValue := range original {
-		if root && (key == "packages" || key == "sdk" || key == "managers") {
+		if root && (key == "packages" || key == "sdk" || key == "ext") {
 			continue
 		}
 		currentValue, currentOK := current[key]
@@ -219,7 +219,7 @@ func sortedAnyKeys(items map[string]any) []string {
 
 func isReservedConfigRootKey(key string) bool {
 	switch key {
-	case "global", "http_proxy", "api_cache", "ghproxy", "cache_mirror", "packages", "pkg_templates", "sdk", "managers":
+	case "global", "http_proxy", "api_cache", "ghproxy", "cache_mirror", "packages", "pkg_templates", "sdk", "ext":
 		return true
 	default:
 		return false
@@ -329,8 +329,8 @@ func sectionToMap(section Section) map[string]any {
 	if section.IsGUI != nil {
 		data["is_gui"] = *section.IsGUI
 	}
-	if section.ManagersMode != nil && *section.ManagersMode != "" {
-		data["managers_mode"] = *section.ManagersMode
+	if section.ExtMode != nil && *section.ExtMode != "" {
+		data["ext_mode"] = *section.ExtMode
 	}
 	if section.Name != nil {
 		data["name"] = *section.Name

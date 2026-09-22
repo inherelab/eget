@@ -11,56 +11,56 @@ import (
 	"github.com/inherelab/eget/internal/extpkg"
 )
 
-// managersSelectAll is the built-in selector value that means "every
+// extSelectAll is the built-in selector value that means "every
 // configured manager". Manager names themselves come from the built-in
-// adapters plus [managers.<name>] sections, so nothing has to be collected
+// adapters plus [ext.<name>] sections, so nothing has to be collected
 // here.
-const managersSelectAll = "all"
+const extSelectAll = "all"
 
-// managersModeOn is the only enabling value of [global] managers_mode.
-const managersModeOn = "on"
+// extModeOn is the only enabling value of [global] ext_mode.
+const extModeOn = "on"
 
-// resolveManagersSelection turns the --managers / --with-managers flags and the
-// [global] managers_mode default into the selection used by list and update.
+// resolveExtSelection turns the --ext / --with-ext flags and the
+// [global] ext_mode default into the selection used by list and update.
 //
-// Precedence: flags > managers_mode > off. A zero selection is off and starts
+// Precedence: flags > ext_mode > off. A zero selection is off and starts
 // no manager process at all.
-func (s *cliService) resolveManagersSelection(managersFlag, withManagersFlag string) (app.ManagersSelection, error) {
-	managersFlag = strings.TrimSpace(managersFlag)
-	withManagersFlag = strings.TrimSpace(withManagersFlag)
+func (s *cliService) resolveExtSelection(extFlag, withExtFlag string) (app.ManagersSelection, error) {
+	extFlag = strings.TrimSpace(extFlag)
+	withExtFlag = strings.TrimSpace(withExtFlag)
 
-	if managersFlag != "" && withManagersFlag != "" {
-		return app.ManagersSelection{}, fmt.Errorf("--managers and --with-managers cannot be used together")
+	if extFlag != "" && withExtFlag != "" {
+		return app.ManagersSelection{}, fmt.Errorf("--ext and --with-ext cannot be used together")
 	}
 	switch {
-	case managersFlag != "":
-		names, err := s.parseManagersSelector(managersFlag)
+	case extFlag != "":
+		names, err := s.parseExtSelector(extFlag)
 		if err != nil {
 			return app.ManagersSelection{}, err
 		}
 		return app.ManagersSelection{Mode: app.ManagersModeOnly, Managers: names}, nil
-	case withManagersFlag != "":
-		names, err := s.parseManagersSelector(withManagersFlag)
+	case withExtFlag != "":
+		names, err := s.parseExtSelector(withExtFlag)
 		if err != nil {
 			return app.ManagersSelection{}, err
 		}
 		return app.ManagersSelection{Mode: app.ManagersModeWith, Managers: names}, nil
 	}
 
-	mode, err := s.configuredManagersMode()
+	mode, err := s.configuredExtMode()
 	if err != nil {
 		return app.ManagersSelection{}, err
 	}
-	if mode == managersModeOn {
+	if mode == extModeOn {
 		return app.ManagersSelection{Mode: app.ManagersModeWith}, nil
 	}
 	return app.ManagersSelection{Mode: app.ManagersModeOff}, nil
 }
 
-// parseManagersSelector accepts "all" or a comma separated list of manager
+// parseExtSelector accepts "all" or a comma separated list of manager
 // names, validating each against the configured managers.
-func (s *cliService) parseManagersSelector(selector string) ([]string, error) {
-	if strings.EqualFold(selector, managersSelectAll) {
+func (s *cliService) parseExtSelector(selector string) ([]string, error) {
+	if strings.EqualFold(selector, extSelectAll) {
 		return nil, nil
 	}
 
@@ -76,7 +76,7 @@ func (s *cliService) parseManagersSelector(selector string) ([]string, error) {
 		names = append(names, part)
 	}
 	if len(names) == 0 {
-		return nil, fmt.Errorf("--managers/--with-managers requires %q or a manager name list", managersSelectAll)
+		return nil, fmt.Errorf("--ext/--with-ext requires %q or a manager name list", extSelectAll)
 	}
 	sort.Strings(names)
 	return names, nil
@@ -97,23 +97,23 @@ func (s *cliService) managerNames() []string {
 	return s.extService.Names()
 }
 
-// configuredManagersMode reads [global] managers_mode, defaulting to off.
-func (s *cliService) configuredManagersMode() (string, error) {
+// configuredExtMode reads [global] ext_mode, defaulting to off.
+func (s *cliService) configuredExtMode() (string, error) {
 	cfg, err := s.loadConfigFile()
 	if err != nil {
 		return "", err
 	}
-	if cfg == nil || cfg.Global.ManagersMode == nil {
+	if cfg == nil || cfg.Global.ExtMode == nil {
 		return app.ManagersModeOff, nil
 	}
-	mode := strings.ToLower(strings.TrimSpace(*cfg.Global.ManagersMode))
+	mode := strings.ToLower(strings.TrimSpace(*cfg.Global.ExtMode))
 	switch mode {
 	case "", app.ManagersModeOff:
 		return app.ManagersModeOff, nil
-	case managersModeOn:
-		return managersModeOn, nil
+	case extModeOn:
+		return extModeOn, nil
 	default:
-		return "", fmt.Errorf("invalid global.managers_mode %q, want %q or %q", mode, app.ManagersModeOff, managersModeOn)
+		return "", fmt.Errorf("invalid global.ext_mode %q, want %q or %q", mode, app.ManagersModeOff, extModeOn)
 	}
 }
 
@@ -124,10 +124,10 @@ func (s *cliService) loadConfigFile() (*cfgpkg.File, error) {
 	return cfgpkg.Load()
 }
 
-// applyManagersSelection stores the selection on the list and update services.
+// applyExtSelection stores the selection on the list and update services.
 // Both are value copies on the cliService, so this only affects the current
 // invocation; the returned function restores the previous values.
-func (s *cliService) applyManagersSelection(selection app.ManagersSelection) func() {
+func (s *cliService) applyExtSelection(selection app.ManagersSelection) func() {
 	prevList := s.listService.Managers
 	prevUpdate := s.updService.Managers
 	s.listService.Managers = selection
@@ -138,15 +138,15 @@ func (s *cliService) applyManagersSelection(selection app.ManagersSelection) fun
 	}
 }
 
-// applyListManagersSelection also wires the failure printer: the plain list
+// applyListExtSelection also wires the failure printer: the plain list
 // path has no failure channel of its own.
-func (s *cliService) applyListManagersSelection(selection app.ManagersSelection) func() {
-	restore := s.applyManagersSelection(selection)
+func (s *cliService) applyListExtSelection(selection app.ManagersSelection) func() {
+	restore := s.applyExtSelection(selection)
 	prevFailure := s.listService.OnExternalFailure
 	s.listService.OnExternalFailure = func(failure extpkg.Failure) {
 		name := failure.Manager
 		if name == "" {
-			name = "managers"
+			name = "ext"
 		}
 		ccolor.Fprintf(s.stderrWriter(), "<yellow>check_failed</> %s: %v\n", name, failure.Err)
 	}
@@ -156,13 +156,13 @@ func (s *cliService) applyListManagersSelection(selection app.ManagersSelection)
 	}
 }
 
-// listManagersSelection resolves the list flags and rejects combinations that
+// listExtSelection resolves the list flags and rejects combinations that
 // would silently drop half of what the user asked for.
-func (s *cliService) listManagersSelection(opts *ListOptions) (app.ManagersSelection, error) {
+func (s *cliService) listExtSelection(opts *ListOptions) (app.ManagersSelection, error) {
 	if opts == nil {
 		return app.ManagersSelection{}, nil
 	}
-	selection, err := s.resolveManagersSelection(opts.Managers, opts.WithManagers)
+	selection, err := s.resolveExtSelection(opts.Ext, opts.WithExt)
 	if err != nil {
 		return app.ManagersSelection{}, err
 	}
@@ -177,38 +177,38 @@ func (s *cliService) listManagersSelection(opts *ListOptions) (app.ManagersSelec
 			{opts.NoInstalled, "--no-installed"},
 		} {
 			if other.set {
-				return app.ManagersSelection{}, fmt.Errorf("--managers cannot be used with %s", other.name)
+				return app.ManagersSelection{}, fmt.Errorf("--ext cannot be used with %s", other.name)
 			}
 		}
 	case app.ManagersModeWith:
 		if opts.GUI {
-			return app.ManagersSelection{}, fmt.Errorf("--with-managers cannot be used with --gui")
+			return app.ManagersSelection{}, fmt.Errorf("--with-ext cannot be used with --gui")
 		}
 		if opts.NoInstalled {
-			return app.ManagersSelection{}, fmt.Errorf("--with-managers cannot be used with --no-installed")
+			return app.ManagersSelection{}, fmt.Errorf("--with-ext cannot be used with --no-installed")
 		}
 	}
 	return selection, nil
 }
 
-// updateManagersSelection resolves the update flags. --managers already names
+// updateExtSelection resolves the update flags. --ext already names
 // the whole selection, so it implies --all for that selection.
-func (s *cliService) updateManagersSelection(opts *UpdateOptions) (app.ManagersSelection, error) {
+func (s *cliService) updateExtSelection(opts *UpdateOptions) (app.ManagersSelection, error) {
 	if opts == nil {
 		return app.ManagersSelection{}, nil
 	}
 	if opts.Self {
-		if opts.Managers != "" || opts.WithManagers != "" {
-			return app.ManagersSelection{}, fmt.Errorf("update --self cannot be used with --managers/--with-managers")
+		if opts.Ext != "" || opts.WithExt != "" {
+			return app.ManagersSelection{}, fmt.Errorf("update --self cannot be used with --ext/--with-ext")
 		}
 		return app.ManagersSelection{}, nil
 	}
-	selection, err := s.resolveManagersSelection(opts.Managers, opts.WithManagers)
+	selection, err := s.resolveExtSelection(opts.Ext, opts.WithExt)
 	if err != nil {
 		return app.ManagersSelection{}, err
 	}
 	if selection.Mode == app.ManagersModeWith && !opts.Check && !opts.All && !opts.Interactive && len(opts.Targets) == 0 {
-		return app.ManagersSelection{}, fmt.Errorf("--with-managers requires --check, --all, --interactive or a target")
+		return app.ManagersSelection{}, fmt.Errorf("--with-ext requires --check, --all, --interactive or a target")
 	}
 	return selection, nil
 }

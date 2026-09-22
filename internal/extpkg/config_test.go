@@ -61,7 +61,7 @@ func TestManagersOverridesBuiltinSection(t *testing.T) {
 	regex := `^(?P<name>\S+)\s+(?P<version>\S+)$`
 	timeout := 5
 	cfg := cfgpkg.NewFile()
-	cfg.Managers["npm"] = cfgpkg.ManagerSection{
+	cfg.Ext["npm"] = cfgpkg.ManagerSection{
 		Bin:       &bin,
 		Parser:    &parser,
 		ListRegex: &regex,
@@ -82,7 +82,7 @@ func TestManagersOverridesBuiltinSection(t *testing.T) {
 func TestManagersDisabledSectionRemovesManager(t *testing.T) {
 	disabled := false
 	cfg := cfgpkg.NewFile()
-	cfg.Managers["pnpm"] = cfgpkg.ManagerSection{Enabled: &disabled}
+	cfg.Ext["pnpm"] = cfgpkg.ManagerSection{Enabled: &disabled}
 
 	names := managerNames(Managers(cfg))
 	for _, name := range names {
@@ -98,7 +98,7 @@ func TestManagersAddsConfiguredManager(t *testing.T) {
 	parser := "lines-regex"
 	regex := `^(?P<name>\S+)\s+(?P<version>\S+)$`
 	cfg := cfgpkg.NewFile()
-	cfg.Managers["scoop"] = cfgpkg.ManagerSection{
+	cfg.Ext["scoop"] = cfgpkg.ManagerSection{
 		Bin:       &bin,
 		Parser:    &parser,
 		ListArgs:  []string{"list"},
@@ -119,7 +119,7 @@ func TestManagersAddsConfiguredManager(t *testing.T) {
 func TestManagersEmptyArgsDisableCommand(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")
-	body := "[managers.npm]\noutdated_args = []\n"
+	body := "[ext.npm]\noutdated_args = []\n"
 	if err := os.WriteFile(configPath, []byte(body), 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}

@@ -260,22 +260,22 @@ Packages installed by other tools (npm, pnpm, uv, pipx, cargo, bun) stay out of
 
 ```bash
 # show eget's packages plus the ones npm owns
-eget list --with-managers npm
+eget list --with-ext npm
 # show only what the configured managers own
-eget list --managers all
+eget list --ext all
 # check outdated packages including two managers
-eget list --outdated --with-managers npm,uv
-eget update --check --with-managers npm
+eget list --outdated --with-ext npm,uv
+eget update --check --with-ext npm
 # update only npm's outdated packages
-eget update --managers npm
+eget update --ext npm
 # update eget's packages plus npm's
-eget update --all --with-managers npm
+eget update --all --with-ext npm
 # update one external package (works without any flag)
 eget update npm:agent-browser
 # managers, their binary, availability and package count
-eget managers list
+eget ext list
 # upgrade one manager as a whole
-eget managers upgrade uv
+eget ext upgrade uv
 ```
 
 ### Config Examples
@@ -336,7 +336,7 @@ The target argument accepted by `install` and `download` can be:
 - Use `--all` / `-a` to list the union of local managed packages and installed-store entries.
 - Use `--no-installed` / `--ni` to list packages configured in `[packages]` but not installed.
 - Use `--gui` to filter the current list view to GUI applications.
-- Use `--with-managers all|npm,bun` to also list packages owned by those external managers, or `--managers ...` to list only theirs. Nothing external runs unless one of these is given or `global.managers_mode = "on"`.
+- Use `--with-ext all|npm,bun` to also list packages owned by those external managers, or `--ext ...` to list only theirs. Nothing external runs unless one of these is given or `global.ext_mode = "on"`.
 
 `show`
 
@@ -359,12 +359,12 @@ The target argument accepted by `install` and `download` can be:
 - `update --self` checks `inherelab/eget` releases, selects the raw executable asset for the current OS/arch, and replaces the running executable. On Windows, replacement is deferred until the current process exits.
 - `update --self --check` prints the self-update check host before requesting the latest version, so it is clear whether the check uses GitHub or a private source.
 - `update --self --self-source <url>` updates from an internal source that exposes `latest.yaml` plus raw platform files such as `eget-linux-amd64` and `eget-windows-amd64.exe`. `<url>` may be either the base directory or the `latest.yaml` URL. You can also set `EGET_SELF_UPDATE_SOURCE`.
-- `--with-managers all|npm,bun` also updates packages owned by those external managers (`--all`, `--interactive` or `--check` needed); `--managers ...` updates only theirs. `eget update npm:typescript` updates one external package without any of these flags.
+- `--with-ext all|npm,bun` also updates packages owned by those external managers (`--all`, `--interactive` or `--check` needed); `--ext ...` updates only theirs. `eget update npm:typescript` updates one external package without any of these flags.
 
-`managers` (alias: `mgr`)
+`ext` (alias: `external`)
 
-- `managers list` prints each configured manager with its binary, whether it is available, whether it can detect outdated packages, and how many packages it owns.
-- `managers upgrade <name> [pkg...]` upgrades every package of one manager, or only the named ones.
+- `ext list` prints each configured manager with its binary, whether it is available, whether it can detect outdated packages, and how many packages it owns.
+- `ext upgrade <name> [pkg...]` upgrades every package of one manager, or only the named ones.
 
 `sdk`
 
@@ -489,7 +489,7 @@ Supported config sections:
 - `[packages.<name>]`
 - `[pkg_templates.<name>]`
 - `[sdk.<name>]`
-- `[managers.<name>]`
+- `[ext.<name>]`
 
 Minimal example:
 
@@ -586,27 +586,27 @@ Nothing external runs by default. Turn it on per command, or change the default:
 [global]
 # off (default) = external packages are only shown when explicitly selected
 # on            = list and update include every configured manager
-managers_mode = "off"
+ext_mode = "off"
 ```
 
 ```bash
-eget list --with-managers npm,bun   # eget packages + npm/bun
-eget list --managers all            # only manager packages
-eget update --managers npm          # only npm's outdated packages
+eget list --with-ext npm,bun   # eget packages + npm/bun
+eget list --ext all            # only manager packages
+eget update --ext npm          # only npm's outdated packages
 ```
 
 Manager adapters are built in and can be extended or overridden. `enabled =
 false` removes one, a new name adds one:
 
 ```toml
-[managers.npm]
+[ext.npm]
 bin           = "npm"
 list_args     = ["ls", "-g", "--depth=0", "--json"]
 outdated_args = ["outdated", "-g", "--json"]
 upgrade_args  = ["update", "-g"]
 
 # a tool eget does not know about
-[managers.scoop]
+[ext.scoop]
 bin            = "scoop"
 list_args      = ["list"]
 outdated_args  = ["status"]

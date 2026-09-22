@@ -9,9 +9,9 @@ import (
 	"github.com/gookit/goutil/x/ccolor"
 )
 
-// handleManagersList shows every configured manager, whether it is available
+// handleExtList shows every configured manager, whether it is available
 // and how many packages it owns.
-func (s *cliService) handleManagersList() error {
+func (s *cliService) handleExtList() error {
 	if s.extService == nil {
 		return fmt.Errorf("external manager service is required")
 	}
@@ -65,14 +65,14 @@ func (s *cliService) handleManagersList() error {
 	return nil
 }
 
-// handleManagersUpgrade upgrades one manager as a whole, or the named packages
+// handleExtUpgrade upgrades one manager as a whole, or the named packages
 // of that manager.
-func (s *cliService) handleManagersUpgrade(opts *ManagersOptions) error {
+func (s *cliService) handleExtUpgrade(opts *ExtOptions) error {
 	if s.extService == nil {
 		return fmt.Errorf("external manager service is required")
 	}
 	if opts == nil || len(opts.Targets) == 0 {
-		return fmt.Errorf("managers upgrade requires a manager name")
+		return fmt.Errorf("ext upgrade requires a manager name")
 	}
 	managerName := opts.Targets[0]
 	names := opts.Targets[1:]

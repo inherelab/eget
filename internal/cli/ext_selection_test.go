@@ -59,7 +59,7 @@ func selectionService(mode string) *cliService {
 			Load: func() (*cfgpkg.File, error) {
 				cfg := cfgpkg.NewFile()
 				if mode != "" {
-					cfg.Global.ManagersMode = util.StringPtr(mode)
+					cfg.Global.ExtMode = util.StringPtr(mode)
 				}
 				return cfg, nil
 			},
@@ -68,10 +68,10 @@ func selectionService(mode string) *cliService {
 	return svc
 }
 
-func TestResolveManagersSelectionDefaultOff(t *testing.T) {
+func TestResolveExtSelectionDefaultOff(t *testing.T) {
 	for _, mode := range []string{"", "off", "OFF"} {
 		t.Run("mode "+mode, func(t *testing.T) {
-			selection, err := selectionService(mode).resolveManagersSelection("", "")
+			selection, err := selectionService(mode).resolveExtSelection("", "")
 			assert.NoErr(t, err)
 			assert.False(t, selection.Enabled())
 			assert.Eq(t, app.ManagersModeOff, selection.Mode)
@@ -79,153 +79,153 @@ func TestResolveManagersSelectionDefaultOff(t *testing.T) {
 	}
 }
 
-func TestResolveManagersSelectionFromGlobalMode(t *testing.T) {
-	selection, err := selectionService("on").resolveManagersSelection("", "")
+func TestResolveExtSelectionFromGlobalMode(t *testing.T) {
+	selection, err := selectionService("on").resolveExtSelection("", "")
 	assert.NoErr(t, err)
 	assert.True(t, selection.Enabled())
 	assert.Eq(t, app.ManagersModeWith, selection.Mode)
 	assert.Eq(t, 0, len(selection.Managers), "on means every configured manager")
 }
 
-func TestResolveManagersSelectionRejectsUnknownMode(t *testing.T) {
-	_, err := selectionService("with").resolveManagersSelection("", "")
+func TestResolveExtSelectionRejectsUnknownMode(t *testing.T) {
+	_, err := selectionService("with").resolveExtSelection("", "")
 	assert.Err(t, err)
-	assert.Contains(t, err.Error(), "managers_mode")
+	assert.Contains(t, err.Error(), "ext_mode")
 }
 
-func TestResolveManagersSelectionFlags(t *testing.T) {
+func TestResolveExtSelectionFlags(t *testing.T) {
 	svc := selectionService("on")
 
-	t.Run("managers all is only-mode", func(t *testing.T) {
-		selection, err := svc.resolveManagersSelection("all", "")
+	t.Run("ext all is only-mode", func(t *testing.T) {
+		selection, err := svc.resolveExtSelection("all", "")
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeOnly, selection.Mode)
 		assert.Eq(t, 0, len(selection.Managers))
 	})
 
 	t.Run("named managers are validated and sorted", func(t *testing.T) {
-		selection, err := svc.resolveManagersSelection("uv, npm", "")
+		selection, err := svc.resolveExtSelection("uv, npm", "")
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeOnly, selection.Mode)
 		assert.Eq(t, []string{"npm", "uv"}, selection.Managers)
 	})
 
-	t.Run("with-managers", func(t *testing.T) {
-		selection, err := svc.resolveManagersSelection("", "bun")
+	t.Run("with-ext", func(t *testing.T) {
+		selection, err := svc.resolveExtSelection("", "bun")
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeWith, selection.Mode)
 		assert.Eq(t, []string{"bun"}, selection.Managers)
 	})
 
 	t.Run("flags override the configured mode", func(t *testing.T) {
-		selection, err := selectionService("off").resolveManagersSelection("", "npm")
+		selection, err := selectionService("off").resolveExtSelection("", "npm")
 		assert.NoErr(t, err)
 		assert.True(t, selection.Enabled())
 	})
 
 	t.Run("both flags are rejected", func(t *testing.T) {
-		_, err := svc.resolveManagersSelection("npm", "bun")
+		_, err := svc.resolveExtSelection("npm", "bun")
 		assert.Err(t, err)
 		assert.Contains(t, err.Error(), "cannot be used together")
 	})
 
 	t.Run("unknown manager lists the available ones", func(t *testing.T) {
-		_, err := svc.resolveManagersSelection("deno", "")
+		_, err := svc.resolveExtSelection("deno", "")
 		assert.Err(t, err)
 		assert.Contains(t, err.Error(), "unknown manager")
 		assert.Contains(t, err.Error(), "npm")
 	})
 }
 
-func TestListManagersSelectionCombos(t *testing.T) {
+func TestListExtSelectionCombos(t *testing.T) {
 	svc := selectionService("off")
 
-	t.Run("managers only rejects eget view filters", func(t *testing.T) {
+	t.Run("ext only rejects eget view filters", func(t *testing.T) {
 		for _, opts := range []*ListOptions{
-			{Managers: "all", All: true},
-			{Managers: "all", GUI: true},
-			{Managers: "all", NoInstalled: true},
+			{Ext: "all", All: true},
+			{Ext: "all", GUI: true},
+			{Ext: "all", NoInstalled: true},
 		} {
-			if _, err := svc.listManagersSelection(opts); err == nil {
+			if _, err := svc.listExtSelection(opts); err == nil {
 				t.Fatalf("expected combination error for %+v", opts)
 			}
 		}
 	})
 
-	t.Run("with-managers rejects installed-only views", func(t *testing.T) {
-		if _, err := svc.listManagersSelection(&ListOptions{WithManagers: "all", GUI: true}); err == nil {
-			t.Fatal("expected --with-managers with --gui to be rejected")
+	t.Run("with-ext rejects installed-only views", func(t *testing.T) {
+		if _, err := svc.listExtSelection(&ListOptions{WithExt: "all", GUI: true}); err == nil {
+			t.Fatal("expected --with-ext with --gui to be rejected")
 		}
-		if _, err := svc.listManagersSelection(&ListOptions{WithManagers: "all", NoInstalled: true}); err == nil {
-			t.Fatal("expected --with-managers with --no-installed to be rejected")
+		if _, err := svc.listExtSelection(&ListOptions{WithExt: "all", NoInstalled: true}); err == nil {
+			t.Fatal("expected --with-ext with --no-installed to be rejected")
 		}
 	})
 
-	t.Run("with-managers works with all and outdated", func(t *testing.T) {
-		selection, err := svc.listManagersSelection(&ListOptions{WithManagers: "all", All: true, Outdated: true})
+	t.Run("with-ext works with all and outdated", func(t *testing.T) {
+		selection, err := svc.listExtSelection(&ListOptions{WithExt: "all", All: true, Outdated: true})
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeWith, selection.Mode)
 	})
 }
 
-func TestUpdateManagersSelectionCombos(t *testing.T) {
+func TestUpdateExtSelectionCombos(t *testing.T) {
 	svc := selectionService("off")
 
-	t.Run("with-managers needs check all interactive or a target", func(t *testing.T) {
-		_, err := svc.updateManagersSelection(&UpdateOptions{WithManagers: "npm"})
+	t.Run("with-ext needs check all interactive or a target", func(t *testing.T) {
+		_, err := svc.updateExtSelection(&UpdateOptions{WithExt: "npm"})
 		assert.Err(t, err)
 		assert.Contains(t, err.Error(), "requires --check")
 
-		if _, err := svc.updateManagersSelection(&UpdateOptions{WithManagers: "npm", All: true}); err != nil {
-			t.Fatalf("expected --with-managers with --all to pass, got %v", err)
+		if _, err := svc.updateExtSelection(&UpdateOptions{WithExt: "npm", All: true}); err != nil {
+			t.Fatalf("expected --with-ext with --all to pass, got %v", err)
 		}
 		// --check is read-only, so it needs no further selection.
-		if _, err := svc.updateManagersSelection(&UpdateOptions{WithManagers: "npm", Check: true}); err != nil {
-			t.Fatalf("expected --with-managers with --check to pass, got %v", err)
+		if _, err := svc.updateExtSelection(&UpdateOptions{WithExt: "npm", Check: true}); err != nil {
+			t.Fatalf("expected --with-ext with --check to pass, got %v", err)
 		}
-		if _, err := svc.updateManagersSelection(&UpdateOptions{WithManagers: "npm", Targets: []string{"typescript"}}); err != nil {
-			t.Fatalf("expected --with-managers with a target to pass, got %v", err)
+		if _, err := svc.updateExtSelection(&UpdateOptions{WithExt: "npm", Targets: []string{"typescript"}}); err != nil {
+			t.Fatalf("expected --with-ext with a target to pass, got %v", err)
 		}
 	})
 
-	t.Run("managers only needs nothing else", func(t *testing.T) {
-		selection, err := svc.updateManagersSelection(&UpdateOptions{Managers: "npm"})
+	t.Run("ext only needs nothing else", func(t *testing.T) {
+		selection, err := svc.updateExtSelection(&UpdateOptions{Ext: "npm"})
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeOnly, selection.Mode)
 	})
 
 	t.Run("self update rejects manager flags", func(t *testing.T) {
-		_, err := svc.updateManagersSelection(&UpdateOptions{Self: true, Managers: "npm"})
+		_, err := svc.updateExtSelection(&UpdateOptions{Self: true, Ext: "npm"})
 		assert.Err(t, err)
 		assert.Contains(t, err.Error(), "cannot be used with")
 	})
 }
 
-func TestUpdateManagersSelectionKeepsTargetsUntouched(t *testing.T) {
+func TestUpdateExtSelectionKeepsTargetsUntouched(t *testing.T) {
 	svc := selectionService("")
 
-	t.Run("targets stay targets beside --managers", func(t *testing.T) {
-		// `--managers npm pnpm` updates the npm package named pnpm, like
+	t.Run("targets stay targets beside --ext", func(t *testing.T) {
+		// `--ext npm pnpm` updates the npm package named pnpm, like
 		// "npm update -g pnpm". The name must not be swallowed as a manager.
-		opts := &UpdateOptions{Managers: "npm", Targets: []string{"pnpm"}}
-		selection, err := svc.updateManagersSelection(opts)
+		opts := &UpdateOptions{Ext: "npm", Targets: []string{"pnpm"}}
+		selection, err := svc.updateExtSelection(opts)
 		assert.NoErr(t, err)
 		assert.Eq(t, app.ManagersModeOnly, selection.Mode)
 		assert.Eq(t, []string{"npm"}, selection.Managers)
-		assert.Eq(t, "npm", opts.Managers)
+		assert.Eq(t, "npm", opts.Ext)
 		assert.Eq(t, []string{"pnpm"}, opts.Targets)
 	})
 
 	t.Run("a target named like a manager stays a target", func(t *testing.T) {
-		opts := &UpdateOptions{Managers: "npm", Targets: []string{"uv"}}
-		_, err := svc.updateManagersSelection(opts)
+		opts := &UpdateOptions{Ext: "npm", Targets: []string{"uv"}}
+		_, err := svc.updateExtSelection(opts)
 		assert.NoErr(t, err)
-		assert.Eq(t, "npm", opts.Managers)
+		assert.Eq(t, "npm", opts.Ext)
 		assert.Eq(t, []string{"uv"}, opts.Targets)
 	})
 }
 
-func TestHandleListWithManagersShowsManagerSource(t *testing.T) {
+func TestHandleListWithExtShowsManagerSource(t *testing.T) {
 	ext := newFakeExtService()
 	ext.packages = []extpkg.Package{{Manager: "npm", Name: "typescript", Version: "5.8.0"}}
 
@@ -251,7 +251,7 @@ func TestHandleListWithManagersShowsManagerSource(t *testing.T) {
 	ccolor.SetOutput(&out)
 	defer ccolor.SetOutput(os.Stdout)
 
-	assert.NoErr(t, svc.handleList(&ListOptions{WithManagers: "npm"}))
+	assert.NoErr(t, svc.handleList(&ListOptions{WithExt: "npm"}))
 	got := out.String()
 	assert.Contains(t, got, "typescript")
 	assert.Contains(t, got, "npm:typescript")
@@ -292,23 +292,23 @@ func TestHandleListOffKeepsExternalOut(t *testing.T) {
 	assert.Contains(t, got, "fzf")
 }
 
-func TestHandleManagersUpgradeRejectsUnknownManager(t *testing.T) {
+func TestHandleExtUpgradeRejectsUnknownManager(t *testing.T) {
 	svc := &cliService{extService: newFakeExtService()}
 
-	err := svc.handleManagersUpgrade(&ManagersOptions{Targets: []string{"deno"}})
+	err := svc.handleExtUpgrade(&ExtOptions{Targets: []string{"deno"}})
 	assert.Err(t, err)
 	assert.Contains(t, err.Error(), "unknown manager")
 }
 
-func TestHandleManagersUpgradeRequiresManagerName(t *testing.T) {
+func TestHandleExtUpgradeRequiresManagerName(t *testing.T) {
 	svc := &cliService{extService: newFakeExtService()}
 
-	err := svc.handleManagersUpgrade(&ManagersOptions{})
+	err := svc.handleExtUpgrade(&ExtOptions{})
 	assert.Err(t, err)
 	assert.Contains(t, err.Error(), "requires a manager name")
 }
 
-func TestHandleManagersUpgradeCallsService(t *testing.T) {
+func TestHandleExtUpgradeCallsService(t *testing.T) {
 	ext := newFakeExtService()
 	svc := &cliService{extService: ext, stderr: os.Stderr}
 
@@ -316,7 +316,7 @@ func TestHandleManagersUpgradeCallsService(t *testing.T) {
 	ccolor.SetOutput(&out)
 	defer ccolor.SetOutput(os.Stdout)
 
-	assert.NoErr(t, svc.handleManagersUpgrade(&ManagersOptions{Targets: []string{"uv"}}))
+	assert.NoErr(t, svc.handleExtUpgrade(&ExtOptions{Targets: []string{"uv"}}))
 	assert.Eq(t, []string{"uv"}, ext.upgraded)
 	assert.Contains(t, out.String(), "uv")
 }

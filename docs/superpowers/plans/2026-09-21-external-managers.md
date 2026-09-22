@@ -1,5 +1,7 @@
 # 外部包管理器纳入管理实施计划
 
+> **命名更新（2026-09-22）**：本计划中的 `managers` 命名已更名为 `ext`（对照见[设计文档](../specs/2026-09-21-external-managers-design.md)头部注记），正文保留历史原貌。
+
 ## 目标
 
 - **默认不改变现状**：`eget list` / `eget update` 默认不处理外部管理器的包（`managers_mode = "off"`），不启动任何管理器进程。

@@ -7,7 +7,7 @@ import (
 	cfgpkg "github.com/inherelab/eget/internal/config"
 )
 
-// Managers merges the built-in adapters with the [managers.<name>] config
+// Managers merges the built-in adapters with the [ext.<name>] config
 // sections:
 //
 //   - a section named after a builtin overrides that builtin
@@ -24,7 +24,7 @@ func Managers(cfg *cfgpkg.File) []Manager {
 
 	if cfg != nil {
 		for _, name := range sortedManagerSectionNames(cfg) {
-			section := cfg.Managers[name]
+			section := cfg.Ext[name]
 			if section.Enabled != nil && !*section.Enabled {
 				delete(byName, name)
 				continue
@@ -51,8 +51,8 @@ func Managers(cfg *cfgpkg.File) []Manager {
 }
 
 func sortedManagerSectionNames(cfg *cfgpkg.File) []string {
-	names := make([]string, 0, len(cfg.Managers))
-	for name := range cfg.Managers {
+	names := make([]string, 0, len(cfg.Ext))
+	for name := range cfg.Ext {
 		names = append(names, name)
 	}
 	sort.Strings(names)

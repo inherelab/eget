@@ -401,7 +401,7 @@ func TestListUpdateCandidatesForTargetsRejectsEgetTargetUnderManagers(t *testing
 
 	_, _, _, err := svc.ListUpdateCandidatesForTargets([]string{"fd"})
 	assert.Err(t, err)
-	assert.Contains(t, err.Error(), "--managers only covers manager packages")
+	assert.Contains(t, err.Error(), "--ext only covers manager packages")
 }
 
 func TestUpdateCandidatesCallsOnUpdateDone(t *testing.T) {

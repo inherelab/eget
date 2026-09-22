@@ -81,10 +81,10 @@ func (s *cliService) handleConfig(opts *ConfigOptions) error {
 		ccolor.Yellowln("📦 Configed SDKs:")
 		show.MList(cfg.SDK, showListConfig)
 
-		// managers
+		// external managers
 		ccolor.Grayln("---------------------------")
-		ccolor.Yellowln("🔧 Configed Managers:")
-		show.MList(cfg.Managers, showListConfig)
+		ccolor.Yellowln("🔧 Configed External Managers:")
+		show.MList(cfg.Ext, showListConfig)
 		return nil
 	case "doctor":
 		return s.handleConfigDoctor()

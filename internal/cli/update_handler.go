@@ -13,11 +13,11 @@ import (
 )
 
 func (s *cliService) handleUpdate(opts *UpdateOptions) error {
-	selection, err := s.updateManagersSelection(opts)
+	selection, err := s.updateExtSelection(opts)
 	if err != nil {
 		return err
 	}
-	restoreSelection := s.applyManagersSelection(selection)
+	restoreSelection := s.applyExtSelection(selection)
 	defer restoreSelection()
 
 	if opts.Self {
@@ -60,20 +60,20 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 		// Carry the manager selection over: the list path resolves it again
 		// from its own flags.
 		return s.handleList(&ListOptions{
-			Outdated:     true,
-			Managers:     opts.Managers,
-			WithManagers: opts.WithManagers,
+			Outdated: true,
+			Ext:      opts.Ext,
+			WithExt:  opts.WithExt,
 		})
 	}
 	if opts.DryRun {
 		return fmt.Errorf("update --dry-run is not implemented")
 	}
 	installOpts := s.applyGlobalFlags(installOptionsFromUpdate(opts))
-	// --managers already names the whole set, so it implies --all over it.
+	// --ext already names the whole set, so it implies --all over it.
 	runCandidates := opts.All || opts.Interactive || selection.OnlyManagers()
 	if runCandidates {
 		var targets []string
-		// With --managers the remaining targets are explicit "manager:pkg"
+		// With --ext the remaining targets are explicit "manager:pkg"
 		// references and restrict the run to them.
 		if (opts.Interactive && !opts.All) || selection.OnlyManagers() {
 			targets = opts.Targets

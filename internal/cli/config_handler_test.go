@@ -453,19 +453,19 @@ func TestHandleConfigPathCheckPrintsExistsStatus(t *testing.T) {
 	assert.Eq(t, filepath.ToSlash(cacheDir)+", exists: true\n", filepath.ToSlash(out.String()))
 }
 
-func TestHandleConfigListShowsManagers(t *testing.T) {
+func TestHandleConfigListShowsExt(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")
 	writeCLIFile(t, configPath, `
 [global]
-managers_mode = "on"
+ext_mode = "on"
 
-[managers.npm]
+[ext.npm]
 bin = "npm"
 parser = "npm-json"
 list_args = ["ls", "-g", "--json"]
 
-[managers.scoop]
+[ext.scoop]
 bin = "scoop"
 enabled = true
 `)
@@ -497,9 +497,9 @@ enabled = true
 	assert.NoErr(t, reader.Close())
 
 	got := string(body)
-	assert.Contains(t, got, "Configed Managers")
+	assert.Contains(t, got, "Configed External Managers")
 	assert.Contains(t, got, "npm")
 	assert.Contains(t, got, "scoop")
 	assert.Contains(t, got, "npm-json")
-	assert.Contains(t, got, "managers_mode")
+	assert.Contains(t, got, "ext_mode")
 }

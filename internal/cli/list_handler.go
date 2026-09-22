@@ -24,11 +24,11 @@ func (s *cliService) handleList(opts *ListOptions) error {
 		return fmt.Errorf("list --no-installed and --info cannot be used together")
 	}
 
-	selection, err := s.listManagersSelection(opts)
+	selection, err := s.listExtSelection(opts)
 	if err != nil {
 		return err
 	}
-	restoreSelection := s.applyListManagersSelection(selection)
+	restoreSelection := s.applyListExtSelection(selection)
 	defer restoreSelection()
 
 	if opts != nil && opts.Info != "" {

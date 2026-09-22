@@ -169,7 +169,7 @@ func TestHandleUpdateNamesEveryFailedTarget(t *testing.T) {
 	assert.Eq(t, "2 update failed: codex, uv", err.Error())
 }
 
-func TestHandleUpdateManagersTargetUpdatesManagerPackage(t *testing.T) {
+func TestHandleUpdateExtTargetUpdatesManagerPackage(t *testing.T) {
 	installer := &fakeUpdateInstallerForCLI{}
 	ext := newFakeExtService()
 	ext.packages = []extpkg.Package{{Manager: "npm", Name: "pnpm", Version: "10.0.0"}}
@@ -204,9 +204,9 @@ func TestHandleUpdateManagersTargetUpdatesManagerPackage(t *testing.T) {
 	ccolor.SetOutput(&out)
 	defer ccolor.SetOutput(os.Stdout)
 
-	// `--managers npm pnpm` is "npm update -g pnpm": the flag names the
+	// `--ext npm pnpm` is "npm update -g pnpm": the flag names the
 	// manager, the target the package it owns.
-	err := svc.handleUpdate(&UpdateOptions{Managers: "npm", Targets: []string{"pnpm"}})
+	err := svc.handleUpdate(&UpdateOptions{Ext: "npm", Targets: []string{"pnpm"}})
 
 	assert.NoErr(t, err)
 	assert.Eq(t, 0, len(installer.targets), "eget packages must not be updated")

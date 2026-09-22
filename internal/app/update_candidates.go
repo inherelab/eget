@@ -102,7 +102,7 @@ func (s UpdateService) ListUpdateCandidatesForTargets(targets []string) ([]Outda
 			return nil, nil, 0, fmt.Errorf("update target %q is not configured or installed; use install first", target)
 		}
 		if s.Managers.OnlyManagers() {
-			return nil, nil, 0, fmt.Errorf("update target %q is an eget package; --managers only covers manager packages (use manager:pkg to name one explicitly)", target)
+			return nil, nil, 0, fmt.Errorf("update target %q is an eget package; --ext only covers manager packages (use manager:pkg to name one explicitly)", target)
 		}
 		if !item.Installed {
 			return nil, nil, 0, fmt.Errorf("update target %q is not installed; use install first", target)

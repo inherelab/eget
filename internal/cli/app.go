@@ -124,7 +124,7 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	app.add(newInstallCmd(handler))
 	app.add(newDownloadCmd(handler))
 	app.add(newSDKCmd(handler))
-	app.add(newManagersCmd(handler))
+	app.add(newExtCmd(handler))
 	app.add(newCacheCmd(handler))
 	app.add(newAddCmd(handler))
 	app.add(newUninstallCmd(handler))
@@ -274,13 +274,13 @@ var commandFlagSpecs = map[string]flagSpec{
 	},
 	"list": {
 		bools:  setOf("outdated", "old", "all", "a", "gui", "no-installed", "ni"),
-		values: setOf("info", "i", "managers", "with-managers"),
+		values: setOf("info", "i", "ext", "with-ext"),
 	},
 	"update": {
 		bools:  setOf("all", "A", "check", "dry-run", "interactive", "i", "self", "source", "quiet"),
-		values: setOf("self-source", "tag", "system", "to", "file", "asset", "a", "retries", "chunk", "batch", "managers", "with-managers"),
+		values: setOf("self-source", "tag", "system", "to", "file", "asset", "a", "retries", "chunk", "batch", "ext", "with-ext"),
 	},
-	"managers": {
+	"ext": {
 		subs: map[string]flagSpec{
 			"list":    {},
 			"ls":      {},

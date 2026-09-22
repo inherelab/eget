@@ -67,7 +67,7 @@ const (
 
 // ManagersSelection is the resolved choice of which external managers take part
 // in list/update. It is produced by the CLI from its flags and [global]
-// managers_mode, so config can only yield off and with.
+// ext_mode, so config can only yield off and with.
 type ManagersSelection struct {
 	Mode string
 	// Managers restricts the selection to these manager names. Empty while Mode
@@ -304,7 +304,7 @@ func (s ListService) externalOutdatedItems(ignored map[string]bool) ([]OutdatedI
 	}
 	packages, failures, err := s.External.Outdated(context.Background(), s.Managers.Managers...)
 	if err != nil {
-		return nil, []OutdatedCheckFailure{{Name: "managers", Error: err}}, 0
+		return nil, []OutdatedCheckFailure{{Name: "ext", Error: err}}, 0
 	}
 
 	outdated := make([]OutdatedItem, 0, len(packages))

@@ -14,7 +14,7 @@ type Section struct {
 	GuiTarget            *string           `toml:"gui_target" mapstructure:"gui_target"`
 	IgnoreUpdatePackages []string          `toml:"ignore_update_packages,omitempty" mapstructure:"ignore_update_packages"`
 	IsGUI                *bool             `toml:"is_gui" mapstructure:"is_gui"`
-	ManagersMode         *string           `toml:"managers_mode,omitempty" mapstructure:"managers_mode"`
+	ExtMode              *string           `toml:"ext_mode,omitempty" mapstructure:"ext_mode"`
 	Name                 *string           `toml:"name" mapstructure:"name"`
 	Quiet                *bool             `toml:"quiet" mapstructure:"quiet"`
 	RenameFiles          map[string]string `toml:"rename_files,omitempty" mapstructure:"rename_files"`
@@ -120,7 +120,7 @@ type File struct {
 	Packages     map[string]Section        `toml:"packages" mapstructure:"packages"`
 	PkgTemplates map[string]Section        `toml:"pkg_templates" mapstructure:"pkg_templates"`
 	SDK          map[string]SDKSection     `toml:"sdk" mapstructure:"sdk"`
-	Managers     map[string]ManagerSection `toml:"managers" mapstructure:"managers"`
+	Ext          map[string]ManagerSection `toml:"ext" mapstructure:"ext"`
 }
 
 type Merged struct {
