@@ -32,28 +32,6 @@ func writeReaderWithModTime(r io.Reader, rename string, mode fs.FileMode, modTim
 	return applyModTime(rename, modTime)
 }
 
-func writeFile(data []byte, rename string, mode fs.FileMode) error {
-	return writeFileWithModTime(data, rename, mode, time.Time{})
-}
-
-func writeFileWithModTime(data []byte, rename string, mode fs.FileMode, modTime time.Time) error {
-	if rename[0] == '-' {
-		_, err := os.Stdout.Write(data)
-		return err
-	}
-	os.Remove(rename)
-	os.MkdirAll(filepath.Dir(rename), 0o755)
-	f, err := os.OpenFile(rename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err = f.Write(data); err != nil {
-		return err
-	}
-	return applyModTime(rename, modTime)
-}
-
 func applyModTime(path string, modTime time.Time) error {
 	if modTime.IsZero() {
 		return nil
