@@ -201,6 +201,43 @@ func TestUpdateManagersSelectionCombos(t *testing.T) {
 	})
 }
 
+func TestUpdateManagersSelectionFoldsManagerNameTargets(t *testing.T) {
+	svc := selectionService("")
+
+	t.Run("bare manager names join the selector", func(t *testing.T) {
+		opts := &UpdateOptions{Managers: "npm", Targets: []string{"uv", "npm"}}
+		selection, err := svc.updateManagersSelection(opts)
+		assert.NoErr(t, err)
+		assert.Eq(t, app.ManagersModeOnly, selection.Mode)
+		assert.Eq(t, []string{"npm", "uv"}, selection.Managers)
+		assert.Eq(t, "npm,uv", opts.Managers)
+		assert.Eq(t, 0, len(opts.Targets))
+	})
+
+	t.Run("all drops bare manager names", func(t *testing.T) {
+		opts := &UpdateOptions{Managers: "all", Targets: []string{"uv"}}
+		selection, err := svc.updateManagersSelection(opts)
+		assert.NoErr(t, err)
+		assert.Eq(t, 0, len(selection.Managers))
+		assert.Eq(t, "all", opts.Managers)
+		assert.Eq(t, 0, len(opts.Targets))
+	})
+
+	t.Run("explicit external references stay targets", func(t *testing.T) {
+		opts := &UpdateOptions{Managers: "npm", Targets: []string{"npm:typescript"}}
+		selection, err := svc.updateManagersSelection(opts)
+		assert.NoErr(t, err)
+		assert.Eq(t, []string{"npm"}, selection.Managers)
+		assert.Eq(t, []string{"npm:typescript"}, opts.Targets)
+	})
+
+	t.Run("eget targets are rejected", func(t *testing.T) {
+		_, err := svc.updateManagersSelection(&UpdateOptions{Managers: "npm", Targets: []string{"fd"}})
+		assert.Err(t, err)
+		assert.Contains(t, err.Error(), "--managers selects manager packages only")
+	})
+}
+
 func TestHandleListWithManagersShowsManagerSource(t *testing.T) {
 	ext := newFakeExtService()
 	ext.packages = []extpkg.Package{{Manager: "npm", Name: "typescript", Version: "5.8.0"}}

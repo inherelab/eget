@@ -277,6 +277,42 @@ func TestListOutdatedPackagesOnlySkipsRepoChecks(t *testing.T) {
 	assert.Eq(t, "typescript", outdated[0].Name)
 }
 
+func TestListUpdateCandidatesOnlySkipsRepoChecks(t *testing.T) {
+	external := newFakeExternal()
+	external.outdated = []extpkg.Package{
+		{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"},
+	}
+
+	latestCalled := 0
+	svc := UpdateService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+			}}, nil
+		},
+		LatestInfo: func(LatestCheckTarget) (LatestInfo, error) {
+			latestCalled++
+			return LatestInfo{Tag: "v14.0.0"}, nil
+		},
+		External: external,
+		Managers: ManagersSelection{Mode: ManagersModeOnly},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidates()
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, latestCalled)
+	assert.Eq(t, "typescript", items[0].Name)
+	assert.Eq(t, "npm", items[0].Manager)
+}
+
 func TestUpdateCandidatesCallsOnUpdateDone(t *testing.T) {
 	external := newFakeExternal()
 	var done []string

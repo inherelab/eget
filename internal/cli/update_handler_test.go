@@ -169,6 +169,48 @@ func TestHandleUpdateNamesEveryFailedTarget(t *testing.T) {
 	assert.Eq(t, "2 update failed: codex, uv", err.Error())
 }
 
+func TestHandleUpdateManagersOnlyUpdatesExternalAndPrints(t *testing.T) {
+	installer := &fakeUpdateInstallerForCLI{}
+	ext := newFakeExtService()
+	ext.outdated = []extpkg.Package{
+		{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"},
+	}
+	svc := &cliService{
+		stderr:     &bytes.Buffer{},
+		extService: ext,
+		cfgService: app.ConfigService{Load: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil }},
+		updService: app.UpdateService{
+			Install: installer,
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["fzf"] = cfgpkg.Section{Repo: util.StringPtr("junegunn/fzf")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"junegunn/fzf": {Repo: "junegunn/fzf", Tag: "v0.50.0"},
+				}}, nil
+			},
+			LatestInfo: func(target app.LatestCheckTarget) (app.LatestInfo, error) {
+				return app.LatestInfo{Tag: "v0.60.0"}, nil
+			},
+			External: ext,
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	// "uv" is folded into the manager selector like `--managers npm,uv`.
+	err := svc.handleUpdate(&UpdateOptions{Managers: "npm", Targets: []string{"uv"}})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, 0, len(installer.targets), "eget packages must not be updated")
+	assert.Eq(t, []string{"npm"}, ext.upgraded)
+	assert.Contains(t, ccolor.ClearCode(out.String()), "✅ updated npm:typescript 5.8.0 -> 5.9.2")
+}
+
 func TestHandleUpdatePrintsExternalUpdateDone(t *testing.T) {
 	ext := newFakeExtService()
 	ext.packages = []extpkg.Package{{Manager: "npm", Name: "typescript", Version: "5.8.0"}}

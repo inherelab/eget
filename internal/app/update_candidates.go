@@ -31,7 +31,12 @@ func (s UpdateService) ListUpdateCandidates() ([]OutdatedItem, []OutdatedCheckFa
 		return nil, nil, 0, err
 	}
 
-	outdated, failures, checked := checkOutdatedItems(items, s.LatestInfo, nil, batchConcurrencyFromConfig(cfg, install.Options{}), s.OnCheckDone)
+	var outdated []OutdatedItem
+	var failures []OutdatedCheckFailure
+	checked := 0
+	if !s.Managers.OnlyManagers() {
+		outdated, failures, checked = checkOutdatedItems(items, s.LatestInfo, nil, batchConcurrencyFromConfig(cfg, install.Options{}), s.OnCheckDone)
+	}
 
 	// External packages are batched per manager, one command instead of one
 	// check per package.

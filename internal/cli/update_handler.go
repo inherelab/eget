@@ -73,7 +73,9 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 	runCandidates := opts.All || opts.Interactive || selection.OnlyManagers()
 	if runCandidates {
 		var targets []string
-		if opts.Interactive && !opts.All {
+		// With --managers the remaining targets are explicit "manager:pkg"
+		// references and restrict the run to them.
+		if (opts.Interactive && !opts.All) || selection.OnlyManagers() {
 			targets = opts.Targets
 		}
 		items, err := s.updateCandidatesForPrompt(targets)
