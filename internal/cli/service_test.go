@@ -154,6 +154,8 @@ func TestNewCLIServiceWiresReleaseInfo(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmp, ".config"))
+	t.Setenv("EGET_CONFIG_DIR", "")
+	t.Setenv("EGET_CONFIG", "")
 
 	svc, err := newCLIService()
 	if err != nil {
@@ -179,6 +181,8 @@ func TestNewCLIServiceWiresReleaseInfo(t *testing.T) {
 
 func TestNewCLIServiceLoadsDotenvBeforeConfig(t *testing.T) {
 	t.Setenv("NO_PROXY", "")
+	t.Setenv("EGET_CONFIG_DIR", "")
+	t.Setenv("EGET_CONFIG", "")
 	tmp := t.TempDir()
 	xdgHome := filepath.Join(tmp, ".config")
 	configDir := filepath.Join(xdgHome, "eget")
@@ -214,6 +218,8 @@ url = "https://github.com/t8y2/dbx/releases/download/v0.5.42/DBX_0.5.42_x64-setu
 	t.Setenv("HOME", tmp)
 	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("XDG_CONFIG_HOME", xdgHome)
+	t.Setenv("EGET_CONFIG_DIR", "")
+	t.Setenv("EGET_CONFIG", "")
 
 	svc, err := newCLIService()
 	assert.NoErr(t, err)

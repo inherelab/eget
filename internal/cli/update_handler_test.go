@@ -388,6 +388,7 @@ func TestHandleUpdateSelfCheckPrintsCheckSource(t *testing.T) {
 }
 
 func TestHandleUpdateSelfCheckPrintsDefaultGitHubSource(t *testing.T) {
+	t.Setenv("EGET_SELF_UPDATE_SOURCE", "")
 	fake := &fakeSelfUpdateCLIService{
 		result: app.SelfUpdateResult{CurrentVersion: "1.7.1", LatestVersion: "1.7.1", Updated: false},
 	}

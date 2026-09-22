@@ -27,6 +27,7 @@ func TestDefaultStorePathUsesHomeConfigDir(t *testing.T) {
 	xdgConfig := filepath.Join(t.TempDir(), "xdg")
 	t.Setenv("HOME", home)
 	t.Setenv("EGET_CONFIG", customConfig)
+	t.Setenv("EGET_CONFIG_DIR", "")
 	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
 
 	path, err := DefaultStorePath()

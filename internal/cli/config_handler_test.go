@@ -20,6 +20,8 @@ func TestHandleConfigDoctorPrintsLocalPaths(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
 	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("EGET_CONFIG_DIR", "")
+	t.Setenv("EGET_CONFIG", "")
 	configPath := filepath.Join(tmp, "eget.toml")
 	cacheDir := filepath.Join(tmp, "cache")
 	targetDir := filepath.Join(tmp, "bin")
