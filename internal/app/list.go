@@ -309,13 +309,12 @@ func (s ListService) externalOutdatedItems(ignored map[string]bool) ([]OutdatedI
 
 	outdated := make([]OutdatedItem, 0, len(packages))
 	for _, pkg := range packages {
-		ref := pkg.Manager + ":" + pkg.Name
-		if ignored[pkg.Name] || ignored[ref] {
+		if ignoredExternalPackage(ignored, pkg) {
 			continue
 		}
 		outdated = append(outdated, OutdatedItem{
 			Name:         pkg.Name,
-			Repo:         ref,
+			Repo:         pkg.Manager + ":" + pkg.Name,
 			InstalledTag: pkg.Version,
 			LatestTag:    pkg.Latest,
 			Manager:      pkg.Manager,
@@ -332,7 +331,31 @@ func (s ListService) externalOutdatedItems(ignored map[string]bool) ([]OutdatedI
 			Error: failure.Err,
 		})
 	}
-	return outdated, checkFailures, len(packages)
+	// One manager command checks every package it owns at once, so the checked
+	// count is its installed set and not the outdated one.
+	return outdated, checkFailures, s.checkedExternalPackages(ignored)
+}
+
+// checkedExternalPackages counts the packages covered by the manager commands:
+// everything installed by the selected managers except the ignored ones, which
+// matches how the repo checks count their eligible items.
+func (s ListService) checkedExternalPackages(ignored map[string]bool) int {
+	installed, _, err := s.External.List(context.Background(), s.Managers.Managers...)
+	if err != nil {
+		return 0
+	}
+	checked := 0
+	for _, pkg := range installed {
+		if !ignoredExternalPackage(ignored, pkg) {
+			checked++
+		}
+	}
+	return checked
+}
+
+func ignoredExternalPackage(ignored map[string]bool, pkg extpkg.Package) bool {
+	ref := pkg.Manager + ":" + pkg.Name
+	return ignored[pkg.Name] || ignored[ref]
 }
 
 func resolveListItemPackageTemplate(cfg *cfgpkg.File, item ListItem) ListItem {

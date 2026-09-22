@@ -203,6 +203,9 @@ func TestListPackagesExternalHonoursIgnoreUpdatePackages(t *testing.T) {
 func TestListOutdatedPackagesMergesExternal(t *testing.T) {
 	publishedAt := time.Date(2026, 4, 21, 14, 10, 17, 0, time.UTC)
 	external := newFakeExternal()
+	external.packages = []extpkg.Package{
+		{Manager: "npm", Name: "typescript", Version: "5.8.0"},
+	}
 	external.outdated = []extpkg.Package{
 		{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"},
 	}
@@ -253,6 +256,9 @@ func TestListOutdatedPackagesMergesExternal(t *testing.T) {
 
 func TestListOutdatedPackagesOnlySkipsRepoChecks(t *testing.T) {
 	external := newFakeExternal()
+	external.packages = []extpkg.Package{
+		{Manager: "npm", Name: "typescript", Version: "5.8.0"},
+	}
 	external.outdated = []extpkg.Package{
 		{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"},
 	}
@@ -277,8 +283,40 @@ func TestListOutdatedPackagesOnlySkipsRepoChecks(t *testing.T) {
 	assert.Eq(t, "typescript", outdated[0].Name)
 }
 
+func TestListOutdatedPackagesExternalCheckedCountsInstalled(t *testing.T) {
+	external := newFakeExternal()
+	for i := 0; i < 10; i++ {
+		name := fmt.Sprintf("pkg%d", i)
+		external.packages = append(external.packages, extpkg.Package{Manager: "npm", Name: name, Version: "1.0.0"})
+	}
+	external.outdated = []extpkg.Package{
+		{Manager: "npm", Name: "pkg7", Version: "1.0.0", Latest: "1.1.0"},
+		{Manager: "npm", Name: "pkg9", Version: "1.0.0", Latest: "1.1.0"},
+	}
+
+	svc := repoListService(map[string]storepkg.Entry{})
+	svc.LoadConfig = func() (*cfgpkg.File, error) {
+		cfg := cfgpkg.NewFile()
+		cfg.Global.IgnoreUpdatePackages = []string{"pkg9"}
+		return cfg, nil
+	}
+	svc.External = external
+	svc.Managers = ManagersSelection{Mode: ManagersModeOnly}
+
+	outdated, _, checked, err := svc.ListOutdatedPackages()
+	assert.NoErr(t, err)
+	// Every installed package is checked, not just the outdated ones; the
+	// ignored one counts for neither.
+	assert.Eq(t, 9, checked)
+	assert.Eq(t, 1, len(outdated))
+	assert.Eq(t, "pkg7", outdated[0].Name)
+}
+
 func TestListUpdateCandidatesOnlySkipsRepoChecks(t *testing.T) {
 	external := newFakeExternal()
+	external.packages = []extpkg.Package{
+		{Manager: "npm", Name: "typescript", Version: "5.8.0"},
+	}
 	external.outdated = []extpkg.Package{
 		{Manager: "npm", Name: "typescript", Version: "5.8.0", Latest: "5.9.2"},
 	}
