@@ -1,6 +1,9 @@
 package installed
 
 import (
+	"os"
+
+	"github.com/inherelab/eget/internal/util/atomicfile"
 	"github.com/inherelab/eget/internal/util/configutil"
 )
 
@@ -41,8 +44,13 @@ func encodeStoreConfig(conf *Config) *configutil.Manager {
 	return cfg
 }
 
+// saveStoreConfig writes the whole store atomically: the TOML is serialized
+// into a temp file beside the target and then moved over it, so a crash cannot
+// truncate installed.toml.
 func saveStoreConfig(path string, conf *Config) error {
-	return encodeStoreConfig(conf).SaveTo(path)
+	return atomicfile.WriteFunc(path, 0o644, func(tmp *os.File) error {
+		return encodeStoreConfig(conf).SaveTo(tmp.Name())
+	})
 }
 
 func entryToMap(entry Entry) map[string]any {

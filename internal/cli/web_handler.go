@@ -79,6 +79,8 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		AllowHosts:     splitCommaList(opts.AllowHosts),
 		JSONLog:        opts.JSONLog,
 		LogWriter:      s.stderrWriter(),
+		TaskStore:      webTaskStorePath(),
+		TaskRunners:    s.webTaskRunners(),
 	})
 	if err != nil {
 		return err

@@ -40,7 +40,7 @@ func (s *Server) handleOverview(c *rux.Context) {
 		}
 	}
 
-	running, queued := s.opts.TaskCounts()
+	running, queued := s.tasks.Counts()
 	resp := overviewResponse{
 		Version:      s.opts.Version,
 		ConfigPath:   info.Path,

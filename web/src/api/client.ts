@@ -1,4 +1,5 @@
 import type {
+  CacheCleanRequest,
   CacheList,
   CacheStatus,
   ConfigView,
@@ -8,6 +9,11 @@ import type {
   Overview,
   PackageDetail,
   PackagesResponse,
+  Task,
+  TaskAccepted,
+  TasksResponse,
+  UninstallRequest,
+  UpdateRequest,
 } from './types'
 
 export class ApiError extends Error {
@@ -78,6 +84,50 @@ export const api = {
   cache: (root?: string) => request<CacheList>(`/api/cache${query({ root })}`),
   cacheStatus: () => request<CacheStatus>('/api/cache/status'),
   config: () => request<ConfigView>('/api/config'),
+
+  tasks: (limit = 50) => request<TasksResponse>(`/api/tasks${query({ limit })}`),
+  task: (id: string) => request<Task>(`/api/tasks/${encodeURIComponent(id)}`),
+  cancelTask: (id: string) =>
+    request<{ ok: boolean }>(`/api/tasks/${encodeURIComponent(id)}/cancel`, postJSON({})),
+
+  submitUpdate: (body: UpdateRequest) => request<TaskAccepted>('/api/update', postJSON(body)),
+  submitUninstall: (body: UninstallRequest) =>
+    request<TaskAccepted>('/api/uninstall', postJSON(body)),
+  submitExtUpgrade: (body: { manager: string; names?: string[] }) =>
+    request<TaskAccepted>('/api/ext/upgrade', postJSON(body)),
+  submitCacheClean: (body: CacheCleanRequest) =>
+    request<TaskAccepted>('/api/cache/clean', postJSON(body)),
+}
+
+// Write requests carry JSON. Same-origin browser requests already send an
+// Origin header, which is what the server's CSRF check verifies.
+function postJSON(body: unknown): RequestInit {
+  return {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }
+}
+
+export type TaskEventName = 'status' | 'progress' | 'log' | 'done'
+
+// subscribeToTask opens the SSE stream for one task and returns a closer.
+export function subscribeToTask(
+  taskId: string,
+  onEvent: (name: TaskEventName, data: unknown) => void,
+): () => void {
+  const source = new EventSource(`/api/tasks/${encodeURIComponent(taskId)}/events`)
+  const names: TaskEventName[] = ['status', 'progress', 'log', 'done']
+  for (const name of names) {
+    source.addEventListener(name, (event) => {
+      try {
+        onEvent(name, JSON.parse((event as MessageEvent).data))
+      } catch {
+        // Ignore frames we cannot parse; the next one usually follows.
+      }
+    })
+  }
+  return () => source.close()
 }
 
 export function formatBytes(size: number): string {

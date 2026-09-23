@@ -35,8 +35,11 @@ type Options struct {
 	AllowHosts []string
 	JSONLog    bool
 	LogWriter  io.Writer
-	// TaskCounts reports queued/running task counts for /api/overview.
-	TaskCounts func() (running int, queued int)
+	// TaskStore is the tasks.json path (empty disables persistence).
+	TaskStore string
+	// TaskRunners maps a task kind to its implementation. Write endpoints are
+	// unavailable when it is empty.
+	TaskRunners map[string]TaskRunner
 }
 
 // ListProvider is the subset of app.ListService the console needs.
@@ -106,6 +109,7 @@ type Server struct {
 	opts   Options
 	deps   Deps
 	router *rux.Router
+	tasks  *Engine
 }
 
 // NewServer builds the router, middleware chain and cache mirror routes.
@@ -117,6 +121,9 @@ func NewServer(deps Deps, opts Options) (*Server, error) {
 
 	router := rux.New()
 	s := &Server{opts: opts, deps: deps, router: router}
+	if len(opts.TaskRunners) > 0 {
+		s.tasks = NewEngine(opts.TaskStore, opts.TaskRunners)
+	}
 	router.Use(
 		s.recoverMiddleware,
 		s.logMiddleware,
@@ -165,6 +172,9 @@ func (s *Server) Serve(ctx context.Context, onReady func(addr string)) error {
 
 	go func() {
 		<-ctx.Done()
+		if s.tasks != nil {
+			s.tasks.Close()
+		}
 		stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = httpServer.Shutdown(stopCtx)
@@ -205,9 +215,6 @@ func (o Options) withDefaults() Options {
 	}
 	if o.LogWriter == nil {
 		o.LogWriter = os.Stderr
-	}
-	if o.TaskCounts == nil {
-		o.TaskCounts = func() (int, int) { return 0, 0 }
 	}
 	return o
 }

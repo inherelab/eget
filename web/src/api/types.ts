@@ -142,3 +142,66 @@ export interface ConfigView {
   exists: boolean
   content: string
 }
+
+export type TaskStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'canceled'
+  | 'interrupted'
+
+export interface TaskLogLine {
+  time: string
+  level: string
+  message: string
+}
+
+export interface TaskProgress {
+  percent: number
+  phase?: string
+  current?: number
+  total?: number
+}
+
+export interface Task {
+  id: string
+  kind: string
+  params?: Record<string, unknown>
+  status: TaskStatus
+  createdAt: string
+  startedAt?: string
+  finishedAt?: string
+  progress: TaskProgress
+  logs?: TaskLogLine[]
+  result?: unknown
+  error?: string
+}
+
+export interface TasksResponse {
+  total: number
+  items: Task[]
+}
+
+export interface TaskAccepted {
+  taskId: string
+  kind: string
+  status: TaskStatus
+}
+
+export interface UpdateRequest {
+  targets?: string[]
+  all?: boolean
+}
+
+export interface UninstallRequest {
+  target: string
+  purge?: boolean
+}
+
+export interface CacheCleanRequest {
+  mode?: 'older' | 'all' | 'keep-latest'
+  days?: number
+  kinds?: string[]
+  dryRun?: boolean
+}

@@ -114,6 +114,19 @@ func testServer(t *testing.T, opts Options) *Server {
 	if opts.LogWriter == nil {
 		opts.LogWriter = io.Discard
 	}
+	if opts.TaskRunners == nil {
+		echo := func(_ context.Context, params map[string]any, report *TaskReporter) (any, error) {
+			report.Info("demo task")
+			return map[string]any{"echo": TaskParamString(params, "name")}, nil
+		}
+		opts.TaskRunners = map[string]TaskRunner{
+			"demo":        echo,
+			"update":      echo,
+			"uninstall":   echo,
+			"ext.upgrade": echo,
+			"cache.clean": echo,
+		}
+	}
 	deps := Deps{
 		List: fakeList{
 			items: []app.ListItem{
@@ -341,6 +354,34 @@ func TestWebSPAFallback(t *testing.T) {
 	// Either the built SPA shell or the "not built" placeholder is served; both
 	// are HTML and both keep client-side routes working.
 	assert.Contains(t, strings.ToLower(rec.Body.String()), "<!doctype html>")
+}
+
+func TestUnknownPathsStillRunMiddleware(t *testing.T) {
+	server := testServer(t, Options{Token: "secret"})
+
+	// The catch-all route must be authenticated like every other request.
+	assert.Eq(t, http.StatusUnauthorized, get(t, server, "/some/unknown/path", nil).Code)
+
+	rec := get(t, server, "/some/unknown/path", func(r *http.Request) {
+		r.Header.Set("Authorization", "Bearer secret")
+	})
+	assert.Eq(t, http.StatusOK, rec.Code)
+	assert.Eq(t, "nosniff", rec.Header().Get("X-Content-Type-Options"))
+	assert.Contains(t, strings.ToLower(rec.Body.String()), "<!doctype html>")
+
+	// Unknown API routes answer with JSON rather than the SPA shell.
+	apiRec := get(t, server, "/api/nope", func(r *http.Request) {
+		r.Header.Set("Authorization", "Bearer secret")
+	})
+	assert.Eq(t, http.StatusNotFound, apiRec.Code)
+	assert.Contains(t, apiRec.Body.String(), "not_found")
+
+	// A method mismatch reaches the chain instead of rux's NotAllowed handler.
+	req := httptest.NewRequest(http.MethodDelete, "/api/overview", nil)
+	req.Host = "127.0.0.1:8787"
+	deleteRec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(deleteRec, req)
+	assert.Eq(t, http.StatusUnauthorized, deleteRec.Code)
 }
 
 func TestWebSecurityHeaders(t *testing.T) {

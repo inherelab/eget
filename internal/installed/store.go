@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
@@ -54,7 +55,18 @@ func (s *Store) Path() string {
 	return s.fallbackPath()
 }
 
+// storeMu serializes read-modify-write cycles on the installed store. The web
+// console serves requests concurrently, and an unlocked load-then-save would
+// lose entries.
+var storeMu sync.Mutex
+
 func (s *Store) Load() (*Config, error) {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+	return s.load()
+}
+
+func (s *Store) load() (*Config, error) {
 	configPath := s.Path()
 
 	cfg, err := loadStoreConfigManager(configPath)
@@ -77,6 +89,12 @@ func (s *Store) Load() (*Config, error) {
 }
 
 func (s *Store) Save(config *Config) error {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+	return s.save(config)
+}
+
+func (s *Store) save(config *Config) error {
 	configPath := s.Path()
 
 	if config.Installed == nil {
@@ -91,7 +109,10 @@ func (s *Store) Save(config *Config) error {
 }
 
 func (s *Store) Record(target string, entry Entry) error {
-	config, err := s.Load()
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	config, err := s.load()
 	if err != nil {
 		return err
 	}
@@ -127,7 +148,7 @@ func (s *Store) Record(target string, entry Entry) error {
 		delete(config.Installed, legacyKey)
 	}
 
-	return s.Save(config)
+	return s.save(config)
 }
 
 func compactStoreTime(value time.Time) time.Time {
@@ -138,13 +159,16 @@ func compactStoreTime(value time.Time) time.Time {
 }
 
 func (s *Store) Remove(target string) error {
-	config, err := s.Load()
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	config, err := s.load()
 	if err != nil {
 		return err
 	}
 
 	delete(config.Installed, NormalizeRepoName(target))
-	return s.Save(config)
+	return s.save(config)
 }
 
 func (s *Store) fallbackPath() string {

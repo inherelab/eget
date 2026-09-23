@@ -20,6 +20,18 @@ func (s *Server) registerRoutes(r *rux.Router) {
 		r.GET("/config", s.handleConfig)
 		r.GET("/query", s.handleQuery)
 		r.GET("/search", s.handleSearch)
+
+		// Write endpoints queue a task; the global CSRF middleware already
+		// guards every non-GET request.
+		r.POST("/update", s.handleSubmitUpdate)
+		r.POST("/uninstall", s.handleSubmitUninstall)
+		r.POST("/ext/upgrade", s.handleSubmitExtUpgrade)
+		r.POST("/cache/clean", s.handleSubmitCacheClean)
+
+		r.GET("/tasks", s.handleTasks)
+		r.GET("/tasks/{id}", s.handleTask)
+		r.GET("/tasks/{id}/events", s.handleTaskEvents)
+		r.POST("/tasks/{id}/cancel", s.handleTaskCancel)
 	})
 
 	// Cache mirror protocol: these paths and their semantics are a cross-machine
@@ -35,5 +47,9 @@ func (s *Server) registerRoutes(r *rux.Router) {
 	}
 
 	s.registerAssets(r)
-	r.NotFound(s.handleSPAFallback)
+	// Deliberately not r.NotFound: rux's NotFound/NotAllowed handlers bypass the
+	// global middleware chain, which would skip auth, security headers and
+	// logging on exactly the requests an attacker controls. A catch-all route
+	// runs through the normal chain instead.
+	r.Any("/*path", s.handleCatchAll)
 }

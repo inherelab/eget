@@ -6,14 +6,21 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/util"
+	"github.com/inherelab/eget/internal/util/atomicfile"
 )
 
 type Store struct {
 	Path string
 }
+
+// storeMu serializes read-modify-write cycles on sdk.installed.json. The web
+// console serves requests concurrently, so an unlocked load-then-save would
+// lose entries.
+var storeMu sync.Mutex
 
 func DefaultStorePath() (string, error) {
 	home, err := util.Home()
@@ -24,6 +31,12 @@ func DefaultStorePath() (string, error) {
 }
 
 func (s Store) Load() (InstalledStore, error) {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+	return s.load()
+}
+
+func (s Store) load() (InstalledStore, error) {
 	if s.Path == "" {
 		return newInstalledStore(), nil
 	}
@@ -43,19 +56,25 @@ func (s Store) Load() (InstalledStore, error) {
 }
 
 func (s Store) Save(store InstalledStore) error {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+	return s.save(store)
+}
+
+func (s Store) save(store InstalledStore) error {
 	normalizeInstalledStore(&store)
 	data, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(s.Path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(s.Path, append(data, '\n'), 0o644)
+	return atomicfile.WriteFile(s.Path, append(data, '\n'), 0o644)
 }
 
 func (s Store) Record(entry InstalledEntry) error {
-	store, err := s.Load()
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	store, err := s.load()
 	if err != nil {
 		return err
 	}
@@ -65,11 +84,14 @@ func (s Store) Record(entry InstalledEntry) error {
 	}
 	node.Versions[entry.Version] = entry
 	store.Installed[entry.Name] = node
-	return s.Save(store)
+	return s.save(store)
 }
 
 func (s Store) Remove(name, version string) (InstalledEntry, error) {
-	store, err := s.Load()
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	store, err := s.load()
 	if err != nil {
 		return InstalledEntry{}, err
 	}
@@ -87,14 +109,17 @@ func (s Store) Remove(name, version string) (InstalledEntry, error) {
 	} else {
 		store.Installed[name] = node
 	}
-	if err := s.Save(store); err != nil {
+	if err := s.save(store); err != nil {
 		return InstalledEntry{}, err
 	}
 	return entry, nil
 }
 
 func (s Store) List(name string) ([]InstalledEntry, error) {
-	store, err := s.Load()
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	store, err := s.load()
 	if err != nil {
 		return nil, err
 	}

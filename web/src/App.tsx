@@ -6,6 +6,7 @@ import Outdated from './pages/Outdated'
 import Ext from './pages/Ext'
 import Cache from './pages/Cache'
 import Config from './pages/Config'
+import Tasks from './pages/Tasks'
 
 const navigation = [
   { to: '/', label: 'Overview', end: true },
@@ -14,6 +15,7 @@ const navigation = [
   { to: '/ext', label: 'External' },
   { to: '/cache', label: 'Cache' },
   { to: '/config', label: 'Config' },
+  { to: '/tasks', label: 'Tasks' },
 ]
 
 export default function App() {
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/ext" element={<Ext />} />
           <Route path="/cache" element={<Cache />} />
           <Route path="/config" element={<Config />} />
+          <Route path="/tasks" element={<Tasks />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

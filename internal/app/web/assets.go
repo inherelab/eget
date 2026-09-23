@@ -2,8 +2,10 @@ package web
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/gookit/rux/v2"
 )
@@ -21,6 +23,28 @@ func (s *Server) registerAssets(r *rux.Router) {
 		return
 	}
 	r.StaticFS("/assets", http.FS(assets))
+}
+
+// handleCatchAll classifies requests that matched no route. It exists because
+// rux serves those through NotFound/NotAllowed handlers that bypass the global
+// middleware chain; routing them here keeps auth, security headers and request
+// logging in force.
+func (s *Server) handleCatchAll(c *rux.Context) {
+	path := c.Req.URL.Path
+	switch {
+	case strings.HasPrefix(path, "/api/"), path == "/api":
+		s.writeError(c, http.StatusNotFound, "not_found", fmt.Errorf("no API route for %s", path))
+		return
+	case strings.HasPrefix(path, "/assets/"):
+		s.writeError(c, http.StatusNotFound, "not_found", fmt.Errorf("no asset at %s", path))
+		return
+	}
+	if c.Req.Method != http.MethodGet && c.Req.Method != http.MethodHead {
+		s.writeError(c, http.StatusMethodNotAllowed, "method_not_allowed",
+			fmt.Errorf("%s is not allowed for %s", c.Req.Method, path))
+		return
+	}
+	s.handleSPAFallback(c)
 }
 
 // handleSPAFallback serves the single-page app shell for unknown paths so

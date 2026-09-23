@@ -1,11 +1,28 @@
-import { Link, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
 import StateBlock from '../components/StateBlock'
 import { useAsync } from '../hooks/useAsync'
 
 export default function PackageDetail() {
   const { name = '' } = useParams()
+  const navigate = useNavigate()
   const { data, error, loading, reload } = useAsync(() => api.packageDetail(name), [name])
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const runTask = async (submit: () => Promise<{ taskId: string }>) => {
+    setSubmitting(true)
+    setActionError(null)
+    try {
+      const accepted = await submit()
+      navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <section className="page">
@@ -15,11 +32,26 @@ export default function PackageDetail() {
           <Link to="/packages" style={{ marginRight: 12 }}>
             ← Back
           </Link>
+          <button
+            onClick={() => void runTask(() => api.submitUpdate({ targets: [name] }))}
+            disabled={submitting}
+            style={{ marginRight: 8 }}
+          >
+            Update
+          </button>
+          <button
+            onClick={() => void runTask(() => api.submitUninstall({ target: name }))}
+            disabled={submitting}
+            style={{ marginRight: 8 }}
+          >
+            Uninstall
+          </button>
           <button onClick={reload} disabled={loading}>
             Refresh
           </button>
         </div>
       </div>
+      {actionError && <div className="alert">{actionError}</div>}
       <StateBlock loading={loading} error={error}>
         {data && (
           <>

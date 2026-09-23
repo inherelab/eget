@@ -1,12 +1,28 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
 import StateBlock from '../components/StateBlock'
 import type { OutdatedResponse } from '../api/types'
 
 export default function Outdated() {
+  const navigate = useNavigate()
   const [result, setResult] = useState<OutdatedResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const updateAll = async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const accepted = await api.submitUpdate({ all: true })
+      navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const check = async () => {
     setLoading(true)
@@ -24,9 +40,14 @@ export default function Outdated() {
     <section className="page">
       <div className="page-head">
         <h1>Outdated</h1>
-        <button className="primary" onClick={check} disabled={loading}>
-          {loading ? 'Checking…' : 'Check for updates'}
-        </button>
+        <div>
+          <button onClick={() => void updateAll()} disabled={submitting} style={{ marginRight: 8 }}>
+            Update all
+          </button>
+          <button className="primary" onClick={check} disabled={loading}>
+            {loading ? 'Checking…' : 'Check for updates'}
+          </button>
+        </div>
       </div>
 
       <div className="notice">
