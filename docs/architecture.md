@@ -22,6 +22,8 @@ Current commands:
 - `sdk`
 - `query`
 - `search`
+- `cache`
+- `web`
 
 The root command does not perform a default install action. Command flags can appear before or after positional arguments:
 

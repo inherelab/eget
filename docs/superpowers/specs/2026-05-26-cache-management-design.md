@@ -4,6 +4,7 @@
 
 | 日期 | 变更 |
 | --- | --- |
+| 2026-09-23 | `cache serve` 命令已删除：其缓存镜像协议（`/manifest.json`、`/download/path-md5:<key>`、`/files/<path>`）与只读浏览能力全部并入 `eget web`，见 [2026-09-23-web-console-design.md](./2026-09-23-web-console-design.md)。本文中 `cache serve` 默认监听 `0.0.0.0:8686`、以及"不新增前端依赖，不引入静态资源目录"的约定均已被该设计取代（`eget web` 默认 `127.0.0.1:8787`，前端采用 Vite/React 构建产物嵌入）。协议本身保持不变。 |
 | 2026-06-01 | 后续 cache mirror 协议调整为 path-key 优先：客户端和服务端基于缓存相对路径 `md5(relpath)` 复用现有老缓存；普通 package cache 暂不要求新增 `.meta.json`，source metadata 和 registry 化能力留给后续阶段单独设计。 |
 | 2026-05-26 | 初始设计：定义 `cache clean`、`cache serve`、manifest schema、客户端自动 mirror 的分期方向。 |
 

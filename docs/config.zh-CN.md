@@ -184,12 +184,12 @@ cache_time = 1800
 
 ## Cache Mirror
 
-`[cache_mirror]` 让 `install`、`download` 和 `sdk install` 在回源下载前先尝试局域网内的 `eget cache serve` 服务。
+`[cache_mirror]` 让 `install`、`download` 和 `sdk install` 在回源下载前先尝试局域网内 `eget web` 提供的缓存镜像。
 
 ```toml
 [cache_mirror]
 enable = true
-url = "http://192.168.1.10:8686"
+url = "http://192.168.1.10:8787"
 timeout = 5
 fallback = true
 ```
@@ -197,7 +197,7 @@ fallback = true
 字段说明：
 
 - `enable`: 是否在回源下载前启用 cache mirror 查询。
-- `url`: cache server 基础地址，通常指向 `eget cache serve --host 0.0.0.0 --port 8686` 启动的服务。
+- `url`: mirror 服务基础地址，通常指向 `eget web --host 0.0.0.0 --token <token>` 启动的服务（默认端口 `8787`）。
 - `timeout`: mirror 连接、TLS 握手和响应头超时时间，单位为秒。小于等于 `0` 时使用默认 5 秒。该值不限制完整文件 body 下载耗时，因此大文件在服务端开始响应后可以继续下载超过该时长。
 - `fallback`: 为 `true` 时，mirror miss 或错误后继续回源；为 `false` 时，mirror miss 或错误会直接终止下载。
 
@@ -205,11 +205,11 @@ fallback = true
 
 ### 已知工具的全离线安装
 
-联网机器先正常查询或安装目标，让同一个 cache root 下的 `api-cache` 和 `pkg-cache` 都完成预热，然后启动 cache server：
+联网机器先正常查询或安装目标，让同一个 cache root 下的 `api-cache` 和 `pkg-cache` 都完成预热，然后启动镜像服务：
 
 ```bash
 eget install owner/tool
-eget cache serve --host 0.0.0.0 --port 8686
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 ```
 
 离线客户端已知道 repo、package alias 或 pkg-template target 时，使用严格模式：
@@ -217,21 +217,21 @@ eget cache serve --host 0.0.0.0 --port 8686
 ```toml
 [cache_mirror]
 enable = true
-url = "http://192.168.1.10:8686"
+url = "http://192.168.1.10:8787"
 fallback = false
 ```
 
 `fallback = false` 会同时禁止 provider metadata 和资产下载回源。缺少 metadata 时错误包含 `cache mirror metadata miss`；metadata 存在但缺少资产时错误包含 `cache mirror miss`。`api_cache.enable = false` 只关闭普通 API cache 策略，不会禁用 metadata mirror；mirror 命中的 metadata 仍会暂存到本地 `api-cache`，供当前解析和后续复用。
 
-一期只支持客户端已经知道的 target，不支持从 cache server 搜索或列出可安装工具。package/version/platform catalog 属于后续独立阶段。
+一期只支持客户端已经知道的 target，不支持从 mirror 服务搜索或列出可安装工具。package/version/platform catalog 属于后续独立阶段。
 
-`[cache_mirror]` 是客户端侧的 mirror 查询配置。服务端访问保护是 `cache serve` 的运行时参数：
+`[cache_mirror]` 是客户端侧的 mirror 查询配置。服务端访问保护是 `eget web` 的运行时参数：
 
 ```bash
-eget cache serve --token "$EGET_CACHE_TOKEN"
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 ```
 
-`cache serve` 默认输出 text 请求日志；需要结构化 JSON lines 时再增加 `--json-log`。
+`eget web` 默认输出 text 请求日志；需要结构化 JSON lines 时再增加 `--json-log`。
 
 不要把 bearer token 写入 `[cache_mirror]`；当前 mirror client 下载不会发送 token。如果后续需要认证的 mirror client 下载，应作为独立的客户端/服务端协议另行设计。
 

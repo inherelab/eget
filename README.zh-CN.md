@@ -161,7 +161,6 @@ eget ca list --root sdk
 - `cache clean`: 清理选定的缓存文件。
 - `cache list`: 按缓存根目录列出文件，支持 `all`、`pkg`、`api`、`sdk`、`sdk-index`、`partial`。
 - `cache status`: 查看缓存目录占用摘要。
-- `cache serve`: 以只读 HTTP 服务暴露缓存文件。
 
 `eget cache clean` 用于清理 `global.cache_dir` 下的本机缓存。默认清理 3 天前的 package 下载缓存、API cache、SDK 下载缓存和未完成下载状态。SDK index 默认保留；如果确认要清理 SDK index，请显式使用 `--sdk-index`。
 
@@ -182,25 +181,28 @@ eget cache list --root sdk-index
 eget cache list --json
 ```
 
-`eget cache serve` 会启动只读 HTTP 服务，方便同一局域网内其它机器浏览或下载本机已有的 package/SDK 缓存文件。浏览器打开服务根路径可以查看内置文件列表界面，也可以请求 `/manifest.json` 获取机器可读的 manifest。
+`eget web` 启动本地 Web 控制台：浏览器打开即用，同时对外提供同一套缓存镜像协议 —— `/manifest.json` 是机器可读清单，`/download/path-md5:<key>` 与 `/files/<path>` 提供文件下载。
 
 ```bash
-eget cache serve
-eget cache serve --host 127.0.0.1 --port 0 --root sdk --no-index
+eget web                          # http://127.0.0.1:8787，自动生成 token 并打印
+eget web --open                   # 启动后用浏览器打开
+eget web --cache-root sdk --no-cache-index
 ```
 
-服务端默认输出 text 请求日志。需要时可以开启简单 bearer 保护，并把请求日志切换为 JSON lines：
+默认只监听 `127.0.0.1`。对外提供镜像时必须显式指定监听地址与 token（明文 HTTP，建议放在反向代理之后）：
 
 ```bash
-eget cache serve --host 0.0.0.0 --port 8686 --token "$EGET_CACHE_TOKEN" --json-log
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --json-log
 ```
 
-客户端开启回源前优先尝试 cache server：
+> `eget cache serve` 已删除，能力并入 `eget web`。选项对照（`--root` → `--cache-root`、`--no-index` → `--no-cache-index` 等）与默认值差异见 [docs/web.md](docs/web.md)。
+
+客户端开启回源前优先尝试 cache mirror（注意默认端口已变为 8787）：
 
 ```toml
 [cache_mirror]
 enable = true
-url = "http://192.168.1.10:8686"
+url = "http://192.168.1.10:8787"
 ```
 
 ### 查询命令示例

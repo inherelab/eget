@@ -184,12 +184,12 @@ The API cache stores known provider metadata `GET` responses, including GitHub A
 
 ## Cache Mirror
 
-`[cache_mirror]` lets `install`, `download`, and `sdk install` try a LAN `eget cache serve` instance before downloading from the original source.
+`[cache_mirror]` lets `install`, `download`, and `sdk install` try a LAN cache mirror served by `eget web` before downloading from the original source.
 
 ```toml
 [cache_mirror]
 enable = true
-url = "http://192.168.1.10:8686"
+url = "http://192.168.1.10:8787"
 timeout = 5
 fallback = true
 ```
@@ -197,7 +197,7 @@ fallback = true
 Fields:
 
 - `enable`: enable cache mirror lookup before origin downloads.
-- `url`: cache server base URL, usually an `eget cache serve --host 0.0.0.0 --port 8686` instance.
+- `url`: mirror base URL, usually an `eget web --host 0.0.0.0 --token <token>` instance (default port `8787`).
 - `timeout`: mirror connect, TLS handshake, and response-header timeout in seconds. Values less than or equal to `0` use the default 5 seconds. The timeout does not cap the full file body download duration, so large LAN mirror downloads can exceed this value once the server starts responding.
 - `fallback`: when `true`, mirror miss or error falls back to the original source. When `false`, mirror miss or error stops the download.
 
@@ -205,11 +205,11 @@ The first mirror protocol uses a path key based on the normalized cache relative
 
 ### Fully offline installation for known targets
 
-On an online machine, query or install the target normally so both `api-cache` and `pkg-cache` under the same cache root are warm, then start the cache server:
+On an online machine, query or install the target normally so both `api-cache` and `pkg-cache` under the same cache root are warm, then start the mirror server:
 
 ```bash
 eget install owner/tool
-eget cache serve --host 0.0.0.0 --port 8686
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 ```
 
 When the offline client already knows the repo, package alias, or pkg-template target, enable strict mode:
@@ -217,21 +217,21 @@ When the offline client already knows the repo, package alias, or pkg-template t
 ```toml
 [cache_mirror]
 enable = true
-url = "http://192.168.1.10:8686"
+url = "http://192.168.1.10:8787"
 fallback = false
 ```
 
 `fallback = false` blocks origin access for both provider metadata and asset downloads. Missing metadata reports `cache mirror metadata miss`; available metadata with a missing asset reports `cache mirror miss`. Setting `api_cache.enable = false` only disables the normal API cache policy; it does not disable the metadata mirror. Mirrored metadata is still staged in the local `api-cache` for parsing and later reuse.
 
-Phase one supports only targets already known to the client. It does not search or list installable tools from the cache server. A package/version/platform catalog belongs to a later, separate phase.
+Phase one supports only targets already known to the client. It does not search or list installable tools from the mirror server. A package/version/platform catalog belongs to a later, separate phase.
 
-`[cache_mirror]` is client-side lookup configuration. Server access protection is a runtime `cache serve` option:
+`[cache_mirror]` is client-side lookup configuration. Server access protection is a runtime `eget web` option:
 
 ```bash
-eget cache serve --token "$EGET_CACHE_TOKEN"
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 ```
 
-`cache serve` prints text request logs by default. Add `--json-log` when structured JSON lines are preferred.
+`eget web` prints text request logs by default. Add `--json-log` when structured JSON lines are preferred.
 
 Do not put bearer tokens in `[cache_mirror]`; current mirror client downloads do not send a token. If authenticated mirror client downloads are needed later, they should be designed as a separate client/server contract.
 

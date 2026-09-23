@@ -161,7 +161,6 @@ Subcommands:
 - `cache clean`: remove selected cache files.
 - `cache list`: list cache files by root (`all`, `pkg`, `api`, `sdk`, `sdk-index`, `partial`).
 - `cache status`: show cache directory usage summary.
-- `cache serve`: serve cache files over a read-only HTTP server.
 
 `eget cache clean` removes local cache files from `global.cache_dir`. By default it removes package, API, SDK download, and partial download cache files older than 3 days. SDK index cache is kept by default; use `--sdk-index` when you explicitly want to clear it.
 
@@ -182,25 +181,28 @@ eget cache list --root sdk-index
 eget cache list --json
 ```
 
-`eget cache serve` starts a read-only HTTP server for local cache files so machines on the same LAN can browse or download cached packages and SDK archives. Open the server root URL in a browser to view the built-in file list UI, or request `/manifest.json` for the machine-readable manifest.
+`eget web` starts the local web console: a browser UI plus the same cache mirror protocol — `/manifest.json` is the machine-readable index, and `/download/path-md5:<key>` and `/files/<path>` serve files.
 
 ```bash
-eget cache serve
-eget cache serve --host 127.0.0.1 --port 0 --root sdk --no-index
+eget web                          # http://127.0.0.1:8787, generates and prints a token
+eget web --open                   # open the console in a browser
+eget web --cache-root sdk --no-cache-index
 ```
 
-The server prints text request logs by default. Add simple bearer protection and switch request logs to JSON lines when needed:
+It listens on `127.0.0.1` only by default. Serving a mirror to other machines requires an explicit host and token (plain HTTP; put it behind a TLS reverse proxy):
 
 ```bash
-eget cache serve --host 0.0.0.0 --port 8686 --token "$EGET_CACHE_TOKEN" --json-log
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --json-log
 ```
 
-Enable a client to try the cache server before origin downloads:
+> `eget cache serve` was removed; its capabilities moved into `eget web`. Option mapping (`--root` → `--cache-root`, `--no-index` → `--no-cache-index`, ...) and the changed defaults are documented in [docs/web.md](docs/web.md).
+
+Enable a client to try the cache mirror before origin downloads (note the new default port):
 
 ```toml
 [cache_mirror]
 enable = true
-url = "http://192.168.1.10:8686"
+url = "http://192.168.1.10:8787"
 ```
 
 ### Query Examples

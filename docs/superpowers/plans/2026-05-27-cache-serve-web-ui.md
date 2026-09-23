@@ -4,6 +4,8 @@
 
 **Goal:** 为 `eget cache serve` 增加内置只读 Web UI，方便在浏览器中查看和下载缓存文件。
 
+> **修订（2026-09-23）**：`eget cache serve` 命令与其内置只读页面已删除，缓存镜像协议与浏览能力并入 `eget web`（见 [2026-09-23-web-console-design.md](../specs/2026-09-23-web-console-design.md)）。`internal/app/cache/ui.go` 与 `ui_test.go` 已移除，机器接口改为 `internal/app/cache/machine.go` 中可挂载的 handler。本文保留为当时的实现记录。
+
 **Architecture:** `server.go` 只增加根路径路由，HTML 数据整理和模板渲染放入 `internal/app/cache/ui.go`。UI 复用现有扫描、root scope 和 `/files/{relpath}` 下载 URL，不新增前端构建链路。
 
 **Tech Stack:** Go, `html/template`, `net/http/httptest`, `github.com/gookit/goutil/x/assert`。

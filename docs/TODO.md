@@ -43,17 +43,22 @@
   - [x] 落盘 package 保留轻量引用：`repo = "pkg-template:mydev:markview"`。
 - [x] 新增 eget 缓存管理命令 `cache` 第一期。
   - [x] `cache clean` 清理下载文件、API cache、SDK 下载缓存和未完成下载状态，默认清理 3 天前的缓存。
-  - [x] `cache serve` 启动只读内网 server，分享 package/sdk cache 文件。
-  - [x] `cache serve` 根路径提供内置只读 Web UI，方便浏览和下载缓存文件。
+  - [x] `cache serve` 启动只读内网 server，分享 package/sdk cache 文件。（2026-09-23：命令已删除，能力并入 `eget web`）
+  - [x] `cache serve` 根路径提供内置只读 Web UI，方便浏览和下载缓存文件。（同上，内置页面由 web 控制台取代）
 - [ ] 增强 cache mirror 自动复用能力。
-  - [x] `cache serve` 增加 path-key 下载协议，基于缓存相对路径 md5 复用现有老缓存。
+  - [x] `cache serve` 增加 path-key 下载协议，基于缓存相对路径 md5 复用现有老缓存。（协议保留在 `eget web` 的 `/download/path-md5:<key>`）
   - [x] 客户端 install/download/sdk install 在回源前尝试使用局域网 cache mirror。
   - [ ] 后续 registry 化阶段再设计 source metadata、搜索和不依赖第三方 provider 的解析能力。
-  - [x] `cache serve --token`。
+  - [x] `cache serve --token`。（由 `eget web --token` 承接）
   - [ ] manifest TTL。
 - [ ] cache 运维和脚本集成增强。
   - [x] `cache list` 和 `cache status`。
-  - [x] `cache clean --json` 和 `cache serve --json-log`。
+  - [x] `cache clean --json` 和 `cache serve --json-log`。（请求日志由 `eget web --json-log` 承接）
+- [ ] eget web 控制台（设计见 `docs/superpowers/specs/2026-09-23-web-console-design.md`，使用说明见 `docs/web.md`）。
+  - [x] 服务骨架：rux/v2 路由、token 认证、Host/CSRF 防护、只读 API（overview/packages/outdated/ext/cache/config）。
+  - [x] 接管缓存镜像协议（`/manifest.json`、`/download/*`、`/files/*`），并删除 `eget cache serve`。
+  - [ ] Vite/React 前端工程与嵌入产物。
+  - [ ] 任务引擎（串行队列 + SSE），以及更新/卸载/安装/配置编辑等写入接口。
 - [x] 基于 `latest.yaml 简版 + url template` 配置支持自定义站点的工具下载
 - [ ] ux 体验优化
   - 核心命令帮助信息都加上各种 example 示例说明
