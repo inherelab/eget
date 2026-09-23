@@ -5,9 +5,7 @@ import (
 )
 
 func (s *Server) registerRoutes(r *rux.Router) {
-	r.GET("/healthz", s.handleHealthz)
-	r.GET("/readyz", s.handleReadyz)
-
+	// /healthz and /readyz are mounted by the rux server (MountHealthChecks).
 	r.Group("/api", func() {
 		r.GET("/overview", s.handleOverview)
 		r.GET("/packages", s.handlePackages)
@@ -53,9 +51,9 @@ func (s *Server) registerRoutes(r *rux.Router) {
 	}
 
 	s.registerAssets(r)
-	// Deliberately not r.NotFound: rux's NotFound/NotAllowed handlers bypass the
-	// global middleware chain, which would skip auth, security headers and
-	// logging on exactly the requests an attacker controls. A catch-all route
-	// runs through the normal chain instead.
-	r.Any("/*path", s.handleCatchAll)
+	// rux 2.1 routes unmatched paths and method mismatches through the global
+	// middleware chain, so auth, security headers and request logging apply to
+	// exactly the requests an attacker controls.
+	r.NotFound(s.handleCatchAll)
+	r.NotAllowed(s.handleCatchAll)
 }

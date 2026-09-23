@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gookit/rux/v2"
+	"github.com/gookit/rux/v2/server"
 	app "github.com/inherelab/eget/internal/app"
 	appcache "github.com/inherelab/eget/internal/app/cache"
 	"github.com/inherelab/eget/internal/extpkg"
@@ -115,6 +116,7 @@ type Server struct {
 	opts    Options
 	deps    Deps
 	router  *rux.Router
+	inner   *server.Server
 	tasks   *Engine
 	limiter *authLimiter
 }
@@ -126,16 +128,29 @@ func NewServer(deps Deps, opts Options) (*Server, error) {
 		return nil, err
 	}
 
-	router := rux.New()
+	// rux 2.1 runs the global middleware chain for 404/405 responses, so the
+	// console uses the framework's own NotFound/NotAllowed handlers instead of a
+	// catch-all route, and the server package owns timeouts, signal handling,
+	// graceful shutdown and the liveness endpoints.
+	inner := server.New(false)
+	inner.Addr = net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port))
+	// SSE streams and large mirror downloads must not be cut mid-response.
+	inner.WriteTimeout = 0
+	rux.WithMethodNotAllowed(true)(inner.Router)
+
+	router := inner.Router
 	s := &Server{
 		opts:    opts,
 		deps:    deps,
 		router:  router,
+		inner:   inner,
 		limiter: newAuthLimiter(authFailureLimit, authFailureWindow),
 	}
 	if len(opts.TaskRunners) > 0 {
 		s.tasks = NewEngine(opts.TaskStore, opts.TaskRunners)
 	}
+	// Order matters: rux requires Use before any route registration, and
+	// MountHealthChecks registers /healthz + /readyz.
 	router.Use(
 		s.recoverMiddleware,
 		s.logMiddleware,
@@ -144,6 +159,7 @@ func NewServer(deps Deps, opts Options) (*Server, error) {
 		s.authMiddleware,
 		s.csrfMiddleware,
 	)
+	inner.MountHealthChecks()
 	s.registerRoutes(router)
 	return s, nil
 }
@@ -159,40 +175,40 @@ func (s *Server) Router() *rux.Router {
 	return s.router
 }
 
-// Serve listens on the configured address and blocks until ctx is canceled,
-// then drains in-flight requests. onReady receives the address actually bound,
-// which resolves a random port when Port is 0.
+// Serve listens on the configured address and blocks until a stop signal or a
+// canceled ctx, then drains in-flight requests. onReady receives the address
+// actually bound, which resolves a random port when Port is 0.
 func (s *Server) Serve(ctx context.Context, onReady func(addr string)) error {
-	addr := net.JoinHostPort(s.opts.Host, strconv.Itoa(s.opts.Port))
-	listener, err := net.Listen("tcp", addr)
+	listener, err := net.Listen("tcp", s.inner.Addr)
 	if err != nil {
 		return err
 	}
-	if onReady != nil {
-		onReady(listener.Addr().String())
-	}
+	s.inner.SetListener(listener)
 
-	httpServer := &http.Server{
-		Handler:           s.router,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       60 * time.Second,
-		// SSE streams and large cache downloads run as long as they need to.
-		WriteTimeout:   0,
-		IdleTimeout:    120 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	go func() {
-		<-ctx.Done()
+	// Cancel queued and running tasks before the drain, so a shutdown cannot
+	// leave a task half applied.
+	s.inner.PreShutdown = append(s.inner.PreShutdown, func(context.Context) error {
 		if s.tasks != nil {
 			s.tasks.Close()
 		}
-		stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		return nil
+	})
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_ = httpServer.Shutdown(stopCtx)
+		_ = s.inner.Shutdown(shutdownCtx)
 	}()
 
-	serveErr := httpServer.Serve(listener)
+	if onReady != nil {
+		// The bound listener knows the real address immediately; s.inner.Addr
+		// still holds the requested one (":0") until the server publishes it.
+		onReady(listener.Addr().String())
+	}
+	// A graceful shutdown surfaces as http.ErrServerClosed; the CLI should treat
+	// that as a normal exit.
+	serveErr := s.inner.ServeListener(listener)
 	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 		return serveErr
 	}
@@ -202,18 +218,6 @@ func (s *Server) Serve(ctx context.Context, onReady func(addr string)) error {
 // MutationsEnabled reports whether write endpoints may run.
 func (s *Server) MutationsEnabled() bool {
 	return !s.opts.ReadOnly && s.opts.AllowMutations
-}
-
-func (s *Server) handleHealthz(c *rux.Context) {
-	c.JSON(http.StatusOK, map[string]any{
-		"ok":      true,
-		"name":    "eget-web",
-		"version": s.opts.Version,
-	})
-}
-
-func (s *Server) handleReadyz(c *rux.Context) {
-	c.JSON(http.StatusOK, map[string]any{"ok": true})
 }
 
 func (o Options) withDefaults() Options {

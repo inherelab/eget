@@ -192,6 +192,8 @@ serveErr := httpServer.Serve(listener)
 
 **实现偏差（M1a 实测确认）**：原计划用 `rux/v2/server` 包（`server.New` + `Run()`）换取开箱即用的超时与优雅关闭，但它的 `Run()` 不回传实际监听地址 —— 于是 `--port 0` 的随机端口无法回显、`--open` 也拼不出 URL。改为自建循环后逐项补齐等价能力（上述超时、`signal.NotifyContext(SIGINT/SIGTERM)` → `Shutdown`、显式 `WriteTimeout = 0`、自注册 `/healthz` 与 `/readyz`），代价约 30 行样板代码，收益是地址回显、`--open` 与测试可控性。
 
+> **更新（2026-09-23 晚）**：rux v2.1.0 已提供 `SetListener`/`ServeListener`/`ListenAddr` 与带中间件链的 404/405 处理，实现已迁回 `server` 包（`Serve` 里仍保留一个 ctx 取消钩子供测试与外部取消），见「实施记录」。
+
 - `port=0` 表示随机端口；默认端口 `8787` 由 CLI flag 提供（`web.DefaultPort`）。
 - 启动信息写 **stderr**：实际地址、配置路径、缓存目录与 mirror scope、token（`--no-token-print` 可抑制）、只读/可写状态、对外监听警告。
 - **非 loopback 监听必须显式提供 `--token`**：空 token 不会自动生成后对外监听（fail closed，已实测拒绝启动）。
@@ -663,8 +665,8 @@ no_cache_index = false
 
 相对本设计的实现偏差：
 
-- **未使用 `rux/v2/server` 包**：它的 `Run()` 不回传实际监听地址，`--port 0` 与 `--open` 无从工作，改为自建监听循环（详见"命令层设计"一节的偏差说明）。
-- **未知路径改用通配路由**（`r.Any("/*path", handleCatchAll)`）而非 `r.NotFound`：rux 的 `NotFound`/`NotAllowed` 处理绕过全局中间件链，导致未认证请求返回 200 且缺失安全头。完整记录见 `docs/superpowers/notes/2026-09-23-rux-v2-feedback.md`。
+- **已回到框架原生写法（2026-09-23 晚，升级到 rux v2.1.0 后）**：上游修复了"404/405 不经过中间件链"与"`server` 包不回传实际监听地址"两个问题，eget 因此撤掉了两处规避——现在用 `r.NotFound` / `r.NotAllowed`（未认证的未知路径实测返回 401 且带安全头）+ `server.New` / `SetListener` / `ServeListener`（`MountHealthChecks` 提供 `/healthz`、`/readyz`，`PreShutdown` 里撤销任务）。
+  v2.0.2 时期的问题记录与规避过程见 `docs/superpowers/notes/2026-09-23-rux-v2-feedback.md`。
 - **配置编辑只支持 set**：清空某个键用空字符串表达，暂不提供键删除。
 - **M4 已完成**：
   - 认证失败限速（每地址 20 次/分钟 → 429）；

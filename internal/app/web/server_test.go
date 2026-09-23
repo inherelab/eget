@@ -216,8 +216,10 @@ func TestWebHealthzBypassesToken(t *testing.T) {
 
 	rec := get(t, server, "/healthz", nil)
 
+	// The liveness endpoint comes from the rux server package and answers a
+	// plain "ok" without touching the token check.
 	assert.Eq(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), `"name":"eget-web"`)
+	assert.Contains(t, rec.Body.String(), "ok")
 }
 
 func TestWebQueryTokenPlantsCookie(t *testing.T) {

@@ -10,6 +10,7 @@ require (
 	github.com/gookit/config/v2 v2.2.8
 	github.com/gookit/gcli/v3 v3.8.3
 	github.com/gookit/goutil v0.8.0
+	github.com/gookit/rux/v2 v2.1.0
 	github.com/klauspost/compress v1.18.5
 	github.com/ulikunitz/xz v0.5.15
 	golang.org/x/net v0.48.0
@@ -26,7 +27,6 @@ require (
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
-	github.com/gookit/rux/v2 v2.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/monoculum/formam v3.5.5+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
