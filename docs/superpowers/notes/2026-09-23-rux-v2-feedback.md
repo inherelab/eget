@@ -4,6 +4,8 @@
 >
 > **状态更新（2026-09-23 晚）：7 条已全部在 rux 侧处理，逐条结果见文末「处理结果」。**
 > 其中第 2 条的描述在当天已过时（原问题当天已修），第 4、7 条在 v2.0.2 时其实已有文档。
+> 当晚另有补充：核心包 `Listen` 也能回传真实地址、`Group` 值写法、容器里跑 race 的命令，
+> 见文末「后续补充」。
 
 ## 1. NotFound / NotAllowed handler 绕过全局中间件链（安全影响）
 
@@ -138,10 +140,25 @@ r := rux.New(
 `WithStrictLastSlash` / `WithEncodedPath` / `WithMethodNotAllowed` / `WithFallbackRoute`
 接受 bool；`StrictLastSlash`、`HandleMethodNotAllowed` 等旧名字保留为别名，现有代码不用改。
 
-### 6. `Group` 闭包风格 → 本次只补文档
+### 6. `Group` 闭包风格 → 已提供 `*Group` 值写法（`63bc573`）
 
-v2 不提供 `*Group` 对象，README 的 Route Group 段已加显式说明（对照 gin 的
-`g := r.Group(...)` + `g.GET(...)`）。`GroupOf` 返回 `*Group` 需要改注册核心，暂不做。
+闭包式 `Group` 保留且行为不变，另加了 gin 风格的值写法：
+
+```go
+api := r.NewGroup("/api", auth())
+api.GET("/users", listUsers)              // GET /api/users，auth 先执行
+
+admin := api.NewGroup("/admin", isAdmin()) // 前缀拼接、中间件叠加
+admin.DELETE("/users/{id}", deleteUser)    // DELETE /api/admin/users/{id}
+
+api.Use(rateLimit()) // 对之后注册的路由生效
+```
+
+- 提供 `Add` / `AddNamed` / `Any` / 10 个 verb / `Use` / `Prefix` / `Router` / 静态目录助手
+- 在闭包组内 `NewGroup` 会继承闭包组的前缀与中间件，两种写法可以混用
+- 冻结后注册照旧 panic；执行顺序 `全局 -> 组(外到内) -> 路由 -> handler`
+- 顺带修掉一个真 bug：`StaticDir`/`StaticFS` 之前用未加前缀的 URL 做 `StripPrefix`，
+  闭包组里挂静态目录会 404（实测旧代码 404 / 新代码 200）
 
 ### 7. 正则路由约束 → 已有文档，本次补上可复用的实现（`1569547`）
 
@@ -157,6 +174,38 @@ r.GET("/users/{id}", showUser, handlers.ParamRegex("id", `\d+`)) // 不匹配 �
 
 ## 仍未处理（记录在案）
 
-- `rux.Router.Listen()`（核心包，非 `server`）仍走 `http.ListenAndServe`，`:0` 时同样拿不到真实端口
 - `MaxParams = 16`、`Use()` 必须在路由注册前调用、路由在首个请求后只读等 v2 约束未变
+- 核心包的 `Listen()` 已能回传真实地址（见下），但 `rux.Router` 仍没有优雅关闭/信号处理，
+  需要这些时还是用 `server` 包
+
+## 后续补充（2026-09-23 深夜）
+
+### 核心包 `Listen` 也能回传真实地址（`474ce52`）
+
+`Listen` / `ListenTLS` / `ListenUnix` 现在都是先绑定再服务，打印与报告的都是解析后的地址；
+另加了 `Bind` / `ServeListener` / `Listener` / `ListenAddr` / `ListenPort`：
+
+```go
+ln, err := r.Bind("127.0.0.1:0") // 只绑定，不服务
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(r.ListenAddr()) // 127.0.0.1:50447
+r.ServeListener(ln)         // 阻塞；也可以传入自己创建的 listener
+```
+
+所以不用 `server` 包、只用核心路由的场景也能做 `--port 0` + 自动打开浏览器了。
+顺手把 `Err()` 与监听状态放进了互斥锁（原来 `Err()` 与 `Listen` 的 goroutine 是竞争）。
+
+### race 测试可以在容器里跑（本机无 CGO/gcc）
+
+`golang:1.25` 容器默认连不上 proxy.golang.org，挂宿主模块缓存 + `GOPROXY=off` 即可：
+
+```bash
+docker run --rm -v <repo>:/src -v <GOMODCACHE>:/go/pkg/mod -w /src \
+  -e GOPROXY=off -e GOSUMDB=off -e GOFLAGS=-mod=mod -e GOCACHE=/tmp/gocache \
+  golang:1.25 go test -race -count=1 ./...
+```
+
+2026-09-23 全量跑通三次（改动前 / core Listen 改动后 / Group 改动后），无 race 报告。
 
