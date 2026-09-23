@@ -104,6 +104,18 @@ type HTTPProxySection struct {
 	Exclude []string `toml:"exclude" mapstructure:"exclude"`
 }
 
+// WebSection holds the defaults for `eget web`. Command flags override it; the
+// access token is deliberately absent — it only ever comes from the CLI or is
+// generated per run.
+type WebSection struct {
+	Host           *string `toml:"host" mapstructure:"host"`
+	ReadOnly       *bool   `toml:"read_only" mapstructure:"read_only"`
+	AllowMutations *bool   `toml:"allow_mutations" mapstructure:"allow_mutations"`
+	AutoOpen       *bool   `toml:"auto_open" mapstructure:"auto_open"`
+	CacheRoot      *string `toml:"cache_root" mapstructure:"cache_root"`
+	NoCacheIndex   *bool   `toml:"no_cache_index" mapstructure:"no_cache_index"`
+}
+
 type File struct {
 	Meta struct {
 		Keys         []string
@@ -116,6 +128,7 @@ type File struct {
 	ApiCache     APICacheSection    `toml:"api_cache" mapstructure:"api_cache"`
 	Ghproxy      GhproxySection     `toml:"ghproxy" mapstructure:"ghproxy"`
 	CacheMirror  CacheMirrorSection `toml:"cache_mirror" mapstructure:"cache_mirror"`
+	Web          WebSection         `toml:"web" mapstructure:"web"`
 	Repos        map[string]Section
 	Packages     map[string]Section        `toml:"packages" mapstructure:"packages"`
 	PkgTemplates map[string]Section        `toml:"pkg_templates" mapstructure:"pkg_templates"`

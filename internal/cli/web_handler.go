@@ -18,11 +18,24 @@ import (
 	app "github.com/inherelab/eget/internal/app"
 	appcache "github.com/inherelab/eget/internal/app/cache"
 	"github.com/inherelab/eget/internal/app/web"
+	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/install"
 )
 
 func (s *cliService) handleWeb(opts *WebOptions) error {
-	host := strings.TrimSpace(opts.Host)
+	// [web] supplies defaults; command flags win.
+	webCfg := s.webSection()
+	resolved := webResolved{
+		Host:           webFirstNonEmpty(opts.Host, webDerefString(webCfg.Host), "127.0.0.1"),
+		Port:           opts.Port,
+		ReadOnly:       opts.ReadOnly || webDerefBool(webCfg.ReadOnly),
+		AllowMutations: opts.AllowMutations || webDerefBool(webCfg.AllowMutations),
+		AutoOpen:       opts.Open || webDerefBool(webCfg.AutoOpen),
+		CacheRoot:      webFirstNonEmpty(opts.CacheRoot, webDerefString(webCfg.CacheRoot), "all"),
+		NoCacheIndex:   opts.NoCacheIndex || webDerefBool(webCfg.NoCacheIndex),
+	}
+
+	host := strings.TrimSpace(resolved.Host)
 	token := strings.TrimSpace(opts.Token)
 	generated := false
 	if token == "" && !opts.NoAuth {
@@ -43,13 +56,13 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		return err
 	}
 	machineOpts := appcache.MachineOptions{
-		Root:    opts.CacheRoot,
-		NoIndex: opts.NoCacheIndex,
+		Root:    resolved.CacheRoot,
+		NoIndex: resolved.NoCacheIndex,
 		Version: BuildInfo().Version,
 	}
 	// Loopback clients may manage packages by default; a non-loopback listener
 	// requires the explicit --allow-mutations flag.
-	allowMutations := opts.AllowMutations || web.IsLoopbackHost(host)
+	allowMutations := resolved.AllowMutations || web.IsLoopbackHost(host)
 
 	// The console always includes packages owned by external managers. The CLI
 	// default (ext_package_mode = off) stays untouched: ListService is a value
@@ -72,13 +85,13 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		AssetCandidates: s.webAssetCandidates,
 	}, web.Options{
 		Host:           host,
-		Port:           opts.Port,
+		Port:           resolved.Port,
 		Token:          token,
-		ReadOnly:       opts.ReadOnly,
+		ReadOnly:       resolved.ReadOnly,
 		AllowMutations: allowMutations,
 		Version:        BuildInfo().Version,
-		CacheRoot:      opts.CacheRoot,
-		NoCacheIndex:   opts.NoCacheIndex,
+		CacheRoot:      resolved.CacheRoot,
+		NoCacheIndex:   resolved.NoCacheIndex,
 		AllowHosts:     splitCommaList(opts.AllowHosts),
 		JSONLog:        opts.JSONLog,
 		LogWriter:      s.stderrWriter(),
@@ -93,8 +106,8 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 	defer stop()
 
 	onReady := func(addr string) {
-		s.printWebStartup(addr, cacheDir, token, generated, allowMutations, opts)
-		if !opts.Open {
+		s.printWebStartup(addr, cacheDir, token, generated, allowMutations, resolved, opts)
+		if !resolved.AutoOpen {
 			return
 		}
 		if err := openInBrowser(webConsoleURL(addr, token)); err != nil {
@@ -114,12 +127,9 @@ func (s *cliService) webAssetCandidates(ctx context.Context, target string) ([]s
 	return runner.ListAssetCandidates(target, install.Options{Context: ctx})
 }
 
-func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, allowMutations bool, opts *WebOptions) {
+func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, allowMutations bool, resolved webResolved, opts *WebOptions) {
 	out := s.stderrWriter()
-	root := strings.TrimSpace(opts.CacheRoot)
-	if root == "" {
-		root = "all"
-	}
+	root := resolved.CacheRoot
 	ccolor.Fprintf(out, "Serving eget web console on <green>http://%s</>\n", addr)
 	if info, err := s.cfgService.ConfigInfo(); err == nil {
 		exists := "missing"
@@ -140,16 +150,56 @@ func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, al
 	default:
 		ccolor.Fprintf(out, " - token: from --token\n")
 	}
-	if opts.ReadOnly {
+	if resolved.ReadOnly {
 		ccolor.Fprintf(out, " - mode: <ylw>read-only</>\n")
 	} else if allowMutations {
 		ccolor.Fprintf(out, " - mode: read-write\n")
 	} else {
-		ccolor.Fprintf(out, " - mode: <ylw>read-only</> (add --allow-mutations to enable writes on %s)\n", opts.Host)
+		ccolor.Fprintf(out, " - mode: <ylw>read-only</> (add --allow-mutations to enable writes on %s)\n", resolved.Host)
 	}
-	if !web.IsLoopbackHost(opts.Host) {
-		ccolor.Warnf(" - warning: listening on %s over plain HTTP with no TLS; put it behind a TLS reverse proxy\n", opts.Host)
+	if !web.IsLoopbackHost(resolved.Host) {
+		ccolor.Warnf(" - warning: listening on %s over plain HTTP with no TLS; put it behind a TLS reverse proxy\n", resolved.Host)
 	}
+}
+
+// webResolved is the effective console configuration after merging [web] with
+// the command flags.
+type webResolved struct {
+	Host           string
+	Port           int
+	ReadOnly       bool
+	AllowMutations bool
+	AutoOpen       bool
+	CacheRoot      string
+	NoCacheIndex   bool
+}
+
+func (s *cliService) webSection() cfgpkg.WebSection {
+	cfg, err := s.cfgService.ConfigList()
+	if err != nil || cfg == nil {
+		return cfgpkg.WebSection{}
+	}
+	return cfg.Web
+}
+
+func webFirstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func webDerefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func webDerefBool(value *bool) bool {
+	return value != nil && *value
 }
 
 // webConsoleURL builds the browser URL. With a random port the bound address is

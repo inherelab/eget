@@ -93,6 +93,7 @@ eget config import --force portable.toml
 - `[http_proxy]`: 首选的全局 HTTP 层代理配置。
 - `[api_cache]`: provider 元数据 API 响应缓存。
 - `[cache_mirror]`: 局域网缓存 mirror 客户端配置。
+- `[web]`: `eget web` 控制台的默认值（host、read_only、auto_open、cache_root 等；token 不落盘）。
 - `[ghproxy]`: GitHub URL 重写代理。
 - `["owner/repo"]`: ~旧版直接 package 配置~。
 - `[packages.<name>]`: 命名 package 配置。

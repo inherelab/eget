@@ -650,6 +650,25 @@ no_cache_index = false
 | **对外监听风险** | 明文 HTTP + token 在局域网传输；默认关闭变更端点并要求显式 opt-in；部署到非可信网络时应置于反代（终止 TLS）之后。 |
 | **进程模型** | 前台阻塞进程，无 daemon / pidfile / 开机自启（与 `cache serve` 一致）。跨平台常驻需另行设计。 |
 
+## 实施记录（2026-09-23）
+
+| 阶段 | 状态 | 提交 |
+|---|---|---|
+| M1a 服务骨架 + 只读 API + 缓存镜像接管 + 删除 `eget cache serve` | 已完成 | `03eb196`、`288e151` |
+| M1b Vite/React 前端与 embed 产物 | 已完成 | `0e2d40a` |
+| M2 任务引擎 + SSE + `tasks.json` + 写入端点 + store 加锁/原子写 | 已完成 | `ad99046` |
+| M3a 配置编辑（原子写 + 键白名单 + diff 预览） | 已完成 | `beb7f80` |
+| M3b 安装链路（取消、进度、非交互、SDK 安装/下载） | 已完成 | `d040f83` |
+| M4 加固收尾 | 部分完成 | 见下 |
+
+相对本设计的实现偏差：
+
+- **未使用 `rux/v2/server` 包**：它的 `Run()` 不回传实际监听地址，`--port 0` 与 `--open` 无从工作，改为自建监听循环（详见"命令层设计"一节的偏差说明）。
+- **未知路径改用通配路由**（`r.Any("/*path", handleCatchAll)`）而非 `r.NotFound`：rux 的 `NotFound`/`NotAllowed` 处理绕过全局中间件链，导致未认证请求返回 200 且缺失安全头。完整记录见 `docs/superpowers/notes/2026-09-23-rux-v2-feedback.md`。
+- **配置编辑只支持 set**：清空某个键用空字符串表达，暂不提供键删除。
+- **M4 已完成**：认证失败限速（每地址 20 次/分钟 → 429）、`[web]` 配置节（host/read_only/allow_mutations/auto_open/cache_root/no_cache_index，token 与端口不入配置）。
+- **M4 未完成**：cache 文件服务的 symlink TOCTOU 加固（`EvalSymlinks` 与 `ServeFile` 之间的窗口）；CLI 侧的静默安装器参数（控制台本身不启动安装器，因此不影响 web 场景）。
+
 ## 开放问题
 
 1. `tasks.json` 的保留策略（默认最近 200 条任务、每任务 50 条日志摘要）是否合适，是否需要可配置？

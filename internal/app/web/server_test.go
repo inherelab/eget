@@ -404,6 +404,25 @@ func TestUnknownPathsStillRunMiddleware(t *testing.T) {
 	assert.Eq(t, http.StatusUnauthorized, deleteRec.Code)
 }
 
+func TestWebThrottlesFailedAuthAttempts(t *testing.T) {
+	server := testServer(t, Options{Token: "secret"})
+
+	var last int
+	for attempt := 0; attempt < authFailureLimit+3; attempt++ {
+		rec := get(t, server, "/api/overview", func(r *http.Request) {
+			r.Header.Set("Authorization", "Bearer wrong")
+		})
+		last = rec.Code
+	}
+	assert.Eq(t, http.StatusTooManyRequests, last)
+
+	// A correct token still works and clears the counter.
+	rec := get(t, server, "/api/overview", func(r *http.Request) {
+		r.Header.Set("Authorization", "Bearer secret")
+	})
+	assert.Eq(t, http.StatusOK, rec.Code)
+}
+
 func TestWebSecurityHeaders(t *testing.T) {
 	server := testServer(t, Options{})
 

@@ -112,10 +112,11 @@ type Deps struct {
 
 // Server hosts the eget web console over HTTP.
 type Server struct {
-	opts   Options
-	deps   Deps
-	router *rux.Router
-	tasks  *Engine
+	opts    Options
+	deps    Deps
+	router  *rux.Router
+	tasks   *Engine
+	limiter *authLimiter
 }
 
 // NewServer builds the router, middleware chain and cache mirror routes.
@@ -126,7 +127,12 @@ func NewServer(deps Deps, opts Options) (*Server, error) {
 	}
 
 	router := rux.New()
-	s := &Server{opts: opts, deps: deps, router: router}
+	s := &Server{
+		opts:    opts,
+		deps:    deps,
+		router:  router,
+		limiter: newAuthLimiter(authFailureLimit, authFailureWindow),
+	}
 	if len(opts.TaskRunners) > 0 {
 		s.tasks = NewEngine(opts.TaskStore, opts.TaskRunners)
 	}

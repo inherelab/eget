@@ -154,6 +154,24 @@ fallback = true
 - 缓存文件服务复用路径穿越与符号链接逃逸防护。
 - **永久不在 web 上提供**：`self-update`、任意命令执行、执行下载得到的可执行文件、交互式启动 GUI 安装器。
 
+## 默认值配置（`[web]`）
+
+命令行参数优先；下列键只提供默认值：
+
+```toml
+[web]
+host = "127.0.0.1"
+read_only = false
+allow_mutations = false
+auto_open = false
+cache_root = "all"
+no_cache_index = false
+```
+
+- 端口只能通过 `--port` 指定（`0` 表示随机空闲端口），不放进配置。
+- **token 永不写入配置文件**：只能通过 `--token` 传入，或由 `eget web` 每次随机生成。
+- 非 loopback 监听时，`host = "0.0.0.0"` 这类配置仍需配合显式的 `--token`，否则拒绝启动。
+
 ## 前端资源
 
 控制台前端是 Vite/React 应用，构建产物嵌入 Go 二进制：

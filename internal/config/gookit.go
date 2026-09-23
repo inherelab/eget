@@ -42,6 +42,9 @@ func decodeConfigFile(cfg *configutil.Manager) (*File, error) {
 	if err := cfg.MapOnExists("cache_mirror", &conf.CacheMirror); err != nil {
 		return nil, err
 	}
+	if err := cfg.MapOnExists("web", &conf.Web); err != nil {
+		return nil, err
+	}
 	if err := cfg.MapOnExists("packages", &conf.Packages); err != nil {
 		return nil, err
 	}
@@ -86,6 +89,7 @@ func encodeConfigFile(file *File) *configutil.Manager {
 		"api_cache":     apiCacheToMap(file.ApiCache),
 		"ghproxy":       ghproxyToMap(file.Ghproxy),
 		"cache_mirror":  cacheMirrorToMap(file.CacheMirror),
+		"web":           webToMap(file.Web),
 		"packages":      map[string]any{},
 		"pkg_templates": map[string]any{},
 		"sdk":           map[string]any{},
@@ -219,7 +223,7 @@ func sortedAnyKeys(items map[string]any) []string {
 
 func isReservedConfigRootKey(key string) bool {
 	switch key {
-	case "global", "http_proxy", "api_cache", "ghproxy", "cache_mirror", "packages", "pkg_templates", "sdk", "ext":
+	case "global", "http_proxy", "api_cache", "ghproxy", "cache_mirror", "web", "packages", "pkg_templates", "sdk", "ext":
 		return true
 	default:
 		return false
@@ -244,13 +248,14 @@ func normalizePathValue(key string, value any) (any, bool) {
 			text = "http://" + text
 		}
 		return text, true
-	case "extract_all", "is_gui", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "enabled", "fallback":
+	case "extract_all", "is_gui", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "enabled", "fallback",
+		"read_only", "allow_mutations", "auto_open", "no_cache_index":
 		parsed, err := strconv.ParseBool(text)
 		if err != nil {
 			return nil, false
 		}
 		return parsed, true
-	case "cache_time", "chunk_concurrency", "batch_concurrency", "timeout":
+	case "cache_time", "chunk_concurrency", "batch_concurrency", "timeout", "port":
 		parsed, err := strconv.Atoi(text)
 		if err != nil {
 			return nil, false
@@ -565,6 +570,29 @@ func cacheMirrorToMap(section CacheMirrorSection) map[string]any {
 	}
 	if section.Fallback != nil {
 		data["fallback"] = *section.Fallback
+	}
+	return data
+}
+
+func webToMap(section WebSection) map[string]any {
+	data := map[string]any{}
+	if section.Host != nil {
+		data["host"] = *section.Host
+	}
+	if section.ReadOnly != nil {
+		data["read_only"] = *section.ReadOnly
+	}
+	if section.AllowMutations != nil {
+		data["allow_mutations"] = *section.AllowMutations
+	}
+	if section.AutoOpen != nil {
+		data["auto_open"] = *section.AutoOpen
+	}
+	if section.CacheRoot != nil {
+		data["cache_root"] = *section.CacheRoot
+	}
+	if section.NoCacheIndex != nil {
+		data["no_cache_index"] = *section.NoCacheIndex
 	}
 	return data
 }

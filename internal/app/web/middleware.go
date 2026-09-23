@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gookit/rux/v2"
@@ -15,7 +16,62 @@ import (
 const (
 	authCookieName = "eget_web_token"
 	authTokenHead  = "X-EGET-Token"
+
+	// Failed token attempts per remote address before the console starts
+	// answering 429, and the window those failures are counted in.
+	authFailureLimit  = 20
+	authFailureWindow = time.Minute
+	authFailureMaxIPs = 1024
 )
+
+// authLimiter throttles failed authentication attempts per remote address so a
+// local process cannot brute-force the token.
+type authLimiter struct {
+	mu       sync.Mutex
+	attempts map[string]*attemptWindow
+	limit    int
+	window   time.Duration
+}
+
+type attemptWindow struct {
+	count int
+	until time.Time
+}
+
+func newAuthLimiter(limit int, window time.Duration) *authLimiter {
+	return &authLimiter{attempts: map[string]*attemptWindow{}, limit: limit, window: window}
+}
+
+// allow records an attempt and reports whether it may proceed.
+func (l *authLimiter) allow(addr string, now time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if entry, ok := l.attempts[addr]; ok && now.Before(entry.until) {
+		entry.count++
+		return entry.count <= l.limit
+	}
+	if len(l.attempts) >= authFailureMaxIPs {
+		l.pruneLocked(now)
+	}
+	l.attempts[addr] = &attemptWindow{count: 1, until: now.Add(l.window)}
+	return true
+}
+
+// reset forgets the failures of an address after a successful authentication.
+func (l *authLimiter) reset(addr string) {
+	l.mu.Lock()
+	delete(l.attempts, addr)
+	l.mu.Unlock()
+}
+
+func (l *authLimiter) pruneLocked(now time.Time) {
+	for addr, entry := range l.attempts {
+		if now.After(entry.until) {
+			delete(l.attempts, addr)
+		}
+	}
+}
 
 // recoverMiddleware converts a handler panic into a 500 response.
 func (s *Server) recoverMiddleware(c *rux.Context) {
@@ -78,8 +134,16 @@ func (s *Server) authMiddleware(c *rux.Context) {
 		c.Next()
 		return
 	}
+	remote := c.Req.RemoteAddr
 	if s.authenticated(c.Req) {
+		if s.limiter != nil {
+			s.limiter.reset(remote)
+		}
 		c.Next()
+		return
+	}
+	if s.limiter != nil && !s.limiter.allow(remote, time.Now()) {
+		c.AbortWithStatus(http.StatusTooManyRequests, "too many failed attempts")
 		return
 	}
 	if s.bootstrapFromQuery(c) {
