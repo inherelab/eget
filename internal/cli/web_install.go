@@ -17,14 +17,15 @@ import (
 )
 
 // The console never talks to a terminal: asset questions turn into errors that
-// carry the candidate list, installers are not launched, and downloaded
-// binaries are never executed.
+// carry the candidate list, downloaded binaries are never executed, and GUI
+// installers only run when the request explicitly asks for a silent install.
 
 func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, report *web.TaskReporter) (any, error) {
 	target := strings.TrimSpace(web.TaskParamString(params, "target"))
 	if target == "" {
 		return nil, fmt.Errorf("target is required")
 	}
+	silent := web.TaskParamBool(params, "silent")
 
 	opts := install.Options{
 		Tag:          web.TaskParamString(params, "version"),
@@ -32,6 +33,7 @@ func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, 
 		ExtractFile:  web.TaskParamString(params, "file"),
 		All:          web.TaskParamBool(params, "extractAll"),
 		DownloadOnly: web.TaskParamBool(params, "downloadOnly"),
+		Silent:       silent,
 	}
 	if asset := strings.TrimSpace(web.TaskParamString(params, "asset")); asset != "" {
 		opts.Asset = []string{asset}
@@ -42,7 +44,7 @@ func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, 
 		return &taskTransferWriter{report: report, ctx: ctx, total: total}
 	}
 
-	runner, err := s.webInstallRunner(report)
+	runner, err := s.webInstallRunner(report, silent)
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +63,10 @@ func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, 
 	return result, nil
 }
 
-// webInstallRunner builds a non-interactive runner for one console task.
-func (s *cliService) webInstallRunner(report *web.TaskReporter) (*install.InstallRunner, error) {
+// webInstallRunner builds a non-interactive runner for one console task. With
+// silent the installer runs unattended (MSI /qn); otherwise the console only
+// downloads it and says where it landed.
+func (s *cliService) webInstallRunner(report *web.TaskReporter, silent bool) (*install.InstallRunner, error) {
 	if s.installService == nil {
 		return nil, fmt.Errorf("the install service is unavailable")
 	}
@@ -74,7 +78,11 @@ func (s *cliService) webInstallRunner(report *web.TaskReporter) (*install.Instal
 			title, len(choices), strings.Join(choices, ", "))
 	}
 	runner.ConfirmLaunchInstaller = func(file string) (bool, error) {
-		report.Info("downloaded installer %s; the console does not launch installers", file)
+		if silent {
+			report.Info("launching installer %s unattended", file)
+			return true, nil
+		}
+		report.Info("downloaded installer %s; set silent to install unattended, or run it yourself", file)
 		return false, nil
 	}
 	runner.AssetRunner = func(path string, _ []string, _, _ io.Writer) error {

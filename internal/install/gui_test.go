@@ -2,6 +2,7 @@ package install
 
 import (
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -31,19 +32,46 @@ func TestDetectGUIInstallMode(t *testing.T) {
 }
 
 func TestWindowsInstallerCommand(t *testing.T) {
-	file, args, err := windowsInstallerCommand("C:/Temp/app.msi", InstallerKindMSI)
+	file, args, err := windowsInstallerCommand("C:/Temp/app.msi", InstallerKindMSI, false)
 	if err != nil {
 		t.Fatalf("msi command: %v", err)
 	}
 	if file != "msiexec.exe" || args != `/i "C:/Temp/app.msi"` {
 		t.Fatalf("unexpected msi command: file=%s args=%s", file, args)
 	}
-	file, args, err = windowsInstallerCommand("C:/Temp/setup.exe", InstallerKindEXE)
+	file, args, err = windowsInstallerCommand("C:/Temp/setup.exe", InstallerKindEXE, false)
 	if err != nil {
 		t.Fatalf("exe command: %v", err)
 	}
 	if file != "C:/Temp/setup.exe" || args != "" {
 		t.Fatalf("unexpected exe command: file=%s args=%s", file, args)
+	}
+}
+
+func TestWindowsInstallerCommandSilentFlags(t *testing.T) {
+	_, silentArgs, err := windowsInstallerCommand(`C:\tmp\app.msi`, InstallerKindMSI, true)
+	if err != nil {
+		t.Fatalf("silent msi command: %v", err)
+	}
+	if !strings.Contains(silentArgs, "/qn") || !strings.Contains(silentArgs, "/norestart") {
+		t.Fatalf("expected unattended msi flags, got %q", silentArgs)
+	}
+
+	_, plainArgs, err := windowsInstallerCommand(`C:\tmp\app.msi`, InstallerKindMSI, false)
+	if err != nil {
+		t.Fatalf("interactive msi command: %v", err)
+	}
+	if strings.Contains(plainArgs, "/qn") {
+		t.Fatalf("interactive msi command must not be silent: %q", plainArgs)
+	}
+
+	// EXE installers disagree on flags, so silent leaves them untouched.
+	file, exeArgs, err := windowsInstallerCommand(`C:\tmp\app-setup.exe`, InstallerKindEXE, true)
+	if err != nil {
+		t.Fatalf("exe command: %v", err)
+	}
+	if file != `C:\tmp\app-setup.exe` || exeArgs != "" {
+		t.Fatalf("unexpected exe command: %q %q", file, exeArgs)
 	}
 }
 
@@ -53,7 +81,7 @@ func TestDefaultInstallerLauncherRejectsUnsupportedPlatform(t *testing.T) {
 		goos = "linux"
 	}
 	launcher := DefaultInstallerLauncher{GOOS: goos}
-	if err := launcher.LaunchInstaller("/tmp/app.msi", InstallerKindMSI); err == nil {
+	if err := launcher.LaunchInstaller("/tmp/app.msi", InstallerKindMSI, false); err == nil {
 		t.Fatal("expected non-windows msi launcher to fail")
 	}
 }

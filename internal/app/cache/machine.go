@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -143,11 +144,9 @@ func (h machineHandler) download(w http.ResponseWriter, r *http.Request) {
 		if cachemirror.KeyForRelPath(entry.RelPath) != key {
 			continue
 		}
-		if !pathStaysInDirAfterSymlinks(h.cacheDir, entry.Path) {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
+		if !h.serveCacheFile(w, r, entry.RelPath) {
+			http.NotFound(w, r)
 		}
-		http.ServeFile(w, r, entry.Path)
 		return
 	}
 	http.NotFound(w, r)
@@ -172,37 +171,66 @@ func (h machineHandler) file(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath := filepath.Join(h.cacheDir, filepath.FromSlash(cleanRel))
-	if err := ensurePathInDir(h.cacheDir, fullPath); err != nil {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
-	realRoot, err := filepath.EvalSymlinks(h.cacheDir)
+	// os.Root resolves the path inside the cache dir and refuses symlink
+	// escapes, and the served bytes come from that same descriptor: the old
+	// EvalSymlinks + ServeFile pair left a TOCTOU window between check and read.
+	root, err := os.OpenRoot(h.cacheDir)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	realPath, err := filepath.EvalSymlinks(fullPath)
+	defer root.Close()
+
+	info, err := root.Stat(filepath.FromSlash(cleanRel))
 	if err != nil {
-		http.NotFound(w, r)
+		// A missing file is a 404; anything else (a symlink pointing outside the
+		// cache dir, a permission problem) is forbidden.
+		if errors.Is(err, os.ErrNotExist) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	if err := ensurePathInDir(realRoot, realPath); err != nil {
+	if info.IsDir() {
+		if h.opts.NoIndex {
+			http.Error(w, "directory listing disabled", http.StatusForbidden)
+			return
+		}
+	} else if !info.Mode().IsRegular() {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
-	info, err := os.Stat(realPath)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	if info.IsDir() && h.opts.NoIndex {
-		http.Error(w, "directory listing disabled", http.StatusForbidden)
-		return
-	}
+	// Files and (when enabled) directory listings are served from the same
+	// rooted filesystem, so a symlink cannot be swapped in between the check and
+	// the read.
+	http.StripPrefix("/files/", http.FileServerFS(root.FS())).ServeHTTP(w, r)
+}
 
-	http.ServeFile(w, r, realPath)
+// serveCacheFile streams one cache file by its relative path. Opening through
+// os.Root keeps the lookup inside the cache dir and the content comes from the
+// same file descriptor, so a symlink swapped in after scanning cannot escape.
+func (h machineHandler) serveCacheFile(w http.ResponseWriter, r *http.Request, rel string) bool {
+	root, err := os.OpenRoot(h.cacheDir)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return true
+	}
+	defer root.Close()
+
+	file, err := root.Open(filepath.FromSlash(rel))
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+	return true
 }
 
 func pathStaysInDirAfterSymlinks(root, target string) bool {

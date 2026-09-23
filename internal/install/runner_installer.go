@@ -44,7 +44,7 @@ func (r *InstallRunner) launchGUIInstaller(path string, file ExtractedFile, opts
 	if launcher == nil {
 		launcher = DefaultInstallerLauncher{}
 	}
-	if err := launcher.LaunchInstaller(path, kind); err != nil {
+	if err := launcher.LaunchInstaller(path, kind, opts.Silent); err != nil {
 		return RunResult{}, err
 	}
 	// Asset is left for the caller: it must be the published asset name. The

@@ -22,6 +22,7 @@ type InstallOptions struct {
 	InstallAll       bool
 	GUI              bool
 	Quiet            bool
+	Silent           bool
 	Add              bool
 	FallbackVersions int
 	Retries          int
@@ -51,6 +52,7 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.BoolOpt(&opts.InstallAll, "all", "", false, "Install all managed packages from config")
 		c.BoolOpt(&opts.GUI, "gui", "", false, "Install as GUI application")
 		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output; select first asset when multiple candidates remain")
+		c.BoolOpt(&opts.Silent, "silent", "", false, "Run the GUI installer unattended (MSI /qn); EXE installers keep their own flags")
 		c.BoolOpt(&opts.Add, "add", "", false, "Add installed repo target to managed packages")
 		c.IntOpt(&opts.FallbackVersions, "fallback-versions", "", 0, "Search older SourceForge version folders when asset is missing")
 		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")

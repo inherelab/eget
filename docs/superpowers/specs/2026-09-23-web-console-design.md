@@ -659,15 +659,18 @@ no_cache_index = false
 | M2 任务引擎 + SSE + `tasks.json` + 写入端点 + store 加锁/原子写 | 已完成 | `ad99046` |
 | M3a 配置编辑（原子写 + 键白名单 + diff 预览） | 已完成 | `beb7f80` |
 | M3b 安装链路（取消、进度、非交互、SDK 安装/下载） | 已完成 | `d040f83` |
-| M4 加固收尾 | 部分完成 | 见下 |
+| M4 加固收尾 | 已完成 | 见下 |
 
 相对本设计的实现偏差：
 
 - **未使用 `rux/v2/server` 包**：它的 `Run()` 不回传实际监听地址，`--port 0` 与 `--open` 无从工作，改为自建监听循环（详见"命令层设计"一节的偏差说明）。
 - **未知路径改用通配路由**（`r.Any("/*path", handleCatchAll)`）而非 `r.NotFound`：rux 的 `NotFound`/`NotAllowed` 处理绕过全局中间件链，导致未认证请求返回 200 且缺失安全头。完整记录见 `docs/superpowers/notes/2026-09-23-rux-v2-feedback.md`。
 - **配置编辑只支持 set**：清空某个键用空字符串表达，暂不提供键删除。
-- **M4 已完成**：认证失败限速（每地址 20 次/分钟 → 429）、`[web]` 配置节（host/read_only/allow_mutations/auto_open/cache_root/no_cache_index，token 与端口不入配置）。
-- **M4 未完成**：cache 文件服务的 symlink TOCTOU 加固（`EvalSymlinks` 与 `ServeFile` 之间的窗口）；CLI 侧的静默安装器参数（控制台本身不启动安装器，因此不影响 web 场景）。
+- **M4 已完成**：
+  - 认证失败限速（每地址 20 次/分钟 → 429）；
+  - `[web]` 配置节（host/read_only/allow_mutations/auto_open/cache_root/no_cache_index；token 与端口不入配置）；
+  - cache 文件服务改用 `os.Root`，并从同一个 fd 提供内容（`/download` 用 `ServeContent`，`/files` 用 `FileServerFS`）：消除 `EvalSymlinks` 与 `ServeFile` 之间的 symlink TOCTOU，同时保留 `/files` 的目录列表能力；
+  - GUI 安装器的无人值守参数：MSI `msiexec /i <path> /qn /norestart`，CLI 侧 `eget install --silent`，控制台侧安装请求的 `silent` 字段（EXE 安装器的参数各家不同，交给 `install_args`）。
 
 ## 开放问题
 

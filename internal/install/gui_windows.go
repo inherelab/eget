@@ -22,8 +22,8 @@ var shellExecute shellExecuteFunc = func(verb, file, args string) error {
 	return windows.ShellExecute(0, verbPtr, filePtr, argsPtr, nil, windows.SW_SHOWNORMAL)
 }
 
-func launchWindowsInstaller(path string, kind InstallerKind) error {
-	file, args, err := windowsInstallerCommand(path, kind)
+func launchWindowsInstaller(path string, kind InstallerKind, silent bool) error {
+	file, args, err := windowsInstallerCommand(path, kind, silent)
 	if err != nil {
 		return err
 	}

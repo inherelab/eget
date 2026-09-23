@@ -32,6 +32,7 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 		IsGUI:               opts.GUI,
 		InstallMode:         opts.InstallMode,
 		Quiet:               opts.Quiet,
+		Silent:              opts.Silent,
 		FallbackVersions:    opts.FallbackVersions,
 		Retries:             opts.Retries,
 		ChunkConcurrency:    opts.ChunkConcurrency,

@@ -28,14 +28,16 @@ func TestEffectiveOutputKeepsExplicitOutputForPortableGUI(t *testing.T) {
 }
 
 type fakeInstallerLauncher struct {
-	path string
-	kind InstallerKind
-	err  error
+	path   string
+	kind   InstallerKind
+	silent bool
+	err    error
 }
 
-func (f *fakeInstallerLauncher) LaunchInstaller(path string, kind InstallerKind) error {
+func (f *fakeInstallerLauncher) LaunchInstaller(path string, kind InstallerKind, silent bool) error {
 	f.path = path
 	f.kind = kind
+	f.silent = silent
 	return f.err
 }
 

@@ -63,8 +63,11 @@ type Options struct {
 	RenameFiles         map[string]string
 	Hash                bool
 	Verify              string
-	URLTemplate         URLTemplateOptions
-	DisableSSL          bool
+	// Silent asks the GUI installer to run unattended (MSI /qn). EXE installers
+	// keep their own flags; configure install_args for those.
+	Silent      bool
+	URLTemplate URLTemplateOptions
+	DisableSSL  bool
 	// Context cancels the run at its checkpoints; the web console cancels
 	// tasks with it. A nil context means "no cancellation".
 	Context context.Context

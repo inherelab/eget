@@ -38,6 +38,11 @@ func (s *Server) handleCatchAll(c *rux.Context) {
 	case strings.HasPrefix(path, "/assets/"):
 		s.writeError(c, http.StatusNotFound, "not_found", fmt.Errorf("no asset at %s", path))
 		return
+	case strings.HasPrefix(path, "/files/"), path == "/files",
+		strings.HasPrefix(path, "/download/"), path == "/download":
+		// Machine-facing endpoints answer JSON rather than the SPA shell.
+		s.writeError(c, http.StatusNotFound, "not_found", fmt.Errorf("no cache file at %s", path))
+		return
 	}
 	if c.Req.Method != http.MethodGet && c.Req.Method != http.MethodHead {
 		s.writeError(c, http.StatusMethodNotAllowed, "method_not_allowed",

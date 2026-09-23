@@ -13,6 +13,7 @@ export default function Install() {
   const [extractAll, setExtractAll] = useState(false)
   const [downloadOnly, setDownloadOnly] = useState(false)
   const [addToConfig, setAddToConfig] = useState(false)
+  const [silent, setSilent] = useState(false)
   const [candidates, setCandidates] = useState<InstallCandidatesResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -53,6 +54,7 @@ export default function Install() {
         extractAll,
         downloadOnly,
         addToConfig,
+        silent,
       })
       navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
     } catch (err) {
@@ -165,13 +167,17 @@ export default function Install() {
             />
             add to config
           </label>
+          <label className="check">
+            <input type="checkbox" checked={silent} onChange={(event) => setSilent(event.target.checked)} />
+            silent installer (MSI /qn)
+          </label>
           <button className="primary" onClick={() => void submit()} disabled={busy}>
             Install
           </button>
         </div>
         <div className="notice">
           When several assets match and you have not picked one, the task fails and lists the candidates
-          instead of guessing.
+          instead of guessing. Without "silent installer" a GUI installer is only downloaded, never launched.
         </div>
       </div>
     </section>

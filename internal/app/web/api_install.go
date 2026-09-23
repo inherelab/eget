@@ -18,6 +18,7 @@ type installRequest struct {
 	ExtractAll   bool   `json:"extractAll"`
 	DownloadOnly bool   `json:"downloadOnly"`
 	AddToConfig  bool   `json:"addToConfig"`
+	Silent       bool   `json:"silent"`
 }
 
 type installCandidatesResponse struct {
@@ -92,6 +93,7 @@ func (s *Server) handleSubmitInstall(c *rux.Context) {
 		"extractAll":   body.ExtractAll,
 		"downloadOnly": body.DownloadOnly,
 		"addToConfig":  body.AddToConfig,
+		"silent":       body.Silent,
 	})
 }
 

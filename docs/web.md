@@ -63,7 +63,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 
 | 方法 | 路径 | 请求体 |
 |---|---|---|
-| POST | `/api/install` | `{target, version, asset, output, file, extractAll, downloadOnly, addToConfig}` |
+| POST | `/api/install` | `{target, version, asset, output, file, extractAll, downloadOnly, addToConfig, silent}` |
 | POST | `/api/update` | `{targets: ["fd", "npm:typescript"], all: false}` |
 | POST | `/api/uninstall` | `{target, purge}` |
 | POST | `/api/ext/upgrade` | `{manager, names: []}` |
@@ -92,7 +92,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 ## 控制台的安全边界
 
 - **不提供通用命令执行**：所有操作都是结构化参数，目标与包名经过白名单校验（拒绝 `-` 前缀、路径分隔符、`..`、控制字符），管理器名必须存在于外部管理器注册表。
-- **不启动 GUI 安装器**：`eget web` 只下载与解压；需要交互式安装器时请在 CLI 执行。安装器确认钩子始终返回"不启动"。
+- **默认不启动 GUI 安装器**：`eget web` 只下载与解压。带 `silent` 的安装请求会以无人值守方式运行 MSI（`msiexec /qn /norestart`）；EXE 安装器的静默参数各家不同，控制台不猜，请在包配置里用 `install_args` 指定。CLI 对应 `eget install --silent`。
 - **不执行下载物**：`run-asset` 这类"下载后直接执行"的路径在控制台被禁用。
 - **配置编辑受限**：只允许 CLI 已暴露的配置节；含 `token` 的键、`meta.*`、`web.*` 一律拒绝。
 - 认证失败、Host 校验、CSRF、安全响应头与请求日志脱敏始终生效——包括未匹配路径（由通配路由处理，不走框架的 NotFound）。
@@ -151,7 +151,7 @@ fallback = true
 - 非 loopback 监听必须提供 token，启动时会打印明文传输警告。
 - **不提供内置 TLS**：对外部署请置于反向代理之后，由代理终止 TLS。
 - 中间件已包含：Host 白名单（防 DNS rebinding）、变更请求的同源/自定义头校验（防 CSRF）、CSP 等安全响应头、认证失败限速、请求日志脱敏（不记录查询串，避免 token 入日志）。
-- 缓存文件服务复用路径穿越与符号链接逃逸防护。
+- 缓存文件服务通过 `os.Root` 打开文件并从同一个 fd 提供内容（`/download` 用 `ServeContent`，`/files` 用 `FileServerFS`）：符号链接无法逃出缓存目录，也不存在"检查后替换"的 TOCTOU 窗口。
 - **永久不在 web 上提供**：`self-update`、任意命令执行、执行下载得到的可执行文件、交互式启动 GUI 安装器。
 
 ## 默认值配置（`[web]`）

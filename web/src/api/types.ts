@@ -163,6 +163,7 @@ export interface InstallRequest {
   extractAll?: boolean
   downloadOnly?: boolean
   addToConfig?: boolean
+  silent?: boolean
 }
 
 export interface InstallCandidatesResponse {
