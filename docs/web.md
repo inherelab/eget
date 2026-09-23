@@ -57,6 +57,45 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 | GET | `/api/cache`、`/api/cache/status` | 缓存文件列表与统计 |
 | GET | `/api/config` | 配置路径与导出内容 |
 | GET | `/api/query`、`/api/search` | 上游查询与仓库搜索 |
+| GET | `/api/install/candidates?target=` | 候选资产列表（不下载），用于多候选时显式选择 |
+
+写入端点（需要可写模式：loopback 监听默认可写，非 loopback 监听必须加 `--allow-mutations`）：
+
+| 方法 | 路径 | 请求体 |
+|---|---|---|
+| POST | `/api/install` | `{target, version, asset, output, file, extractAll, downloadOnly, addToConfig}` |
+| POST | `/api/update` | `{targets: ["fd", "npm:typescript"], all: false}` |
+| POST | `/api/uninstall` | `{target, purge}` |
+| POST | `/api/ext/upgrade` | `{manager, names: []}` |
+| POST | `/api/cache/clean` | `{mode: "older"\|"all"\|"keep-latest", days, kinds: [], dryRun}` |
+| POST | `/api/sdk/install`、`/api/sdk/download` | `{targets: ["node@20"]}` |
+| POST | `/api/config/validate` | `{set: {"global.proxy_url": "..."}}`（只校验，不落盘） |
+| PUT | `/api/config` | `{set: {...}}`（应用修改） |
+
+写入端点返回 `202` 与任务 id：
+
+```json
+{ "taskId": "t_1790168229_c22359", "kind": "install", "status": "queued" }
+```
+
+任务与实时日志：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/tasks?limit=50` | 任务列表（含持久化历史） |
+| GET | `/api/tasks/{id}` | 任务详情：状态、进度、日志、结果 |
+| GET | `/api/tasks/{id}/events` | SSE 事件流（`status` / `progress` / `log` / `done`） |
+| POST | `/api/tasks/{id}/cancel` | 取消排队中或运行中的任务 |
+
+任务串行执行（同一时刻只跑一个），历史写入 `<config dir>/tasks.json`；进程重启后仍未完成的任务标记为 `interrupted`。
+
+## 控制台的安全边界
+
+- **不提供通用命令执行**：所有操作都是结构化参数，目标与包名经过白名单校验（拒绝 `-` 前缀、路径分隔符、`..`、控制字符），管理器名必须存在于外部管理器注册表。
+- **不启动 GUI 安装器**：`eget web` 只下载与解压；需要交互式安装器时请在 CLI 执行。安装器确认钩子始终返回"不启动"。
+- **不执行下载物**：`run-asset` 这类"下载后直接执行"的路径在控制台被禁用。
+- **配置编辑受限**：只允许 CLI 已暴露的配置节；含 `token` 的键、`meta.*`、`web.*` 一律拒绝。
+- 认证失败、Host 校验、CSRF、安全响应头与请求日志脱敏始终生效——包括未匹配路径（由通配路由处理，不走框架的 NotFound）。
 
 示例：
 

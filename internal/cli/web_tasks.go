@@ -17,10 +17,13 @@ import (
 // the CLI uses. Every runner receives already-validated structural parameters.
 func (s *cliService) webTaskRunners() map[string]web.TaskRunner {
 	return map[string]web.TaskRunner{
-		"update":      s.webTaskUpdate,
-		"uninstall":   s.webTaskUninstall,
-		"ext.upgrade": s.webTaskExtUpgrade,
-		"cache.clean": s.webTaskCacheClean,
+		"install":      s.webTaskInstall,
+		"update":       s.webTaskUpdate,
+		"uninstall":    s.webTaskUninstall,
+		"ext.upgrade":  s.webTaskExtUpgrade,
+		"cache.clean":  s.webTaskCacheClean,
+		"sdk.install":  s.webTaskSDKInstall,
+		"sdk.download": s.webTaskSDKDownload,
 	}
 }
 

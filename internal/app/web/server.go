@@ -104,6 +104,10 @@ type Deps struct {
 	Manifest http.HandlerFunc
 	Download http.HandlerFunc
 	File     http.HandlerFunc
+
+	// AssetCandidates lists the assets matching a target without downloading,
+	// so the install form can offer an explicit choice.
+	AssetCandidates func(ctx context.Context, target string) ([]string, error)
 }
 
 // Server hosts the eget web console over HTTP.

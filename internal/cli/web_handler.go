@@ -18,6 +18,7 @@ import (
 	app "github.com/inherelab/eget/internal/app"
 	appcache "github.com/inherelab/eget/internal/app/cache"
 	"github.com/inherelab/eget/internal/app/web"
+	"github.com/inherelab/eget/internal/install"
 )
 
 func (s *cliService) handleWeb(opts *WebOptions) error {
@@ -67,6 +68,8 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		Manifest: appcache.ManifestHandler(s.cacheService, cacheDir, machineOpts),
 		Download: appcache.DownloadHandler(s.cacheService, cacheDir, machineOpts),
 		File:     appcache.FileHandler(s.cacheService, cacheDir, machineOpts),
+
+		AssetCandidates: s.webAssetCandidates,
 	}, web.Options{
 		Host:           host,
 		Port:           opts.Port,
@@ -99,6 +102,16 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		}
 	}
 	return server.Serve(ctx, onReady)
+}
+
+// webAssetCandidates lists the assets matching a target without downloading
+// anything, which is how the install form offers an explicit choice.
+func (s *cliService) webAssetCandidates(ctx context.Context, target string) ([]string, error) {
+	if s.installService == nil {
+		return nil, fmt.Errorf("the install service is unavailable")
+	}
+	runner := install.NewRunner(s.installService)
+	return runner.ListAssetCandidates(target, install.Options{Context: ctx})
 }
 
 func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, allowMutations bool, opts *WebOptions) {

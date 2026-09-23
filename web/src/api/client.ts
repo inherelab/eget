@@ -6,6 +6,8 @@ import type {
   ConfigView,
   ExtManagersResponse,
   ExtPackagesResponse,
+  InstallCandidatesResponse,
+  InstallRequest,
   OutdatedResponse,
   Overview,
   PackageDetail,
@@ -89,6 +91,14 @@ export const api = {
     request<ConfigUpdateResponse>('/api/config/validate', postJSON({ set })),
   updateConfig: (set: Record<string, string>) =>
     request<ConfigUpdateResponse>('/api/config', putJSON({ set })),
+
+  installCandidates: (target: string) =>
+    request<InstallCandidatesResponse>(`/api/install/candidates${query({ target })}`),
+  submitInstall: (body: InstallRequest) => request<TaskAccepted>('/api/install', postJSON(body)),
+  submitSDKInstall: (targets: string[]) =>
+    request<TaskAccepted>('/api/sdk/install', postJSON({ targets })),
+  submitSDKDownload: (targets: string[]) =>
+    request<TaskAccepted>('/api/sdk/download', postJSON({ targets })),
 
   tasks: (limit = 50) => request<TasksResponse>(`/api/tasks${query({ limit })}`),
   task: (id: string) => request<Task>(`/api/tasks/${encodeURIComponent(id)}`),

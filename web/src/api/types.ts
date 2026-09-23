@@ -154,6 +154,23 @@ export interface ConfigUpdateResponse {
   path?: string
 }
 
+export interface InstallRequest {
+  target: string
+  version?: string
+  asset?: string
+  output?: string
+  file?: string
+  extractAll?: boolean
+  downloadOnly?: boolean
+  addToConfig?: boolean
+}
+
+export interface InstallCandidatesResponse {
+  target: string
+  candidates: string[]
+  needsChoice: boolean
+}
+
 export type TaskStatus =
   | 'queued'
   | 'running'

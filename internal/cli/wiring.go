@@ -247,6 +247,7 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 		cacheService:      cacheService,
 		extService:        extService,
 		extPkg:            extService,
+		installService:    installService,
 		stderr:            os.Stderr,
 		proxyURL:          defaultOpts.ProxyURL,
 		proxyExclude:      append([]string(nil), defaultOpts.ProxyExclude...),

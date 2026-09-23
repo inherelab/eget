@@ -1,6 +1,8 @@
 package install
 
 import (
+	"context"
+	"io"
 	"net/url"
 	"os"
 	"regexp"
@@ -63,6 +65,22 @@ type Options struct {
 	Verify              string
 	URLTemplate         URLTemplateOptions
 	DisableSSL          bool
+	// Context cancels the run at its checkpoints; the web console cancels
+	// tasks with it. A nil context means "no cancellation".
+	Context context.Context
+	// Progress, when set, replaces the terminal progress bar. It receives the
+	// total size and returns the writer that downloaded bytes are reported to;
+	// returning a write error aborts the transfer, which is how cancellation
+	// reaches an in-flight download.
+	Progress func(total int64) io.Writer
+}
+
+// contextErr reports cancellation at a checkpoint.
+func (o Options) contextErr() error {
+	if o.Context == nil {
+		return nil
+	}
+	return o.Context.Err()
 }
 
 type URLTemplateOptions struct {

@@ -1,0 +1,186 @@
+package cli
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
+	app "github.com/inherelab/eget/internal/app"
+	"github.com/inherelab/eget/internal/app/web"
+	"github.com/inherelab/eget/internal/install"
+	"github.com/inherelab/eget/internal/sdk"
+)
+
+// The console never talks to a terminal: asset questions turn into errors that
+// carry the candidate list, installers are not launched, and downloaded
+// binaries are never executed.
+
+func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, report *web.TaskReporter) (any, error) {
+	target := strings.TrimSpace(web.TaskParamString(params, "target"))
+	if target == "" {
+		return nil, fmt.Errorf("target is required")
+	}
+
+	opts := install.Options{
+		Tag:          web.TaskParamString(params, "version"),
+		Output:       web.TaskParamString(params, "output"),
+		ExtractFile:  web.TaskParamString(params, "file"),
+		All:          web.TaskParamBool(params, "extractAll"),
+		DownloadOnly: web.TaskParamBool(params, "downloadOnly"),
+	}
+	if asset := strings.TrimSpace(web.TaskParamString(params, "asset")); asset != "" {
+		opts.Asset = []string{asset}
+	}
+	opts = s.applyGlobalFlags(opts)
+	opts.Context = ctx
+	opts.Progress = func(total int64) io.Writer {
+		return &taskTransferWriter{report: report, ctx: ctx, total: total}
+	}
+
+	runner, err := s.webInstallRunner(report)
+	if err != nil {
+		return nil, err
+	}
+	// Copy the app service so the console runner stays local to this task.
+	service := s.appService
+	service.Runner = runner
+
+	report.Info("installing %s", target)
+	result, err := service.InstallTarget(target, opts, app.InstallExtras{
+		AddToConfig: web.TaskParamBool(params, "addToConfig"),
+	})
+	if err != nil {
+		return nil, err
+	}
+	report.Info("installed %s %s", target, result.Version)
+	return result, nil
+}
+
+// webInstallRunner builds a non-interactive runner for one console task.
+func (s *cliService) webInstallRunner(report *web.TaskReporter) (*install.InstallRunner, error) {
+	if s.installService == nil {
+		return nil, fmt.Errorf("the install service is unavailable")
+	}
+	runner := install.NewRunner(s.installService)
+	runner.Stdout = newTaskLogWriter(report, "info")
+	runner.Stderr = newTaskLogWriter(report, "error")
+	runner.Prompt = func(title, _ string, choices []string) (int, error) {
+		return 0, fmt.Errorf("%s: %d assets match, pass \"asset\" to pick one: %s",
+			title, len(choices), strings.Join(choices, ", "))
+	}
+	runner.ConfirmLaunchInstaller = func(file string) (bool, error) {
+		report.Info("downloaded installer %s; the console does not launch installers", file)
+		return false, nil
+	}
+	runner.AssetRunner = func(path string, _ []string, _, _ io.Writer) error {
+		return fmt.Errorf("refusing to execute the downloaded asset %s from the console", path)
+	}
+	return runner, nil
+}
+
+func (s *cliService) webTaskSDKInstall(ctx context.Context, params map[string]any, report *web.TaskReporter) (any, error) {
+	targets := web.TaskParamStrings(params, "targets")
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("at least one SDK target is required")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	report.Info("installing %s", strings.Join(targets, ", "))
+	results, err := s.sdkService.InstallMany(ctx, targets, sdk.InstallOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"results": results}, nil
+}
+
+func (s *cliService) webTaskSDKDownload(ctx context.Context, params map[string]any, report *web.TaskReporter) (any, error) {
+	targets := web.TaskParamStrings(params, "targets")
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("at least one SDK target is required")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	report.Info("downloading %s", strings.Join(targets, ", "))
+	results, err := s.sdkService.DownloadMany(ctx, targets, sdk.SDKDownloadOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"results": results}, nil
+}
+
+// taskTransferWriter reports download progress and aborts the transfer when the
+// task is canceled: returning a write error stops io.Copy in the downloader.
+type taskTransferWriter struct {
+	report *web.TaskReporter
+	ctx    context.Context
+	total  int64
+
+	current  int64
+	lastSent time.Time
+	lastPct  float64
+}
+
+func (w *taskTransferWriter) Write(data []byte) (int, error) {
+	if w.ctx != nil {
+		if err := w.ctx.Err(); err != nil {
+			return 0, err
+		}
+	}
+	w.current += int64(len(data))
+	percent := 0.0
+	if w.total > 0 {
+		percent = float64(w.current) / float64(w.total) * 100
+	}
+	if time.Since(w.lastSent) >= 250*time.Millisecond || percent-w.lastPct >= 1 {
+		w.lastSent = time.Now()
+		w.lastPct = percent
+		w.report.ProgressBytes(w.current, w.total, "download")
+	}
+	return len(data), nil
+}
+
+var ansiEscapePattern = regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+
+// taskLogWriter turns a CLI writer into task log lines, one line per entry and
+// without terminal escape sequences.
+type taskLogWriter struct {
+	report *web.TaskReporter
+	level  string
+
+	mu  sync.Mutex
+	buf []byte
+}
+
+func newTaskLogWriter(report *web.TaskReporter, level string) *taskLogWriter {
+	return &taskLogWriter{report: report, level: level}
+}
+
+func (w *taskLogWriter) Write(data []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.buf = append(w.buf, data...)
+	for {
+		index := bytes.IndexByte(w.buf, '\n')
+		if index < 0 {
+			break
+		}
+		line := strings.TrimSpace(ansiEscapePattern.ReplaceAllString(string(w.buf[:index]), ""))
+		w.buf = append([]byte(nil), w.buf[index+1:]...)
+		if line != "" {
+			w.report.Logf(w.level, "%s", line)
+		}
+	}
+	// A writer that never emits a newline must not grow without bound.
+	if len(w.buf) > 8*1024 {
+		w.buf = w.buf[:0]
+	}
+	return len(data), nil
+}

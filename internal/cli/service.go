@@ -8,6 +8,7 @@ import (
 	"github.com/inherelab/eget/internal/app"
 	appcache "github.com/inherelab/eget/internal/app/cache"
 	"github.com/inherelab/eget/internal/extpkg"
+	"github.com/inherelab/eget/internal/install"
 	"github.com/inherelab/eget/internal/sdk"
 )
 
@@ -47,6 +48,8 @@ type cliService struct {
 	// extPkg keeps the concrete ext manager service: the web console also needs
 	// Path(), which is not part of the app-layer interface.
 	extPkg extpkg.Service
+	// installService builds per-task install runners for the web console.
+	installService *install.Service
 
 	stderr             io.Writer
 	configPathResolver func() (string, error)

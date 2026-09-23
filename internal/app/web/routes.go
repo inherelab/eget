@@ -25,10 +25,14 @@ func (s *Server) registerRoutes(r *rux.Router) {
 
 		// Write endpoints queue a task; the global CSRF middleware already
 		// guards every non-GET request.
+		r.GET("/install/candidates", s.handleInstallCandidates)
+		r.POST("/install", s.handleSubmitInstall)
 		r.POST("/update", s.handleSubmitUpdate)
 		r.POST("/uninstall", s.handleSubmitUninstall)
 		r.POST("/ext/upgrade", s.handleSubmitExtUpgrade)
 		r.POST("/cache/clean", s.handleSubmitCacheClean)
+		r.POST("/sdk/install", s.handleSubmitSDKInstall)
+		r.POST("/sdk/download", s.handleSubmitSDKDownload)
 
 		r.GET("/tasks", s.handleTasks)
 		r.GET("/tasks/{id}", s.handleTask)

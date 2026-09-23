@@ -137,11 +137,14 @@ func testServer(t *testing.T, opts Options) *Server {
 			return map[string]any{"echo": TaskParamString(params, "name")}, nil
 		}
 		opts.TaskRunners = map[string]TaskRunner{
-			"demo":        echo,
-			"update":      echo,
-			"uninstall":   echo,
-			"ext.upgrade": echo,
-			"cache.clean": echo,
+			"demo":         echo,
+			"install":      echo,
+			"update":       echo,
+			"uninstall":    echo,
+			"ext.upgrade":  echo,
+			"cache.clean":  echo,
+			"sdk.install":  echo,
+			"sdk.download": echo,
 		}
 	}
 	deps := Deps{

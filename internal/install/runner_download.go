@@ -203,6 +203,11 @@ func fileModTime(path string) time.Time {
 
 func (r *InstallRunner) downloadProgress(opts Options) func(int64) io.Writer {
 	return func(size int64) io.Writer {
+		// An injected reporter (web console) replaces the terminal bar and can
+		// abort the transfer by failing a write.
+		if opts.Progress != nil {
+			return opts.Progress(size)
+		}
 		pbout := r.Stdout
 		if pbout == nil || opts.Quiet {
 			pbout = io.Discard

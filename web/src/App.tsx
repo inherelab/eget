@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from 'react-router-dom'
 import Overview from './pages/Overview'
 import Packages from './pages/Packages'
 import PackageDetail from './pages/PackageDetail'
+import Install from './pages/Install'
 import Outdated from './pages/Outdated'
 import Ext from './pages/Ext'
 import Cache from './pages/Cache'
@@ -11,6 +12,7 @@ import Tasks from './pages/Tasks'
 const navigation = [
   { to: '/', label: 'Overview', end: true },
   { to: '/packages', label: 'Packages' },
+  { to: '/install', label: 'Install' },
   { to: '/outdated', label: 'Outdated' },
   { to: '/ext', label: 'External' },
   { to: '/cache', label: 'Cache' },
@@ -44,6 +46,7 @@ export default function App() {
           <Route path="/" element={<Overview />} />
           <Route path="/packages" element={<Packages />} />
           <Route path="/packages/:name" element={<PackageDetail />} />
+          <Route path="/install" element={<Install />} />
           <Route path="/outdated" element={<Outdated />} />
           <Route path="/ext" element={<Ext />} />
           <Route path="/cache" element={<Cache />} />

@@ -67,9 +67,38 @@ func NewRunner(service *Service) *InstallRunner {
 	}
 }
 
+// ListAssetCandidates resolves the matching asset URLs for a target without
+// downloading anything. The console uses it to offer an explicit choice when
+// several assets match and no rule can pick one.
+func (r *InstallRunner) ListAssetCandidates(target string, opts Options) ([]string, error) {
+	if r.Service == nil {
+		return nil, fmt.Errorf("install service is required")
+	}
+	finder, _, err := r.Service.SelectFinder(target, &opts)
+	if err != nil {
+		return nil, err
+	}
+	assets, err := finder.Find()
+	if err != nil {
+		return nil, err
+	}
+	detector, err := r.Service.SelectDetector(&opts)
+	if err != nil {
+		return nil, err
+	}
+	_, candidates, detectErr := detector.Detect(assets)
+	if len(candidates) == 0 && detectErr != nil {
+		return nil, detectErr
+	}
+	return candidates, nil
+}
+
 func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if r.Service == nil {
 		return RunResult{}, fmt.Errorf("install service is required")
+	}
+	if err := opts.contextErr(); err != nil {
+		return RunResult{}, err
 	}
 
 	output := r.Stdout
