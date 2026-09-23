@@ -13,32 +13,18 @@ import (
 	"github.com/inherelab/eget/internal/cachemirror"
 )
 
-func TestCacheServerHealthz(t *testing.T) {
-	cacheDir := t.TempDir()
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	assert.Eq(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), `"ok":true`)
-	assert.Contains(t, rec.Body.String(), `"name":"eget-cache"`)
-}
-
-func TestCacheServerManifest(t *testing.T) {
+func TestManifestHandlerIndexesCacheFiles(t *testing.T) {
 	cacheDir := t.TempDir()
 	file := filepath.Join(cacheDir, "pkg.zip")
 	assert.NoErr(t, os.WriteFile(file, []byte("pkg"), 0o644))
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "pkg.zip.part"), []byte("partial"), 0o644))
 	fixed := time.Date(2026, 5, 26, 10, 0, 0, 0, time.UTC)
 	service := Service{Now: func() time.Time { return fixed }}
-	handler := NewHandler(service, cacheDir, ServeOptions{})
 	req := httptest.NewRequest(http.MethodGet, "/manifest.json", nil)
 	req.Host = "example.com"
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	ManifestHandler(service, cacheDir, MachineOptions{})(rec, req)
 
 	assert.Eq(t, http.StatusOK, rec.Code)
 	var manifest Manifest
@@ -54,66 +40,58 @@ func TestCacheServerManifest(t *testing.T) {
 	assert.Eq(t, "http://example.com", manifest.Server.BaseURL)
 }
 
-func TestCacheServerFilesDownloadHeadAndRange(t *testing.T) {
+func TestFileHandlerServesDownloadHeadAndRange(t *testing.T) {
 	cacheDir := t.TempDir()
 	file := filepath.Join(cacheDir, "sdk-downloads", "go", "1.22.0", "go.zip")
 	assert.NoErr(t, os.MkdirAll(filepath.Dir(file), 0o755))
 	assert.NoErr(t, os.WriteFile(file, []byte("0123456789"), 0o644))
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
+	handler := FileHandler(Service{}, cacheDir, MachineOptions{})
 
-	getReq := httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/go/1.22.0/go.zip", nil)
 	getRec := httptest.NewRecorder()
-	handler.ServeHTTP(getRec, getReq)
+	handler(getRec, httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/go/1.22.0/go.zip", nil))
 	assert.Eq(t, http.StatusOK, getRec.Code)
 	assert.Eq(t, "0123456789", getRec.Body.String())
 
-	headReq := httptest.NewRequest(http.MethodHead, "/files/sdk-downloads/go/1.22.0/go.zip", nil)
 	headRec := httptest.NewRecorder()
-	handler.ServeHTTP(headRec, headReq)
+	handler(headRec, httptest.NewRequest(http.MethodHead, "/files/sdk-downloads/go/1.22.0/go.zip", nil))
 	assert.Eq(t, http.StatusOK, headRec.Code)
 	assert.Eq(t, "", headRec.Body.String())
 
 	rangeReq := httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/go/1.22.0/go.zip", nil)
 	rangeReq.Header.Set("Range", "bytes=2-5")
 	rangeRec := httptest.NewRecorder()
-	handler.ServeHTTP(rangeRec, rangeReq)
+	handler(rangeRec, rangeReq)
 	assert.Eq(t, http.StatusPartialContent, rangeRec.Code)
 	assert.Eq(t, "2345", rangeRec.Body.String())
 }
 
-func TestCacheServerRejectsPathEscape(t *testing.T) {
+func TestFileHandlerRejectsPathEscape(t *testing.T) {
 	cacheDir := t.TempDir()
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-	req := httptest.NewRequest(http.MethodGet, "/files/../secret.txt", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	FileHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/files/../secret.txt", nil))
 
 	assert.Eq(t, http.StatusForbidden, rec.Code)
 }
 
-func TestCacheServerNoIndexRejectsDirectoryListing(t *testing.T) {
+func TestFileHandlerNoIndexRejectsDirectoryListing(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.MkdirAll(filepath.Join(cacheDir, "sdk-downloads"), 0o755))
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{NoIndex: true})
-	req := httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	FileHandler(Service{}, cacheDir, MachineOptions{NoIndex: true})(rec, httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/", nil))
 
 	assert.Eq(t, http.StatusForbidden, rec.Code)
 }
 
-func TestCacheServerRootScopeFiltersManifest(t *testing.T) {
+func TestManifestHandlerRootScopeFiltersFiles(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "pkg.zip"), []byte("pkg"), 0o644))
 	assert.NoErr(t, os.MkdirAll(filepath.Join(cacheDir, "sdk-downloads"), 0o755))
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "sdk-downloads", "go.zip"), []byte("sdk"), 0o644))
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{Root: "sdk"})
-	req := httptest.NewRequest(http.MethodGet, "/manifest.json", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	ManifestHandler(Service{}, cacheDir, MachineOptions{Root: "sdk"})(rec, httptest.NewRequest(http.MethodGet, "/manifest.json", nil))
 
 	assert.Eq(t, http.StatusOK, rec.Code)
 	var manifest Manifest
@@ -122,50 +100,43 @@ func TestCacheServerRootScopeFiltersManifest(t *testing.T) {
 	assert.Eq(t, "sdk", manifest.Files[0].Kind)
 }
 
-func TestCacheServerRootScopeRejectsDirectFileOutsideScope(t *testing.T) {
+func TestFileHandlerRootScopeRejectsFileOutsideScope(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "pkg.zip"), []byte("pkg"), 0o644))
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{Root: "sdk"})
-	req := httptest.NewRequest(http.MethodGet, "/files/pkg.zip", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	FileHandler(Service{}, cacheDir, MachineOptions{Root: "sdk"})(rec, httptest.NewRequest(http.MethodGet, "/files/pkg.zip", nil))
 
 	assert.Eq(t, http.StatusForbidden, rec.Code)
 }
 
-func TestCacheServerRejectsPartialFiles(t *testing.T) {
+func TestFileHandlerRejectsPartialFiles(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "pkg.zip.part"), []byte("partial"), 0o644))
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-	req := httptest.NewRequest(http.MethodGet, "/files/pkg.zip.part", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	FileHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/files/pkg.zip.part", nil))
 
 	assert.Eq(t, http.StatusForbidden, rec.Code)
 }
 
-func TestCacheServerRejectsSymlinkEscape(t *testing.T) {
+func TestFileHandlerRejectsSymlinkEscape(t *testing.T) {
 	cacheDir := t.TempDir()
-	outsideDir := t.TempDir()
-	outsideFile := filepath.Join(outsideDir, "secret.txt")
+	outsideFile := filepath.Join(t.TempDir(), "secret.txt")
 	assert.NoErr(t, os.WriteFile(outsideFile, []byte("secret"), 0o644))
 	link := filepath.Join(cacheDir, "sdk-downloads", "leak")
 	assert.NoErr(t, os.MkdirAll(filepath.Dir(link), 0o755))
 	if err := os.Symlink(outsideFile, link); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-	req := httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/leak", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	FileHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/files/sdk-downloads/leak", nil))
 
 	assert.Eq(t, http.StatusForbidden, rec.Code)
 }
 
-func TestCacheServerManifestExcludesSymlinkEscape(t *testing.T) {
+func TestManifestHandlerExcludesSymlinkEscape(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.MkdirAll(filepath.Join(cacheDir, "sdk-downloads"), 0o755))
 	outsideFile := filepath.Join(t.TempDir(), "secret.zip")
@@ -174,11 +145,9 @@ func TestCacheServerManifestExcludesSymlinkEscape(t *testing.T) {
 	if err := os.Symlink(outsideFile, link); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-	req := httptest.NewRequest(http.MethodGet, "/manifest.json", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, req)
+	ManifestHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/manifest.json", nil))
 
 	assert.Eq(t, http.StatusOK, rec.Code)
 	var manifest Manifest
@@ -186,70 +155,61 @@ func TestCacheServerManifestExcludesSymlinkEscape(t *testing.T) {
 	assert.Eq(t, 0, len(manifest.Files))
 }
 
-func TestCacheServerDownloadPathKey(t *testing.T) {
+func TestDownloadHandlerServesPathKey(t *testing.T) {
 	cacheDir := t.TempDir()
 	file := filepath.Join(cacheDir, "pkg-cache", "tool.zip")
 	assert.NoErr(t, os.MkdirAll(filepath.Dir(file), 0o755))
 	assert.NoErr(t, os.WriteFile(file, []byte("pkg"), 0o644))
 	key := cachemirror.KeyForRelPath("pkg-cache/tool.zip")
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-
-	req := httptest.NewRequest(http.MethodGet, "/download/"+key, nil)
 	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+
+	DownloadHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/download/"+key, nil))
 
 	assert.Eq(t, http.StatusOK, rec.Code)
 	assert.Eq(t, "pkg", rec.Body.String())
 }
 
-func TestCacheServerDownloadPathKeyServesAPICache(t *testing.T) {
+func TestDownloadHandlerServesAPICache(t *testing.T) {
 	cacheDir := t.TempDir()
 	rel := filepath.ToSlash(filepath.Join("api-cache", "github-repos-owner-tool-releases-latest.json"))
 	file := filepath.Join(cacheDir, filepath.FromSlash(rel))
 	assert.NoErr(t, os.MkdirAll(filepath.Dir(file), 0o755))
 	assert.NoErr(t, os.WriteFile(file, []byte(`{"tag_name":"v1.2.3"}`), 0o644))
-
-	req := httptest.NewRequest(http.MethodGet, "/download/"+cachemirror.KeyForRelPath(rel), nil)
 	rec := httptest.NewRecorder()
-	NewHandler(Service{}, cacheDir, ServeOptions{}).ServeHTTP(rec, req)
+
+	DownloadHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/download/"+cachemirror.KeyForRelPath(rel), nil))
 
 	assert.Eq(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"tag_name":"v1.2.3"`)
 }
 
-func TestCacheServerDownloadPathKeyMiss(t *testing.T) {
+func TestDownloadHandlerPathKeyMiss(t *testing.T) {
 	cacheDir := t.TempDir()
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-
-	req := httptest.NewRequest(http.MethodGet, "/download/path-md5:missing", nil)
 	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+
+	DownloadHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/download/path-md5:missing", nil))
 
 	assert.Eq(t, http.StatusNotFound, rec.Code)
 }
 
-func TestCacheServerDownloadPathKeyRespectsRootScope(t *testing.T) {
+func TestDownloadHandlerRespectsRootScope(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "pkg.zip"), []byte("pkg"), 0o644))
 	key := cachemirror.KeyForRelPath("pkg.zip")
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{Root: "sdk"})
-
-	req := httptest.NewRequest(http.MethodGet, "/download/"+key, nil)
 	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+
+	DownloadHandler(Service{}, cacheDir, MachineOptions{Root: "sdk"})(rec, httptest.NewRequest(http.MethodGet, "/download/"+key, nil))
 
 	assert.Eq(t, http.StatusNotFound, rec.Code)
 }
 
-func TestCacheServerDownloadPathKeyRejectsPartial(t *testing.T) {
+func TestDownloadHandlerRejectsPartial(t *testing.T) {
 	cacheDir := t.TempDir()
 	assert.NoErr(t, os.WriteFile(filepath.Join(cacheDir, "pkg.zip.part"), []byte("partial"), 0o644))
 	key := cachemirror.KeyForRelPath("pkg.zip.part")
-	handler := NewHandler(Service{}, cacheDir, ServeOptions{})
-
-	req := httptest.NewRequest(http.MethodGet, "/download/"+key, nil)
 	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+
+	DownloadHandler(Service{}, cacheDir, MachineOptions{})(rec, httptest.NewRequest(http.MethodGet, "/download/"+key, nil))
 
 	assert.Eq(t, http.StatusNotFound, rec.Code)
 }

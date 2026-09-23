@@ -16,6 +16,8 @@
 
 <!-- PROCESSING WORKS:START -->
 
+- eget web 控制台（多阶段）：M1a 已交付（服务骨架 + 只读 API + 缓存镜像协议接管 + 删除 `eget cache serve`），M1b（Vite/React 前端与 embed 产物）、M2（任务引擎 + 更新/卸载）、M3（安装链路 + 配置编辑）待做。设计文档：`docs/superpowers/specs/2026-09-23-web-console-design.md`，使用文档：`docs/web.md`。
+
 <!-- PROCESSING WORKS:END -->
 
 ## 核心原则

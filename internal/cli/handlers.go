@@ -135,9 +135,9 @@ func (s *cliService) handle(name string, options any) error {
 	case "cache.status":
 		opts := options.(*CacheStatusOptions)
 		return s.handleCacheStatus(opts)
-	case "cache.serve":
-		opts := options.(*CacheServeOptions)
-		return s.handleCacheServe(opts)
+	case "web":
+		opts := options.(*WebOptions)
+		return s.handleWeb(opts)
 	case "ext.list":
 		return s.handleExtList()
 	case "ext.upgrade":

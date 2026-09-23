@@ -128,7 +128,7 @@ func (s Service) Status(cacheDir string) (StatusResult, error) {
 		TotalFiles:   totalFiles,
 		TotalSize:    totalSize,
 		Kinds:        kinds,
-		ServeCommand: "eget cache serve --host 0.0.0.0 --port 8686",
+		ServeCommand: "eget web --host 0.0.0.0 --port 8787",
 		CacheMirror:  s.cacheMirrorStatus(),
 	}, nil
 }

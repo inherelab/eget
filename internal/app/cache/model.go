@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"io"
 	"os"
 	"time"
 )
@@ -71,15 +70,4 @@ type CleanResult struct {
 
 func (r CleanResult) NeedsConfirmation() bool {
 	return r.MatchedFiles >= 100 || r.MatchedSize >= 1024*1024*1024
-}
-
-type ServeOptions struct {
-	Host      string
-	Port      int
-	Root      string
-	NoIndex   bool
-	Version   string
-	Token     string
-	JSONLog   bool
-	LogWriter io.Writer `json:"-"`
 }

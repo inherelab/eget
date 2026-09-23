@@ -29,18 +29,8 @@ type CacheStatusOptions struct {
 	JSON bool
 }
 
-type CacheServeOptions struct {
-	Host    string
-	Port    int
-	Root    string
-	NoIndex bool
-	Token   string
-	JSONLog bool
-}
-
 func newCacheCmd(handler CommandHandler) (*gcli.Command, func()) {
 	cleanOpts := &CacheCleanOptions{}
-	serveOpts := &CacheServeOptions{Host: "0.0.0.0", Port: 8686, Root: "all"}
 	cmd := gcli.NewCommand("cache", "Manage local eget cache")
 	cmd.Aliases = []string{"ca"}
 	cmd.Help = `<info>Examples</>:
@@ -49,17 +39,15 @@ func newCacheCmd(handler CommandHandler) (*gcli.Command, func()) {
   eget cache list --root sdk --json
   eget cache status
   eget cache clean --api --all
-  eget cache serve
-  eget cache serve --host 127.0.0.1 --port 0 --root sdk`
+
+<comment>Note:</> serving the cache over HTTP moved to: <info>eget web</info>`
 	cmd.Subs = []*gcli.Command{
 		newCacheListCmd(&CacheListOptions{Root: "all"}, handler),
 		newCacheStatusCmd(&CacheStatusOptions{}, handler),
 		newCacheCleanCmd(cleanOpts, handler),
-		newCacheServeCmd(serveOpts, handler),
 	}
 	return cmd, func() {
 		*cleanOpts = CacheCleanOptions{}
-		*serveOpts = CacheServeOptions{Host: "0.0.0.0", Port: 8686, Root: "all"}
 	}
 }
 
@@ -120,29 +108,6 @@ func newCacheCleanCmd(opts *CacheCleanOptions, handler CommandHandler) *gcli.Com
 		}
 		snapshot := *opts
 		return handler("cache.clean", &snapshot)
-	}
-	return cmd
-}
-
-func newCacheServeCmd(opts *CacheServeOptions, handler CommandHandler) *gcli.Command {
-	cmd := gcli.NewCommand("serve", "Serve local cache files over read-only HTTP")
-	cmd.Config = func(c *gcli.Command) {
-		c.StrOpt(&opts.Host, "host", "", "0.0.0.0", "Listen host")
-		c.IntOpt(&opts.Port, "port", "p", 8686, "Listen port, 0 means random free port")
-		c.StrOpt(&opts.Root, "root", "", "all", "Share scope: all, pkg, api, sdk, sdk-index")
-		c.StrOpt(&opts.Token, "token", "", "", "Bearer token required for cache downloads and manifest")
-		c.BoolOpt(&opts.NoIndex, "no-index", "", false, "Disable directory listing")
-		c.BoolOpt(&opts.JSONLog, "json-log", "", false, "Write one JSON request log line per cache server request")
-	}
-	cmd.Func = func(_ *gcli.Command, args []string) error {
-		if err := validateNoFlagArgs(args); err != nil {
-			return err
-		}
-		if !isValidCacheRoot(opts.Root) {
-			return fmt.Errorf("invalid cache root %q: must be one of all, pkg, api, sdk, sdk-index", opts.Root)
-		}
-		snapshot := *opts
-		return handler("cache.serve", &snapshot)
 	}
 	return cmd
 }

@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 
 	"github.com/gookit/goutil/x/ccolor"
@@ -102,18 +100,6 @@ func (s *cliService) handleCacheStatus(opts *CacheStatusOptions) error {
 	return nil
 }
 
-func serveOptionsFromCLI(opts *CacheServeOptions) appcache.ServeOptions {
-	return appcache.ServeOptions{
-		Host:    opts.Host,
-		Port:    opts.Port,
-		Root:    opts.Root,
-		NoIndex: opts.NoIndex,
-		Version: BuildInfo().Version,
-		Token:   opts.Token,
-		JSONLog: opts.JSONLog,
-	}
-}
-
 func (s *cliService) handleCacheClean(opts *CacheCleanOptions) error {
 	cleanOpts, err := cleanOptionsFromCLI(opts)
 	if err != nil {
@@ -174,38 +160,6 @@ func (s *cliService) handleCacheClean(opts *CacheCleanOptions) error {
 		}
 	}
 	return nil
-}
-
-func (s *cliService) handleCacheServe(opts *CacheServeOptions) error {
-	serveOpts := serveOptionsFromCLI(opts)
-	if serveOpts.Host == "" {
-		serveOpts.Host = "0.0.0.0"
-	}
-	if serveOpts.Root == "" {
-		serveOpts.Root = "all"
-	}
-	if serveOpts.JSONLog {
-		serveOpts.LogWriter = s.stderrWriter()
-	}
-	cacheDir, err := s.cacheService.ResolveCacheDir()
-	if err != nil {
-		return err
-	}
-	handler := appcache.NewHandler(s.cacheService, cacheDir, serveOpts)
-	addr := fmt.Sprintf("%s:%d", serveOpts.Host, serveOpts.Port)
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-
-	actualAddr := listener.Addr().String()
-	ccolor.Fprintf(s.stderrWriter(), "Serving eget cache on http://%s\n", actualAddr)
-	ccolor.Fprintf(s.stderrWriter(), " - cache dir: %s\n", cacheDir)
-	ccolor.Fprintln(s.stderrWriter(), " - <ylw>read-only</> mode; do not expose this service to the public internet")
-
-	server := &http.Server{Handler: handler}
-	return server.Serve(listener)
 }
 
 func formatBytes(size int64) string {

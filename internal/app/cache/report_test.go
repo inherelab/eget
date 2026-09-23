@@ -61,5 +61,5 @@ func TestServiceStatusSummarizesKindsAndMirrorConfig(t *testing.T) {
 	assert.Eq(t, 1, result.Kinds[string(KindPkg)].Files)
 	assert.True(t, result.CacheMirror.Enable)
 	assert.Eq(t, "http://127.0.0.1:8686", result.CacheMirror.URL)
-	assert.Contains(t, result.ServeCommand, "eget cache serve")
+	assert.Contains(t, result.ServeCommand, "eget web")
 }

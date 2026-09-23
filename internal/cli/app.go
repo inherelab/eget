@@ -128,6 +128,7 @@ func newApp(handler CommandHandler, stdout, stderr io.Writer) *App {
 	app.add(newSDKCmd(handler))
 	app.add(newExtCmd(handler))
 	app.add(newCacheCmd(handler))
+	app.add(newWebCmd(handler))
 	app.add(newAddCmd(handler))
 	app.add(newUninstallCmd(handler))
 	app.add(newListCmd(handler))
@@ -189,6 +190,12 @@ func commonCommandHelp(name string) string {
   eget uninstall sshc markview
   eget uninstall sshc --yes
   eget uninstall sshc --purge`
+	case "web":
+		return `<info>Examples</>:
+  eget web
+  eget web --open
+  eget web --port 9000 --read-only
+  eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --allow-mutations`
 	default:
 		return ""
 	}
@@ -343,8 +350,11 @@ var commandFlagSpecs = map[string]flagSpec{
 			"list":   {bools: setOf("json", "j"), values: setOf("root")},
 			"status": {bools: setOf("json", "j")},
 			"clean":  {bools: setOf("all", "a", "dry-run", "yes", "y", "pkg", "api", "sdk", "sdk-index", "partial", "json", "j", "keep-latest"), values: setOf("older")},
-			"serve":  {bools: setOf("no-index", "json-log"), values: setOf("host", "port", "p", "root", "token")},
 		},
+	},
+	"web": {
+		bools:  setOf("no-auth", "read-only", "allow-mutations", "open", "no-token-print", "no-cache-index", "json-log"),
+		values: setOf("host", "port", "p", "token", "cache-root", "allow-host"),
 	},
 	"search":    {bools: setOf("json", "j"), values: setOf("sort", "order", "limit", "l")},
 	"show":      {},

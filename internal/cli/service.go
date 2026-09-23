@@ -7,6 +7,7 @@ import (
 
 	"github.com/inherelab/eget/internal/app"
 	appcache "github.com/inherelab/eget/internal/app/cache"
+	"github.com/inherelab/eget/internal/extpkg"
 	"github.com/inherelab/eget/internal/sdk"
 )
 
@@ -43,6 +44,9 @@ type cliService struct {
 	cacheService      appcache.Service
 	// extService drives packages owned by external managers (npm, uv, ...).
 	extService app.ExternalProvider
+	// extPkg keeps the concrete ext manager service: the web console also needs
+	// Path(), which is not part of the app-layer interface.
+	extPkg extpkg.Service
 
 	stderr             io.Writer
 	configPathResolver func() (string, error)

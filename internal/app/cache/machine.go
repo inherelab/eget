@@ -13,6 +13,7 @@ import (
 	"github.com/inherelab/eget/internal/cachemirror"
 )
 
+// Manifest is the JSON cache index eget clients use as a cache mirror source.
 type Manifest struct {
 	Schema int            `json:"schema"`
 	Server ManifestServer `json:"server"`
@@ -40,48 +41,45 @@ type ManifestFile struct {
 	ModTime time.Time `json:"mod_time"`
 }
 
-type cacheHandler struct {
-	service  Service
-	cacheDir string
-	opts     ServeOptions
+// MachineOptions configures the machine endpoints (/manifest.json, /download/*,
+// /files/*). Authentication is the caller's job: `eget web` wraps these
+// handlers with its own token middleware, so no token lives here.
+type MachineOptions struct {
+	Root    string
+	NoIndex bool
+	Version string
 }
 
-func NewHandler(service Service, cacheDir string, opts ServeOptions) http.Handler {
+type machineHandler struct {
+	service  Service
+	cacheDir string
+	opts     MachineOptions
+}
+
+func newMachineHandler(service Service, cacheDir string, opts MachineOptions) machineHandler {
 	if opts.Root == "" {
 		opts.Root = "all"
 	}
-	handler := http.Handler(cacheHandler{service: service, cacheDir: cacheDir, opts: opts})
-	handler = withBearerToken(handler, opts.Token)
-	if opts.JSONLog {
-		handler = withJSONLog(handler, opts.LogWriter, service.now)
-	} else {
-		handler = withTextLog(handler, opts.LogWriter, service.now)
-	}
-	return handler
+	return machineHandler{service: service, cacheDir: cacheDir, opts: opts}
 }
 
-func (h cacheHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch {
-	case r.URL.Path == "/":
-		h.handleIndex(w, r)
-	case r.URL.Path == "/healthz":
-		writeJSON(w, http.StatusOK, map[string]any{
-			"ok":      true,
-			"name":    "eget-cache",
-			"version": h.opts.Version,
-		})
-	case r.URL.Path == "/manifest.json":
-		h.handleManifest(w, r)
-	case strings.HasPrefix(r.URL.Path, "/download/"):
-		h.handleDownload(w, r)
-	case strings.HasPrefix(r.URL.Path, "/files/"):
-		h.handleFile(w, r)
-	default:
-		http.NotFound(w, r)
-	}
+// ManifestHandler serves the cache manifest at /manifest.json.
+func ManifestHandler(service Service, cacheDir string, opts MachineOptions) http.HandlerFunc {
+	return newMachineHandler(service, cacheDir, opts).manifest
 }
 
-func (h cacheHandler) handleManifest(w http.ResponseWriter, r *http.Request) {
+// DownloadHandler serves /download/<path-md5 key>, the protocol eget clients
+// use to fetch a cached file by content path.
+func DownloadHandler(service Service, cacheDir string, opts MachineOptions) http.HandlerFunc {
+	return newMachineHandler(service, cacheDir, opts).download
+}
+
+// FileHandler serves /files/<relative path> for direct browsing.
+func FileHandler(service Service, cacheDir string, opts MachineOptions) http.HandlerFunc {
+	return newMachineHandler(service, cacheDir, opts).file
+}
+
+func (h machineHandler) manifest(w http.ResponseWriter, r *http.Request) {
 	entries, err := h.service.Scan(h.cacheDir, CacheScanOptions{
 		Root:  h.opts.Root,
 		Kinds: []Kind{KindPkg, KindAPI, KindSDK, KindSDKIndex},
@@ -121,7 +119,7 @@ func (h cacheHandler) handleManifest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h cacheHandler) handleDownload(w http.ResponseWriter, r *http.Request) {
+func (h machineHandler) download(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -155,7 +153,7 @@ func (h cacheHandler) handleDownload(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
-func (h cacheHandler) handleFile(w http.ResponseWriter, r *http.Request) {
+func (h machineHandler) file(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
