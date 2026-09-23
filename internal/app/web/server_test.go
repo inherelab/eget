@@ -338,8 +338,9 @@ func TestWebSPAFallback(t *testing.T) {
 
 	assert.Eq(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
-	// Without a frontend build the placeholder explains how to create one.
-	assert.Contains(t, rec.Body.String(), "web-build")
+	// Either the built SPA shell or the "not built" placeholder is served; both
+	// are HTML and both keep client-side routes working.
+	assert.Contains(t, strings.ToLower(rec.Body.String()), "<!doctype html>")
 }
 
 func TestWebSecurityHeaders(t *testing.T) {

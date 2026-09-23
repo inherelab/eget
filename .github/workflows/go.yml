@@ -5,6 +5,8 @@ on:
       - 'go.mod'
       - '**.go'
       - '**.yml'
+      - 'web/**'
+      - '.github/workflows/go.yml'
   push:
     branches: # Only trigger branch pushes; tag pushes are ignored.
       - '**'
@@ -12,6 +14,8 @@ on:
       - 'go.mod'
       - '**.go'
       - '**.yml'
+      - 'web/**'
+      - '.github/workflows/go.yml'
 
 jobs:
 
@@ -48,6 +52,27 @@ jobs:
     - name: Mod tidy
       run: |
         go mod tidy
+
+    - name: Setup pnpm
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: web/pnpm-lock.yaml
+
+    # The Go build works without a frontend bundle (the dist placeholder keeps
+    # //go:embed valid), so this step verifies the real bundle can be produced.
+    - name: Build web console
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
+      working-directory: web
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm build
 
     - name: Run unit tests
       # run: go test -v -cover ./...

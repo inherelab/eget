@@ -16,5 +16,6 @@ eget.1
 .worktrees/
 .xenv.toml
 dist/
+node_modules/
 tmp/
 .gitnexus

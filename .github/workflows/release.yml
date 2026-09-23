@@ -34,6 +34,17 @@ jobs:
         run: |
           go mod tidy -diff
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # `make release` runs the web-build target, which needs pnpm/node in place.
       - name: Build bin package
         run: |
           make release

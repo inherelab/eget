@@ -15,13 +15,23 @@ LDFLAGS := -s -w \
 	-X main.GitHash=$(GIT_HASH) \
 	-X 'main.BuildTime=$(BUILD_TIME)'
 
-.PHONY: all build backend clean clean-dist help latest
+.PHONY: all build web-build backend clean clean-dist help latest
 
 ## all: build (default)
 all: build
 
+## web-build: build the web console frontend into internal/app/web/dist
+web-build:
+	@echo "🎨 Building web console..."
+	@command -v pnpm >/dev/null 2>&1 || { \
+		echo "⚠️  pnpm not found; skipping frontend build (the binary will serve the unbuilt page)"; \
+		exit 0; \
+	}
+	@cd web && pnpm install && pnpm build
+	@touch internal/app/web/dist/.gitkeep
+
 ## build: build Go binary (current platform)
-build:
+build: web-build
 	@echo "🐹 Building Go binary ($(VERSION) @ $(GIT_HASH))..."
 	@go build -ldflags "$(LDFLAGS)" -o $(BINARY) $(MAIN_DIR)
 	@echo "📦 Compressing binary..."
@@ -48,7 +58,7 @@ WINDOWS_MANIFEST := $(MAIN_DIR)/eget.exe.manifest
 GOVERSIONINFO := go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
 
 ## build-all: cross-compile for all platforms
-build-all: clean-dist dump-info build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows latest-yaml
+build-all: web-build clean-dist dump-info build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows latest-yaml
 	ls -lh $(DIST_DIR)
 
 ## dump-info: dump build info

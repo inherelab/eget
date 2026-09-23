@@ -1,0 +1,85 @@
+import { Link, useParams } from 'react-router-dom'
+import { api, formatTime } from '../api/client'
+import StateBlock from '../components/StateBlock'
+import { useAsync } from '../hooks/useAsync'
+
+export default function PackageDetail() {
+  const { name = '' } = useParams()
+  const { data, error, loading, reload } = useAsync(() => api.packageDetail(name), [name])
+
+  return (
+    <section className="page">
+      <div className="page-head">
+        <h1>{name}</h1>
+        <div>
+          <Link to="/packages" style={{ marginRight: 12 }}>
+            ← Back
+          </Link>
+          <button onClick={reload} disabled={loading}>
+            Refresh
+          </button>
+        </div>
+      </div>
+      <StateBlock loading={loading} error={error}>
+        {data && (
+          <>
+            {data.desc && <div className="notice">{data.desc}</div>}
+            <div className="panel">
+              <h2>Package</h2>
+              <dl className="detail-grid">
+                <dt>Repo</dt>
+                <dd className="mono">{data.repo || '-'}</dd>
+                <dt>Source</dt>
+                <dd>{data.source}</dd>
+                <dt>Configured</dt>
+                <dd>{data.configured ? 'yes' : 'no'}</dd>
+                <dt>Installed</dt>
+                <dd>{data.installed ? 'yes' : 'no'}</dd>
+                <dt>Version</dt>
+                <dd className="mono">{data.version || '-'}</dd>
+                <dt>Tag</dt>
+                <dd className="mono">{data.tag || '-'}</dd>
+                <dt>Asset</dt>
+                <dd className="mono">{data.asset || '-'}</dd>
+                <dt>Install mode</dt>
+                <dd>{data.installMode || '-'}</dd>
+                <dt>Install target</dt>
+                <dd className="mono">{data.installTarget || '-'}</dd>
+                <dt>Config target</dt>
+                <dd className="mono">{data.configTarget || '-'}</dd>
+                <dt>Installed at</dt>
+                <dd>{formatTime(data.installedAt)}</dd>
+                <dt>Updated at</dt>
+                <dd>{formatTime(data.updatedAt)}</dd>
+                <dt>Ignore update</dt>
+                <dd>{data.ignoreUpdate ? 'yes' : 'no'}</dd>
+              </dl>
+            </div>
+
+            {data.homepage && (
+              <div className="panel">
+                <h2>Links</h2>
+                <a href={data.homepage} target="_blank" rel="noreferrer noopener">
+                  {data.homepage}
+                </a>
+              </div>
+            )}
+
+            {data.extractedFiles && data.extractedFiles.length > 0 && (
+              <div className="panel">
+                <h2>Extracted files</h2>
+                <ul>
+                  {data.extractedFiles.map((file) => (
+                    <li key={file} className="mono">
+                      {file}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </StateBlock>
+    </section>
+  )
+}
