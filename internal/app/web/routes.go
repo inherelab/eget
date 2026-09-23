@@ -18,6 +18,8 @@ func (s *Server) registerRoutes(r *rux.Router) {
 		r.GET("/cache", s.handleCacheList)
 		r.GET("/cache/status", s.handleCacheStatus)
 		r.GET("/config", s.handleConfig)
+		r.POST("/config/validate", s.handleConfigValidate)
+		r.PUT("/config", s.handleConfigUpdate)
 		r.GET("/query", s.handleQuery)
 		r.GET("/search", s.handleSearch)
 

@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -62,13 +63,29 @@ func (f fakeShow) ShowPackage(string) (app.ShowResult, error) { return f.result,
 type fakeConfig struct {
 	info    app.ConfigInfoResult
 	content string
+	values  map[string]string
 }
 
-func (f fakeConfig) ConfigInfo() (app.ConfigInfoResult, error) { return f.info, nil }
+func (f *fakeConfig) ConfigInfo() (app.ConfigInfoResult, error) { return f.info, nil }
 
-func (f fakeConfig) ConfigExport(out io.Writer, _ bool) error {
+func (f *fakeConfig) ConfigExport(out io.Writer, _ bool) error {
 	_, err := io.WriteString(out, f.content)
 	return err
+}
+
+func (f *fakeConfig) ConfigGet(key string) (any, error) {
+	if value, ok := f.values[key]; ok {
+		return value, nil
+	}
+	return nil, fmt.Errorf("unsupported config key %q", key)
+}
+
+func (f *fakeConfig) ConfigSet(key, value string) error {
+	if f.values == nil {
+		f.values = map[string]string{}
+	}
+	f.values[key] = value
+	return nil
 }
 
 type fakeCache struct{}
@@ -137,7 +154,7 @@ func testServer(t *testing.T, opts Options) *Server {
 			checked:  2,
 		},
 		Show:   fakeShow{result: app.ShowResult{Name: "fd", Repo: "sharkdp/fd", Installed: true, Configured: true, Tag: "v10.4.2"}},
-		Config: fakeConfig{info: app.ConfigInfoResult{Path: "/home/me/.eget.toml", Exists: true}, content: "[global]\n"},
+		Config: &fakeConfig{info: app.ConfigInfoResult{Path: "/home/me/.eget.toml", Exists: true}, content: "[global]\n"},
 		Cache:  fakeCache{},
 		Ext:    fakeExt{},
 		Manifest: func(w http.ResponseWriter, r *http.Request) {

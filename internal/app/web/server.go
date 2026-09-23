@@ -69,6 +69,8 @@ type SearchProvider interface {
 type ConfigProvider interface {
 	ConfigInfo() (app.ConfigInfoResult, error)
 	ConfigExport(out io.Writer, withGlobal bool) error
+	ConfigGet(key string) (any, error)
+	ConfigSet(key, value string) error
 }
 
 // CacheProvider is the subset of appcache.Service the console needs.

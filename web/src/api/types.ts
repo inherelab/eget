@@ -143,6 +143,17 @@ export interface ConfigView {
   content: string
 }
 
+export interface ConfigChange {
+  key: string
+  value: string
+  current?: string
+}
+
+export interface ConfigUpdateResponse {
+  applied: ConfigChange[]
+  path?: string
+}
+
 export type TaskStatus =
   | 'queued'
   | 'running'

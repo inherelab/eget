@@ -2,6 +2,7 @@ import type {
   CacheCleanRequest,
   CacheList,
   CacheStatus,
+  ConfigUpdateResponse,
   ConfigView,
   ExtManagersResponse,
   ExtPackagesResponse,
@@ -84,6 +85,10 @@ export const api = {
   cache: (root?: string) => request<CacheList>(`/api/cache${query({ root })}`),
   cacheStatus: () => request<CacheStatus>('/api/cache/status'),
   config: () => request<ConfigView>('/api/config'),
+  validateConfig: (set: Record<string, string>) =>
+    request<ConfigUpdateResponse>('/api/config/validate', postJSON({ set })),
+  updateConfig: (set: Record<string, string>) =>
+    request<ConfigUpdateResponse>('/api/config', putJSON({ set })),
 
   tasks: (limit = 50) => request<TasksResponse>(`/api/tasks${query({ limit })}`),
   task: (id: string) => request<Task>(`/api/tasks/${encodeURIComponent(id)}`),
@@ -104,6 +109,14 @@ export const api = {
 function postJSON(body: unknown): RequestInit {
   return {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }
+}
+
+function putJSON(body: unknown): RequestInit {
+  return {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   }

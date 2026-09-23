@@ -173,7 +173,7 @@ func (s ConfigService) ConfigInit() (string, error) {
 	file.ApiCache.CacheTime = &apiCacheTime
 	file.Ghproxy.HostURL = &ghproxyHostURL
 	file.Ghproxy.Fallbacks = []string{}
-	if err := cfgpkg.Save(path, file); err != nil {
+	if err := cfgpkg.SaveAtomic(path, file); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -361,7 +361,8 @@ func (s ConfigService) save(file *cfgpkg.File) error {
 	if s.Save != nil {
 		return s.Save(path, file)
 	}
-	return cfgpkg.Save(path, file)
+	// Atomic by default: an interrupted write must not truncate eget.toml.
+	return cfgpkg.SaveAtomic(path, file)
 }
 
 func pathExists(path string, isDir bool) bool {
