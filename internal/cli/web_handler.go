@@ -147,8 +147,10 @@ func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, al
 		ccolor.Fprintf(out, " - token: <ylw>hidden</> (pass --token or open the console from this terminal)\n")
 	case generated:
 		ccolor.Fprintf(out, " - token: <green>%s</>\n", token)
+		ccolor.Fprintf(out, " - open:  <green>%s</>\n", webConsoleURL(addr, token))
 	default:
 		ccolor.Fprintf(out, " - token: from --token\n")
+		ccolor.Fprintf(out, " - open:  %s\n", webConsoleURL(addr, token))
 	}
 	if resolved.ReadOnly {
 		ccolor.Fprintf(out, " - mode: <ylw>read-only</>\n")

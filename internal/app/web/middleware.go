@@ -150,9 +150,72 @@ func (s *Server) authMiddleware(c *rux.Context) {
 		c.Next()
 		return
 	}
+	// A browser navigating to the console should get a form instead of a bare
+	// 401; API and mirror clients keep the plain unauthorized answer.
+	if htmlRequest(c.Req) && servesConsole(c.Req.URL.Path) {
+		c.HTMLString(http.StatusUnauthorized, tokenPage)
+		return
+	}
 	c.Resp.Header().Set("WWW-Authenticate", "Bearer")
 	c.AbortWithStatus(http.StatusUnauthorized, "unauthorized")
 }
+
+// htmlRequest reports whether the client looks like a browser loading a page.
+func htmlRequest(r *http.Request) bool {
+	return r.Method == http.MethodGet && strings.Contains(r.Header.Get("Accept"), "text/html")
+}
+
+// servesConsole reports whether a path belongs to the console UI rather than to
+// the machine-facing API (which answers JSON/plain text).
+func servesConsole(path string) bool {
+	switch {
+	case strings.HasPrefix(path, "/api/"), path == "/api",
+		strings.HasPrefix(path, "/assets/"),
+		strings.HasPrefix(path, "/files/"), path == "/files",
+		strings.HasPrefix(path, "/download/"), path == "/download",
+		path == "/manifest.json", path == "/healthz", path == "/readyz":
+		return false
+	default:
+		return true
+	}
+}
+
+// tokenPage is shown when an unauthenticated browser opens the console. The
+// form submits back to "/" with ?token=…, which the auth middleware turns into
+// the auth cookie.
+const tokenPage = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eget web</title>
+<style>
+body{margin:0;font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI",sans-serif;background:#f6f7f9;color:#1f242b}
+main{max-width:560px;margin:12vh auto;padding:28px;background:#fff;border:1px solid #dfe3ea;border-radius:10px}
+h1{margin:0 0 14px;font-size:22px}
+code,pre{font-family:ui-monospace,Consolas,monospace}
+pre{margin:12px 0;padding:10px 12px;background:#0f1720;color:#e6edf3;border-radius:7px;overflow:auto}
+form{display:flex;gap:8px;margin:16px 0 8px}
+input{flex:1;height:38px;padding:0 12px;border:1px solid #dfe3ea;border-radius:7px;font:inherit}
+button{height:38px;padding:0 16px;border:0;border-radius:7px;background:#0f766e;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.muted{color:#667085;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>eget web</h1>
+<p>This console is protected by a token. It was printed by <code>eget web</code> in the terminal:</p>
+<pre> - token: &lt;the token&gt;
+ - open:  http://127.0.0.1:&lt;port&gt;/?token=&lt;the token&gt;</pre>
+<form method="get" action="/">
+  <input type="password" name="token" placeholder="paste the token" autofocus aria-label="Token">
+  <button type="submit">Open console</button>
+</form>
+<p class="muted">Visiting the <code>open</code> URL above (or submitting this form) stores the token as a cookie, so this is a one-time step.</p>
+</main>
+</body>
+</html>
+`
 
 func publicPath(path string) bool {
 	return path == "/healthz" || path == "/readyz"

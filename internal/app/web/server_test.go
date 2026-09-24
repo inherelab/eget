@@ -222,6 +222,27 @@ func TestWebHealthzBypassesToken(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "ok")
 }
 
+func TestWebShowsTokenPageForBrowserNavigation(t *testing.T) {
+	server := testServer(t, Options{Token: "secret"})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "127.0.0.1:8787"
+	req.Header.Set("Accept", "text/html,application/xhtml+xml")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	assert.Eq(t, http.StatusUnauthorized, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+	assert.Contains(t, rec.Body.String(), `name="token"`)
+
+	// Machine-facing paths keep answering without the form.
+	apiRec := get(t, server, "/api/overview", func(r *http.Request) {
+		r.Header.Set("Accept", "text/html")
+	})
+	assert.Eq(t, http.StatusUnauthorized, apiRec.Code)
+	assert.False(t, strings.Contains(apiRec.Body.String(), `name="token"`))
+}
+
 func TestWebQueryTokenPlantsCookie(t *testing.T) {
 	server := testServer(t, Options{Token: "secret"})
 
