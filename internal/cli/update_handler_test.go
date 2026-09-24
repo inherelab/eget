@@ -5,7 +5,9 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/gookit/goutil/x/assert"
@@ -648,6 +650,7 @@ func TestHandleUpdateCheckPrintsSameOutdatedListWithoutUpdating(t *testing.T) {
 func TestHandleUpdateCheckWithTargetsOnlyChecksRequestedPackages(t *testing.T) {
 	installer := &fakeUpdateInstallerForCLI{}
 	checkedRepos := make([]string, 0, 2)
+	var checkedMu sync.Mutex
 	svc := &cliService{
 		listService: app.ListService{
 			LatestInfo: func(target app.LatestCheckTarget) (app.LatestInfo, error) {
@@ -672,7 +675,9 @@ func TestHandleUpdateCheckWithTargetsOnlyChecksRequestedPackages(t *testing.T) {
 				}}, nil
 			},
 			LatestInfo: func(target app.LatestCheckTarget) (app.LatestInfo, error) {
+				checkedMu.Lock()
 				checkedRepos = append(checkedRepos, target.Repo)
+				checkedMu.Unlock()
 				switch target.Repo {
 				case "jqlang/jq":
 					return app.LatestInfo{Tag: "jq-1.8"}, nil
@@ -694,6 +699,9 @@ func TestHandleUpdateCheckWithTargetsOnlyChecksRequestedPackages(t *testing.T) {
 	assert.NoErr(t, err)
 
 	got := out.String()
+	// The service checks targets with a worker pool, so the call order is
+	// unspecified; only the checked set is part of the contract.
+	sort.Strings(checkedRepos)
 	assert.Eq(t, []string{"OXY2DEV/markview.nvim", "jqlang/jq"}, checkedRepos)
 	assert.Contains(t, got, "jqlang/jq")
 	assert.Contains(t, got, "jq-1.8")
