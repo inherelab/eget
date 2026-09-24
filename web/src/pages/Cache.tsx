@@ -1,18 +1,49 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api, formatBytes, formatTime } from '../api/client'
 import StateBlock from '../components/StateBlock'
 import { useAsync } from '../hooks/useAsync'
 
+// The cache can hold hundreds of files; the table pages through them so the
+// page stays responsive and the file names remain scannable.
+const PAGE_SIZE = 35
+
 export default function Cache() {
   const [root, setRoot] = useState('all')
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(1)
   const status = useAsync(() => api.cacheStatus(), [])
   const list = useAsync(() => api.cache(root), [root])
+
+  const files = useMemo(() => list.data?.files ?? [], [list.data])
+
+  const filtered = useMemo(() => {
+    const needle = keyword.trim().toLowerCase()
+    if (!needle) {
+      return files
+    }
+    return files.filter((file) => file.path.toLowerCase().includes(needle))
+  }, [files, keyword])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  // A new filter or scope starts from the first page.
+  useEffect(() => {
+    setPage(1)
+  }, [keyword, root])
 
   return (
     <section className="page">
       <div className="page-head">
         <h1>Cache</h1>
-        <button onClick={() => { status.reload(); list.reload() }} disabled={list.loading}>
+        <button
+          onClick={() => {
+            status.reload()
+            list.reload()
+          }}
+          disabled={list.loading}
+        >
           Refresh
         </button>
       </div>
@@ -68,6 +99,18 @@ export default function Cache() {
           <option value="sdk">sdk</option>
           <option value="sdk-index">sdk-index</option>
         </select>
+        <input
+          type="search"
+          placeholder="Filter by file path"
+          value={keyword}
+          onChange={(event) => setKeyword(event.target.value)}
+          style={{ minWidth: 260 }}
+        />
+        {list.data && (
+          <span className="muted">
+            {filtered.length} of {files.length} files
+          </span>
+        )}
       </div>
 
       <StateBlock
@@ -76,7 +119,10 @@ export default function Cache() {
         empty={list.data?.total_files === 0}
         emptyText="No cache files in this scope."
       >
-        {list.data && (
+        {list.data && filtered.length === 0 && (
+          <div className="notice">No cache file matches this filter.</div>
+        )}
+        {visible.length > 0 && (
           <table>
             <thead>
               <tr>
@@ -88,7 +134,7 @@ export default function Cache() {
               </tr>
             </thead>
             <tbody>
-              {list.data.files.map((file) => (
+              {visible.map((file) => (
                 <tr key={file.path}>
                   <td>
                     <span className="tag">{file.kind}</span>
@@ -103,6 +149,26 @@ export default function Cache() {
               ))}
             </tbody>
           </table>
+        )}
+
+        {filtered.length > PAGE_SIZE && (
+          <div className="pager">
+            <button onClick={() => setPage(1)} disabled={currentPage === 1}>
+              « First
+            </button>
+            <button onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+              ‹ Prev
+            </button>
+            <span className="muted">
+              Page {currentPage} / {totalPages} · {PAGE_SIZE} per page
+            </span>
+            <button onClick={() => setPage(currentPage + 1)} disabled={currentPage >= totalPages}>
+              Next ›
+            </button>
+            <button onClick={() => setPage(totalPages)} disabled={currentPage >= totalPages}>
+              Last »
+            </button>
+          </div>
         )}
       </StateBlock>
     </section>

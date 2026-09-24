@@ -357,6 +357,18 @@ a {
   color: var(--accent);
 }
 
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.pager .muted {
+  margin: 0 4px;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: 180px 1fr;
