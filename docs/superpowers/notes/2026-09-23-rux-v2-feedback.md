@@ -174,7 +174,7 @@ r.GET("/users/{id}", showUser, handlers.ParamRegex("id", `\d+`)) // 不匹配 �
 
 ## 仍未处理（记录在案）
 
-- `MaxParams = 16`、`Use()` 必须在路由注册前调用、路由在首个请求后只读等 v2 约束未变
+- `MaxParams = 16`、路由在首个请求后只读（冻结）等 v2 约束未变
 - 核心包的 `Listen()` 已能回传真实地址（见下），但 `rux.Router` 仍没有优雅关闭/信号处理，
   需要这些时还是用 `server` 包
 
@@ -209,6 +209,23 @@ docker run --rm -v <repo>:/src -v <GOMODCACHE>:/go/pkg/mod -w /src \
 
 2026-09-23 全量跑通三次（改动前 / core Listen 改动后 / Group 改动后），无 race 报告。
 
+### 本地跑 CodeQL（复现 code scanning 结论，不用等 CI）
+
+用官方 Go-only bundle（108.8 MiB，sha256 校验）+ 已有 `golang:1.25` 造了镜像 `codeql-go:2.27.1`，
+Dockerfile 与用法在 `inhere-tools/codeql/`。建库 + 单条查询约 1 分钟：
+
+```bash
+docker run --rm --entrypoint sh -v <repo>:/src -v <GOMODCACHE>:/go/pkg/mod \
+  -v <out>:/out -w /src -e GOPROXY=off -e GOFLAGS=-mod=mod codeql-go:2.27.1 -c '
+    codeql database create /tmp/db --language=go --source-root=. --overwrite &&
+    codeql database analyze /tmp/db codeql/go-queries:Security/CWE-079/ReflectedXss.ql \
+      --format=sarif-latest --output=/out/xss.sarif'
+```
+
+实测：HEAD 0 命中；旧提交（fixture 未改时）1 命中，正好是 CI 报的
+`internal/core/response_writer.go:41`。注意：本地跑 CodeQL 会用 `-mod=mod` 改写
+`_benchmarks/*/go.mod`、`go.sum`，跑完记得 `git checkout -- _benchmarks _examples`。
+
 ## eget 侧迁移记录（2026-09-23 晚，rux v2.1.0）
 
 eget web 已升级到 v2.1.0 并撤掉了文中的两处规避：
@@ -217,11 +234,13 @@ eget web 已升级到 v2.1.0 并撤掉了文中的两处规避：
 - 自建监听循环 → `server.New` + `SetListener` + `ServeListener`（`MountHealthChecks` 提供 `/healthz`（纯文本 `ok`）与 `/readyz`；关闭时 `ServeListener` 返回 `http.ErrServerClosed`，调用方需自行折叠为正常退出；任务取消放进 `PreShutdown`）。
 - 选项改用取值式 `rux.WithMethodNotAllowed(true)`。
 
-**新发现（供上游参考）**：`Use` 现在有硬性顺序约束 —— 必须在**任何**路由注册之前调用，否则 panic：
+**新发现（已于同日处理）**：`Use` 曾要求必须在**任何**路由注册之前调用，否则 panic：
 
 ```
 rux: Use must be called before any route registration (Q6)
 ```
 
-而 `server.New()` 的 `MountHealthChecks()` 正是注册路由，所以正确顺序是 `Use(...)` → `MountHealthChecks()` → 业务路由。这对调用方不直观（server 包文档只说"在 Run() 前挂载健康检查"，没提 `Use` 的顺序）。建议：在 `MountHealthChecks` 的注释里点明"先 Use 再挂载"，或让 server 包在 `New` 时一次性注册。
+而 `server.New()` 的 `MountHealthChecks()` 正是注册路由，所以顺序被硬性绑成 `Use(...)` → `MountHealthChecks()` → 业务路由，对调用方不直观。
+
+上游已放宽（`01fb1e5`）：全局中间件链本来就是在 router 冻结（首个请求）时才合并进每条路由的，所以 `Use` 现在在**首个请求之前任意时刻**调用都生效，并覆盖此前注册的路由（回到 v1 的追溯语义）。只剩两条注意：首个请求之后 `Use` 仍 panic（frozen）；`Use` 永远是全局的，写在 `Group` 闭包里不会变成组级中间件。迁移时记录的那条顺序约束因此不再需要。
 
