@@ -41,6 +41,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
   - `?token=<token>` —— 仅首次引导，服务端校验通过后会种 `HttpOnly` + `SameSite=Strict` cookie，token 随后离开地址栏。
 - **首次打开控制台**：复制启动日志里的 `open:` 行（形如 `http://127.0.0.1:8787/?token=<token>`）——`--port 0` 时也能直接点开。若直接打开根地址，页面会给一个 token 输入框，粘贴后同样种下 cookie；API、静态资源与缓存镜像路径不会返回这个表单，仍是普通的 401。
 - `/healthz`、`/readyz` 免鉴权。
+- 浏览器图标（`/favicon.ico`、`/favicon.svg`、`/apple-touch-icon.png`、`/android-chrome-192x192.png`、`/android-chrome-512x512.png`、`/site.webmanifest`）同样免鉴权：图标要在未认证的 token 页就显示，而浏览器抓取 web manifest 时不携带凭据。
 
 ## API
 
@@ -183,3 +184,5 @@ go build -o eget ./cmd/eget
 ```
 
 未构建前端时二进制仍可编译运行，`GET /` 会返回一张说明页；API 与缓存镜像不受影响。
+
+浏览器图标（favicon、PWA 图标、`site.webmanifest`）不随前端构建：它们直接嵌入二进制（`internal/app/web/icons`，由 `assets/logo/exports` 拷贝而来），因此未构建前端时 token 页与说明页也带图标。

@@ -188,6 +188,8 @@ const tokenPage = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>eget web</title>
 <style>
 body{margin:0;font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI",sans-serif;background:#f6f7f9;color:#1f242b}
@@ -217,8 +219,16 @@ button{height:38px;padding:0 16px;border:0;border-radius:7px;background:#0f766e;
 </html>
 `
 
+// publicPath lists the token-free endpoints: the liveness probes and the
+// browser furniture. Icons and the web manifest load before a token exists (the
+// token page is itself a browser page), and browsers fetch a manifest with
+// credentials omitted, so gating it behind the cookie would break both.
 func publicPath(path string) bool {
-	return path == "/healthz" || path == "/readyz"
+	if path == "/healthz" || path == "/readyz" {
+		return true
+	}
+	_, isIcon := browserIcons[path]
+	return isIcon
 }
 
 func (s *Server) authenticated(r *http.Request) bool {

@@ -88,7 +88,8 @@ An existing target config requires interactive confirmation unless `--force` is 
 ## Write behaviour
 
 Edits (`eget add`, `eget config set`, `eget rm --purge`) rewrite the configuration in place instead
-of re-serializing it:
+of re-serializing it. The merging is provided by
+[`gookit/ext/tomlkit`](https://github.com/gookit/ext/tree/main/tomlkit):
 
 - a table whose parsed content did not change keeps its original text — comments, key order and
   formatting included;

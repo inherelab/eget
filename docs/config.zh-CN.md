@@ -87,7 +87,8 @@ eget config import --force portable.toml
 
 ## 写回行为
 
-修改配置的操作（`eget add`、`eget config set`、`eget rm --purge`）是**就地改写**而不是整篇重新序列化：
+修改配置的操作（`eget add`、`eget config set`、`eget rm --purge`）是**就地改写**而不是整篇重新序列化，合并逻辑由
+[`gookit/ext/tomlkit`](https://github.com/gookit/ext/tree/main/tomlkit) 提供：
 
 - 解析内容没有变化的表，保留原文（含注释、键顺序与格式）；
 - 发生变化的表，内部未改动的键行（连同其注释）原样保留，只有变更/新增的键重新渲染；

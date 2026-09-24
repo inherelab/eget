@@ -165,7 +165,9 @@ func NewServer(deps Deps, opts Options) (*Server, error) {
 		s.csrfMiddleware,
 	)
 	inner.MountHealthChecks()
-	s.registerRoutes(router)
+	if err := s.registerRoutes(router); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 

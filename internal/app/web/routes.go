@@ -4,7 +4,7 @@ import (
 	"github.com/gookit/rux/v2"
 )
 
-func (s *Server) registerRoutes(r *rux.Router) {
+func (s *Server) registerRoutes(r *rux.Router) error {
 	// /healthz and /readyz are mounted by the rux server (MountHealthChecks).
 	r.Group("/api", func() {
 		r.GET("/overview", s.handleOverview)
@@ -51,9 +51,13 @@ func (s *Server) registerRoutes(r *rux.Router) {
 	}
 
 	s.registerAssets(r)
+	if err := s.registerBrowserIcons(r); err != nil {
+		return err
+	}
 	// rux 2.1 routes unmatched paths and method mismatches through the global
 	// middleware chain, so auth, security headers and request logging apply to
 	// exactly the requests an attacker controls.
 	r.NotFound(s.handleCatchAll)
 	r.NotAllowed(s.handleCatchAll)
+	return nil
 }
