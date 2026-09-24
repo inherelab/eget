@@ -99,18 +99,34 @@ func selectInputReader(in io.Reader) io.Reader {
 	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
 		return file
 	}
-	return singleByteReader{reader: in}
+	return &singleByteReader{reader: in}
 }
 
+// singleByteReader feeds the prompt one byte at a time and stops at the newline
+// that ends the answer. Byte-wise reads are what the prompt's key handling wants,
+// and the stop matters because the non-interactive prompt keeps reading until it
+// has filled a buffer: given the raw stream it would swallow the answers the
+// prompts after it still need (asset choice, then overwrite confirmation).
 type singleByteReader struct {
 	reader io.Reader
+	ended  bool
 }
 
-func (r singleByteReader) Read(p []byte) (int, error) {
+func (r *singleByteReader) Read(p []byte) (int, error) {
+	if r.ended {
+		return 0, io.EOF
+	}
 	if len(p) > 1 {
 		p = p[:1]
 	}
-	return r.reader.Read(p)
+	n, err := r.reader.Read(p)
+	if n > 0 && p[0] == '\n' {
+		r.ended = true
+	}
+	if err != nil {
+		r.ended = true
+	}
+	return n, err
 }
 
 func readStdinLine() (string, error) {

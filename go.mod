@@ -5,13 +5,13 @@ go 1.25.0
 require (
 	github.com/bodgit/sevenzip v1.6.2
 	github.com/gobwas/glob v0.2.3
-	github.com/gookit/cliui v0.3.2-0.20260624120656-906827b77d7b
+	github.com/gookit/cliui v0.5.0
 	github.com/gookit/color v1.6.2-0.20260604125953-289d54c4470a
 	github.com/gookit/config/v2 v2.2.8
 	github.com/gookit/ext v0.1.0
 	github.com/gookit/gcli/v3 v3.8.3
 	github.com/gookit/goutil v0.8.0
-	github.com/gookit/rux/v2 v2.1.0
+	github.com/gookit/rux/v2 v2.1.2
 	github.com/klauspost/compress v1.18.5
 	github.com/ulikunitz/xz v0.5.15
 	golang.org/x/net v0.48.0
