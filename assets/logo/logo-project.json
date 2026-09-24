@@ -84,7 +84,9 @@
   },
   "exports": {
     "symbol_png": "exports/eget-symbol-{1024,512,256,128,64,48,32,16}.png (transparent)",
-    "app_icon": "exports/eget-favicon-*.png, favicon.ico (16/32/48), favicon.svg, apple-touch-icon.png (180, flattened on #0f1720), android-chrome-192x192.png, android-chrome-512x512.png, site.webmanifest"
+    "app_icon": "exports/eget-favicon-*.png, favicon.ico (16/32/48), favicon.svg, apple-touch-icon.png (180, flattened on #0f1720), android-chrome-192x192.png, android-chrome-512x512.png, site.webmanifest",
+    "readme_lockup": "exports/eget-lockup-1280.png and exports/eget-lockup-dark-1280.png, width 1280, used by the README <picture> block for light and dark themes",
+    "web_console_icons": "internal/app/web/icons/ holds the browser subset served by the console (copied from this directory; regenerate with the same render command, then copy favicon.ico, favicon.svg, apple-touch-icon.png, android-chrome-192x192.png, android-chrome-512x512.png and site.webmanifest)"
   },
   "minimum_sizes": {
     "symbol": "24px; use final/eget-favicon.svg below 24px",

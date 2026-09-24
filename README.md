@@ -1,5 +1,12 @@
 # Eget
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/exports/eget-lockup-dark-1280.png">
+    <img alt="eget" src="assets/logo/exports/eget-lockup-1280.png" width="380">
+  </picture>
+</p>
+
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/inherelab/eget?style=flat-square)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/inherelab/eget)](https://github.com/inherelab/eget)
 [![Unit-Tests](https://github.com/inherelab/eget/actions/workflows/go.yml/badge.svg)](https://github.com/inherelab/eget)
