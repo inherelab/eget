@@ -153,7 +153,35 @@ func (s *Server) handleOutdated(c *rux.Context) {
 		s.writeError(c, http.StatusNotImplemented, "not_available", nil)
 		return
 	}
-	items, failures, checked, err := s.deps.List.ListOutdatedPackages()
+
+	scope := strings.TrimSpace(c.Query("scope", "all"))
+	manager := strings.TrimSpace(c.Query("manager"))
+	selection := app.ManagersSelection{Mode: app.ManagersModeWith}
+	switch scope {
+	case "", "all":
+	case "eget":
+		selection = app.ManagersSelection{Mode: app.ManagersModeOff}
+	case "ext":
+		selection = app.ManagersSelection{Mode: app.ManagersModeOnly}
+		if manager != "" {
+			canonical, err := s.externalManager(manager)
+			if err != nil {
+				s.writeError(c, http.StatusUnprocessableEntity, "invalid_manager", err)
+				return
+			}
+			selection.Managers = []string{canonical}
+		}
+	default:
+		s.writeError(c, http.StatusBadRequest, "bad_scope",
+			fmt.Errorf("unknown scope %q: use all, eget or ext", scope))
+		return
+	}
+
+	provider := s.deps.List
+	if s.deps.ListWithManagers != nil {
+		provider = s.deps.ListWithManagers(selection)
+	}
+	items, failures, checked, err := provider.ListOutdatedPackages()
 	if err != nil {
 		s.writeError(c, http.StatusInternalServerError, "outdated_failed", err)
 		return

@@ -6,10 +6,10 @@ import { useAsync } from '../hooks/useAsync'
 
 export default function Packages() {
   const navigate = useNavigate()
-  const [scope, setScope] = useState('all')
+  const [scope, setScope] = useState('eget')
   const [keyword, setKeyword] = useState('')
   const [installedOnly, setInstalledOnly] = useState(false)
-  const [applied, setApplied] = useState({ scope: 'all', q: '', installed: false })
+  const [applied, setApplied] = useState({ scope: 'eget', q: '', installed: false })
 
   const { data, error, loading, reload } = useAsync(
     () => api.packages({ scope: applied.scope, q: applied.q, installed: applied.installed }),

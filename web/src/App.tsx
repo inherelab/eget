@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
 import Overview from './pages/Overview'
 import Packages from './pages/Packages'
@@ -10,22 +11,49 @@ import Config from './pages/Config'
 import Tasks from './pages/Tasks'
 
 const navigation = [
-  { to: '/', label: 'Overview', end: true },
-  { to: '/packages', label: 'Packages' },
-  { to: '/install', label: 'Install' },
-  { to: '/outdated', label: 'Outdated' },
-  { to: '/ext', label: 'External' },
-  { to: '/cache', label: 'Cache' },
-  { to: '/config', label: 'Config' },
-  { to: '/tasks', label: 'Tasks' },
+  { to: '/', label: 'Overview', icon: '◍', end: true },
+  { to: '/packages', label: 'Packages', icon: '▤' },
+  { to: '/install', label: 'Install', icon: '＋' },
+  { to: '/outdated', label: 'Outdated', icon: '↑' },
+  { to: '/ext', label: 'External', icon: '⊕' },
+  { to: '/cache', label: 'Cache', icon: '▣' },
+  { to: '/config', label: 'Config', icon: '⚙' },
+  { to: '/tasks', label: 'Tasks', icon: '⟳' },
 ]
 
+const sidebarKey = 'eget-web-sidebar'
+
 export default function App() {
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(sidebarKey) === 'collapsed')
+
+  const toggleSidebar = () => {
+    setCollapsed((previous) => {
+      const next = !previous
+      localStorage.setItem(sidebarKey, next ? 'collapsed' : 'expanded')
+      return next
+    })
+  }
+
   return (
-    <div className="shell">
+    <div className={collapsed ? 'shell collapsed' : 'shell'}>
       <aside className="sidebar">
-        <div className="brand">
-          eget<span>web</span>
+        <div className="sidebar-head">
+          <div className="brand">
+            {collapsed ? 'e' : (
+              <>
+                eget<span>web</span>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={toggleSidebar}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? '»' : '«'}
+          </button>
         </div>
         <nav>
           {navigation.map((item) => (
@@ -33,9 +61,11 @@ export default function App() {
               key={item.to}
               to={item.to}
               end={item.end}
+              title={item.label}
               className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
             >
-              {item.label}
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
             </NavLink>
           ))}
         </nav>

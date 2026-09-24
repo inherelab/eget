@@ -80,7 +80,8 @@ export const api = {
     request<PackagesResponse>(`/api/packages${query(params)}`),
   packageDetail: (name: string) =>
     request<PackageDetail>(`/api/packages/${encodeURIComponent(name)}`),
-  outdated: () => request<OutdatedResponse>('/api/outdated'),
+  outdated: (params: { scope?: string; manager?: string } = {}) =>
+    request<OutdatedResponse>(`/api/outdated${query(params)}`),
   ext: () => request<ExtManagersResponse>('/api/ext'),
   extPackages: (manager: string) =>
     request<ExtPackagesResponse>(`/api/ext/${encodeURIComponent(manager)}/packages`),

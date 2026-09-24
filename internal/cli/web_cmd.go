@@ -23,7 +23,10 @@ type WebOptions struct {
 }
 
 func newWebCmd(handler CommandHandler) (*gcli.Command, func()) {
-	opts := &WebOptions{}
+	// The reset closure runs before every invocation and must restore the
+	// declared defaults: gcli writes a flag default into the pointer when the
+	// flag is registered, not on each parse.
+	opts := &WebOptions{Port: web.DefaultPort}
 	cmd := gcli.NewCommand("web", "Serve the eget web console over HTTP")
 	cmd.Help = `<info>Examples</>:
   eget web
@@ -57,5 +60,5 @@ func newWebCmd(handler CommandHandler) (*gcli.Command, func()) {
 		snapshot := *opts
 		return handler("web", &snapshot)
 	}
-	return cmd, func() { *opts = WebOptions{} }
+	return cmd, func() { *opts = WebOptions{Port: web.DefaultPort} }
 }

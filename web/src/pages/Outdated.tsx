@@ -2,14 +2,30 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
 import StateBlock from '../components/StateBlock'
+import { useAsync } from '../hooks/useAsync'
 import type { OutdatedResponse } from '../api/types'
 
 export default function Outdated() {
   const navigate = useNavigate()
+  const [scope, setScope] = useState('eget')
+  const [manager, setManager] = useState('')
   const [result, setResult] = useState<OutdatedResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const managers = useAsync(() => api.ext(), [])
+
+  const check = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      setResult(await api.outdated({ scope, manager: scope === 'ext' ? manager : '' }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const updateAll = async () => {
     setSubmitting(true)
@@ -24,17 +40,7 @@ export default function Outdated() {
     }
   }
 
-  const check = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      setResult(await api.outdated())
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const scopeLabel = scope === 'eget' ? 'eget packages' : scope === 'ext' ? 'external packages' : 'everything'
 
   return (
     <section className="page">
@@ -50,8 +56,30 @@ export default function Outdated() {
         </div>
       </div>
 
+      <div className="toolbar">
+        <select value={scope} onChange={(event) => setScope(event.target.value)}>
+          <option value="eget">eget packages only</option>
+          <option value="ext">external packages only</option>
+          <option value="all">everything</option>
+        </select>
+        {scope === 'ext' && (
+          <select value={manager} onChange={(event) => setManager(event.target.value)}>
+            <option value="">all managers</option>
+            {(managers.data?.managers ?? [])
+              .filter((entry) => entry.available)
+              .map((entry) => (
+                <option key={entry.manager} value={entry.manager}>
+                  {entry.manager}
+                </option>
+              ))}
+          </select>
+        )}
+      </div>
+
       <div className="notice">
-        Checking queries every installed package and each external manager, so it can take a while.
+        Checking queries {scopeLabel}
+        {scope === 'ext' ? ' through their own manager commands' : ''}, so it can take a while. The result below
+        reflects the scope selected at the last check.
       </div>
 
       <StateBlock loading={loading} error={error} empty={result?.items.length === 0} emptyText="Everything is up to date.">

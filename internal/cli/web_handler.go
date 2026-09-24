@@ -83,6 +83,13 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		File:     appcache.FileHandler(s.cacheService, cacheDir, machineOpts),
 
 		AssetCandidates: s.webAssetCandidates,
+		// Filtering /api/outdated copies the list service (a value type) with a
+		// different manager selection, leaving the shared instance untouched.
+		ListWithManagers: func(selection app.ManagersSelection) web.ListProvider {
+			scoped := s.listService
+			scoped.Managers = selection
+			return scoped
+		},
 	}, web.Options{
 		Host:           host,
 		Port:           resolved.Port,

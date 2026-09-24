@@ -109,6 +109,11 @@ type Deps struct {
 	// AssetCandidates lists the assets matching a target without downloading,
 	// so the install form can offer an explicit choice.
 	AssetCandidates func(ctx context.Context, target string) ([]string, error)
+
+	// ListWithManagers returns the list provider scoped to a manager selection,
+	// which is how /api/outdated filters to eget-only or one external manager
+	// without rebuilding the service.
+	ListWithManagers func(app.ManagersSelection) ListProvider
 }
 
 // Server hosts the eget web console over HTTP.

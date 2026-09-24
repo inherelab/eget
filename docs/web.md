@@ -52,7 +52,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 | GET | `/api/overview` | 版本、配置路径、包统计、外部管理器可用性、缓存概览 |
 | GET | `/api/packages` | 包列表，支持 `scope=all\|eget\|ext`、`manager=`、`q=`、`installed=true` |
 | GET | `/api/packages/{name}` | 单包详情 |
-| GET | `/api/outdated` | 过期检查（会访问网络），返回 `checked`、`items`、`failures` |
+| GET | `/api/outdated?scope=all\|eget\|ext&manager=<name>` | 过期检查（会访问网络），返回 `checked`、`items`、`failures`；`scope=ext` 时可用 `manager` 收窄到单个管理器 |
 | GET | `/api/ext` | 外部管理器列表与各自的包数量 |
 | GET | `/api/ext/{manager}/packages` | 单个管理器的包 |
 | GET | `/api/cache`、`/api/cache/status` | 缓存文件列表与统计 |
