@@ -487,6 +487,53 @@ func TestUninstallPortableGUIKeepsSharedGuiTarget(t *testing.T) {
 	}
 }
 
+func TestUninstallWithPurgeRemovesConfigOnlyPackage(t *testing.T) {
+	store := &fakeInstalledStoreWithLoad{
+		cfg: &storepkg.Config{Installed: map[string]storepkg.Entry{}},
+	}
+	cfg := cfgpkg.NewFile()
+	cfg.Packages["Clauge"] = cfgpkg.Section{Repo: util.StringPtr("owner/clauge")}
+	saved := false
+	svc := UninstallService{
+		Store: store,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+		SaveConfig: func(*cfgpkg.File) error {
+			saved = true
+			return nil
+		},
+	}
+
+	result, err := svc.UninstallWithOptions("Clauge", UninstallOptions{Purge: true})
+	assert.NoErr(t, err)
+	assert.Eq(t, "Clauge", result.PurgedConfig)
+	assert.Eq(t, 0, len(result.RemovedFiles))
+	assert.True(t, saved)
+	assert.Eq(t, 0, len(store.removeCalls))
+	if _, ok := cfg.Packages["Clauge"]; ok {
+		t.Fatalf("expected packages.Clauge to be removed, got %#v", cfg.Packages)
+	}
+
+	// Without --purge a missing install record is still an error.
+	if _, err := svc.Uninstall("Clauge"); err == nil {
+		t.Fatal("expected uninstall to fail without --purge")
+	}
+}
+
+func TestUninstallWithPurgeRejectsUnknownTarget(t *testing.T) {
+	svc := UninstallService{
+		Store: &fakeInstalledStoreWithLoad{
+			cfg: &storepkg.Config{Installed: map[string]storepkg.Entry{}},
+		},
+		LoadConfig: func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil },
+	}
+
+	_, err := svc.UninstallWithOptions("owner/nope", UninstallOptions{Purge: true})
+	assert.Err(t, err)
+	assert.StrContains(t, err.Error(), "neither installed nor configured")
+}
+
 func TestUninstallFailsWhenInstalledEntryMissing(t *testing.T) {
 	store := &fakeInstalledStoreWithLoad{
 		cfg: &storepkg.Config{

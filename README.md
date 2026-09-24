@@ -331,6 +331,7 @@ The target argument accepted by `install` and `download` can be:
 
 - Removes installed files and clears the installed store entry without deleting `[packages.<name>]`.
 - Use `--purge` to also remove the matching `[packages.<name>]` definition from config. It does not remove package download cache files.
+- A package that is only configured (added but never installed) can be dropped with `--purge` too.
 
 `list` (alias: `ls`)
 

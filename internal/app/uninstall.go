@@ -58,7 +58,13 @@ func (s UninstallService) UninstallWithOptions(target string, opts UninstallOpti
 	}
 	entry, key, ok := findUninstallEntry(installedCfg, resolved)
 	if !ok {
-		return UninstallResult{}, fmt.Errorf("installed entry not found for %q", resolved.Key)
+		// A package can be configured without ever being installed (eget add,
+		// or a failed install). With --purge, removing that config is the whole
+		// job; without it there is nothing to remove.
+		if !opts.Purge {
+			return UninstallResult{}, fmt.Errorf("installed entry not found for %q", resolved.Key)
+		}
+		return s.purgeConfigOnly(resolved)
 	}
 
 	result := UninstallResult{
@@ -91,6 +97,23 @@ func (s UninstallService) UninstallWithOptions(target string, opts UninstallOpti
 		result.PurgedConfig = purgedConfig
 	}
 	return result, nil
+}
+
+// purgeConfigOnly drops the [packages.<name>] section of a package that was
+// never installed, so `eget rm --purge <name>` works for a config-only entry.
+func (s UninstallService) purgeConfigOnly(target uninstallTarget) (UninstallResult, error) {
+	configFile, err := s.loadConfig()
+	if err != nil {
+		return UninstallResult{}, err
+	}
+	purged, err := s.purgePackageConfig(configFile, target)
+	if err != nil {
+		return UninstallResult{}, err
+	}
+	if purged == "" {
+		return UninstallResult{}, fmt.Errorf("%q is neither installed nor configured", target.Key)
+	}
+	return UninstallResult{Repo: target.Repo, PurgedConfig: purged}, nil
 }
 
 func removePortableGUIDirs(entry storepkg.Entry) error {

@@ -330,6 +330,7 @@ eget config set global.target ~/.local/bin
 
 - 删除已安装文件并清理 installed store 记录，不移除 `[packages.<name>]` 配置。
 - 使用 `--purge` 可同时删除匹配的 `[packages.<name>]` 配置；不会清理 package 下载缓存。
+- 只有配置、尚未安装的包（例如 `eget add` 之后没有真正安装）也可以用 `--purge` 直接清除配置。
 
 `list`(alias: `ls`)
 
