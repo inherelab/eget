@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t d">
+  <title id="t">eget symbol</title>
+  <desc id="d">A rounded archive box whose lower-right corner is scooped open; the extracted binary chip has left the opening and sits diagonally outside it.</desc>
+  <path fill="#0f766e" fill-rule="evenodd" d="M136 76H280A60 60 0 0 1 340 136V216A124 124 0 0 0 216 340H136A60 60 0 0 1 76 280V136A60 60 0 0 1 136 76Z"/>
+  <rect x="300" y="300" width="136" height="136" rx="34" fill="#0f766e"/>
+</svg>

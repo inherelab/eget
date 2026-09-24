@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 676 376" role="img" aria-labelledby="t d">
+  <title id="t">eget wordmark (dark surfaces)</title>
+  <desc id="d">The eget wordmark in near-white for dark backgrounds, drawn entirely as stroked paths.</desc>
+  <g transform="translate(0 212)" fill="none" stroke="#e6edf3" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M132 -56A56 56 0 1 0 115.6 -16.4"/>
+      <path d="M20 -56H132"/>
+      <path d="M300 -56A56 56 0 1 0 283.6 -16.4"/>
+      <path d="M300 -56V64A40 40 0 0 1 260 104H204"/>
+      <path d="M468 -56A56 56 0 1 0 451.6 -16.4"/>
+      <path d="M356 -56H468"/>
+      <path d="M544 -152V-36A36 36 0 0 0 580 0"/>
+      <path d="M508 -112H576"/>
+    </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="peel-title peel-desc">
+  <title id="peel-title">eget peel mark</title>
+  <desc id="peel-desc">A rounded archive box with its lower-right corner opened; the extracted binary chip sits in the opening, separated from the box by a crescent of negative space.</desc>
+  <path fill="currentColor" fill-rule="evenodd" d="M148 84H308A64 64 0 0 1 372 148V252A120 120 0 0 0 252 372H148A64 64 0 0 1 84 308V148A64 64 0 0 1 148 84Z"/>
+  <rect x="316" y="316" width="112" height="112" rx="28" fill="currentColor"/>
+</svg>

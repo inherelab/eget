@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="tray-title tray-desc">
+  <title id="tray-title">eget tray mark</title>
+  <desc id="tray-desc">A single binary chip settles into an open tray, the install destination; the gap between chip and tray carries the downward motion.</desc>
+  <path d="M128 280V328A56 56 0 0 0 184 384H328A56 56 0 0 0 384 328V280" fill="none" stroke="currentColor" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="200" y="100" width="112" height="112" rx="28" fill="currentColor"/>
+</svg>

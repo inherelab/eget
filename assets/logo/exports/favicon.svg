@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t d">
+  <title id="t">eget app icon</title>
+  <desc id="d">The eget symbol on a solid dark rounded tile: an archive box with a scooped corner and the extracted binary chip outside it, sized so the mark still reads at 16 pixels.</desc>
+  <rect width="512" height="512" rx="112" fill="#0f1720"/>
+  <path fill="#4fd1c5" fill-rule="evenodd" d="M150.39999999999998 97.6H277.11999999999995A52.8 52.8 0 0 1 329.91999999999996 150.39999999999998V220.79999999999995A109.12 109.12 0 0 0 220.79999999999995 329.91999999999996H150.39999999999998A52.8 52.8 0 0 1 97.6 277.11999999999995V150.39999999999998A52.8 52.8 0 0 1 150.39999999999998 97.6Z"/>
+  <rect x="294.72" y="294.72" width="119.68" height="119.68" rx="29.92" fill="#4fd1c5"/>
+</svg>

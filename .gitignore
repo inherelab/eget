@@ -1,6 +1,9 @@
 eget
 *.exe
 eget-*
+# Brand assets keep their eget- prefix in file names, so the release-binary
+# rule above must not swallow them.
+!assets/logo/**
 !cmd/
 !cmd/eget/
 !cmd/eget/main.go

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 817.88 352.32" role="img" aria-labelledby="t d">
+  <title id="t">eget lockup</title>
+  <desc id="d">Horizontal eget lockup: the archive-and-chip symbol followed by the eget wordmark.</desc>
+  <g transform="translate(0 79.94)">
+    <g transform="translate(11.8 -28.2) scale(0.37)" fill="#0f766e">
+      <path fill-rule="evenodd" d="M136 76H280A60 60 0 0 1 340 136V216A124 124 0 0 0 216 340H136A60 60 0 0 1 76 280V136A60 60 0 0 1 136 76Z"/>
+      <rect x="300" y="300" width="136" height="136" rx="34"/>
+    </g>
+    <g transform="translate(192.76 -76.74) scale(0.92)">
+      <g transform="translate(0 212)" fill="none" stroke="#0f1720" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M132 -56A56 56 0 1 0 115.6 -16.4"/>
+          <path d="M20 -56H132"/>
+          <path d="M300 -56A56 56 0 1 0 283.6 -16.4"/>
+          <path d="M300 -56V64A40 40 0 0 1 260 104H204"/>
+          <path d="M468 -56A56 56 0 1 0 451.6 -16.4"/>
+          <path d="M356 -56H468"/>
+          <path d="M544 -152V-36A36 36 0 0 0 580 0"/>
+          <path d="M508 -112H576"/>
+        </g>
+    </g>
+  </g>
+</svg>

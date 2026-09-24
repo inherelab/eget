@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="slot-title slot-desc">
+  <title id="slot-title">eget slot e mark</title>
+  <desc id="slot-desc">A geometric letter e whose right mouth is cut open; the extracted binary chip has left through that mouth and sits beside it.</desc>
+  <path fill="currentColor" fill-rule="evenodd" d="M148 112H244A96 96 0 0 1 340 208V304A96 96 0 0 1 244 400H148A96 96 0 0 1 52 304V208A96 96 0 0 1 148 112ZM148 176H244A32 32 0 0 1 276 208V304A32 32 0 0 1 244 336H148A32 32 0 0 1 116 304V208A32 32 0 0 1 148 176ZM276 208H340V304H276Z"/>
+  <rect x="116" y="232" width="160" height="48" fill="currentColor"/>
+  <rect x="372" y="212" width="88" height="88" rx="24" fill="currentColor"/>
+</svg>

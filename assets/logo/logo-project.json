@@ -1,0 +1,104 @@
+{
+  "brand_name": "eget",
+  "brief": {
+    "brand_text": "eget",
+    "audience": "developers installing and updating prebuilt binaries from the command line, plus users of the local `eget web` console",
+    "metaphor": "one verified binary extracted from many release assets and placed where it runs: an archive box whose lower-right corner is scooped open, with the extracted chip just outside it",
+    "adjectives": [
+      "precise",
+      "quiet",
+      "engineered",
+      "quick",
+      "trustworthy"
+    ],
+    "avoid": [
+      "download arrows",
+      "globes",
+      "shields",
+      "sparkles or AI stars",
+      "chat bubbles",
+      "bare initials monograms"
+    ],
+    "rejected_directions": [
+      {
+        "name": "concept-2-tray",
+        "why": "chip settling into an open tray: reads as a generic bin/download glyph (distinction 2/5)"
+      },
+      {
+        "name": "concept-3-slot-e",
+        "why": "letterform e with the chip leaving its mouth: distinctive but needs horizontal room and the letterform carries the mark alone (reduction 3/5)"
+      }
+    ]
+  },
+  "variants": [
+    {
+      "file": "final/eget-symbol.svg",
+      "note": "colored master, transparent background"
+    },
+    {
+      "file": "final/eget-symbol-mono.svg",
+      "note": "currentColor monochrome symbol"
+    },
+    {
+      "file": "final/eget-symbol-dark.svg",
+      "note": "symbol for dark surfaces"
+    },
+    {
+      "file": "final/eget-wordmark.svg",
+      "note": "text-only wordmark, paths only (no <text>, no symbol)"
+    },
+    {
+      "file": "final/eget-wordmark-dark.svg",
+      "note": "wordmark for dark surfaces"
+    },
+    {
+      "file": "final/eget-lockup.svg",
+      "note": "combination mark: symbol + wordmark"
+    },
+    {
+      "file": "final/eget-lockup-dark.svg",
+      "note": "combination mark for dark surfaces"
+    },
+    {
+      "file": "final/eget-favicon.svg",
+      "note": "app-icon tile: same geometry scaled up on a solid #0f1720 tile so the mark holds at 16px"
+    }
+  ],
+  "palette": {
+    "primary": {
+      "hex": "#0f766e",
+      "use": "symbol, wordmark lockup symbol on light surfaces (matches --accent in web/src/styles.css, 4.9:1 on #f6f7f9)"
+    },
+    "dark_surface": {
+      "hex": "#4fd1c5",
+      "use": "symbol on dark surfaces, app-icon tile mark (matches the console sidebar brand teal, 7.4:1 on #0f1720)"
+    },
+    "ink": {
+      "hex": "#0f1720",
+      "use": "wordmark on light surfaces, app-icon tile background (matches the console sidebar background)"
+    },
+    "wordmark_on_dark": {
+      "hex": "#e6edf3",
+      "use": "wordmark on dark surfaces"
+    }
+  },
+  "exports": {
+    "symbol_png": "exports/eget-symbol-{1024,512,256,128,64,48,32,16}.png (transparent)",
+    "app_icon": "exports/eget-favicon-*.png, favicon.ico (16/32/48), favicon.svg, apple-touch-icon.png (180, flattened on #0f1720), android-chrome-192x192.png, android-chrome-512x512.png, site.webmanifest"
+  },
+  "minimum_sizes": {
+    "symbol": "24px; use final/eget-favicon.svg below 24px",
+    "app_icon_tile": "16px",
+    "wordmark": "120px wide; not for use below ~90px",
+    "lockup": "160px wide"
+  },
+  "regenerate": [
+    "python .agents/skills/logo-generator/scripts/logo_tool.py validate inhere-tools/eget/assets/logo/final/*.svg",
+    "python .agents/skills/logo-generator/scripts/logo_tool.py render inhere-tools/eget/assets/logo/final/eget-symbol.svg --output inhere-tools/eget/assets/logo/exports --sizes 1024,512,256,128,64,48,32,16",
+    "python .agents/skills/logo-generator/scripts/logo_tool.py render inhere-tools/eget/assets/logo/final/eget-favicon.svg --output inhere-tools/eget/assets/logo/exports --sizes 1024,512,256,128,64,48,32,16 --favicon --app-name eget --background \"#0f1720\""
+  ],
+  "notes": [
+    "No trademark clearance has been performed. The mark is a generic geometric composition (rounded square with a scooped corner plus a chip) and could resemble package/archive marks in the wild; commission a professional similarity search before commercial registration.",
+    "Concepts in concepts/ are exploration artifacts scored during design; concept-1-peel is the selected direction (its geometry is what final/ ships)."
+  ]
+}
