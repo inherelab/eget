@@ -361,8 +361,9 @@ func (s ConfigService) save(file *cfgpkg.File) error {
 	if s.Save != nil {
 		return s.Save(path, file)
 	}
-	// Atomic by default: an interrupted write must not truncate eget.toml.
-	return cfgpkg.SaveAtomic(path, file)
+	// Merged and atomic: untouched tables keep their comments and formatting,
+	// and an interrupted write cannot truncate eget.toml.
+	return cfgpkg.SaveMerged(path, file)
 }
 
 func pathExists(path string, isDir bool) bool {

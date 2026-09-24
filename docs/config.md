@@ -85,6 +85,21 @@ eget config import --force portable.toml
 
 An existing target config requires interactive confirmation unless `--force` is used. The operation is rejected when the source and target refer to the same file. If the source omits `[global]`, the target machine's current `[global]` is retained; if the source contains `[global]`, it is replaced. Every other top-level section is replaced as a whole from the source instead of merging individual packages. The source TOML is fully validated before the target is safely replaced. Re-serialization does not preserve the source file's comments or formatting.
 
+## Write behaviour
+
+Edits (`eget add`, `eget config set`, `eget rm --purge`) rewrite the configuration in place instead
+of re-serializing it:
+
+- a table whose parsed content did not change keeps its original text — comments, key order and
+  formatting included;
+- inside a table that did change, lines of untouched keys (with the comments around them) are kept,
+  and only the changed/new keys are rendered;
+- tables that left the configuration are dropped whole;
+- tables that would only hold defaults are not written into a file that never had them.
+
+The merged document is parsed again before writing: if it would not round-trip, eget falls back to a
+full atomic rewrite, so a broken document is never written.
+
 ## Sections
 
 Supported sections:

@@ -24,6 +24,16 @@ func LoadTOMLFile(name, path string) (*gconfig.Config, error) {
 	return cfg, nil
 }
 
+// LoadTOMLString parses TOML held in memory, for callers that already have the
+// document text (the merge writer reads the file itself).
+func LoadTOMLString(name, text string) (*gconfig.Config, error) {
+	cfg := NewTOMLManager(name)
+	if err := cfg.LoadStrings(FormatTOML, text); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
 func SaveTOMLFile(path string, cfg *gconfig.Config) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
