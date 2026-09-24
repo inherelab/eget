@@ -7,9 +7,9 @@ import { useAsync } from '../hooks/useAsync'
 
 const statusClass: Record<TaskStatus, string> = {
   queued: 'tag',
-  running: 'tag',
+  running: 'tag live',
   succeeded: 'tag',
-  failed: 'tag warn',
+  failed: 'tag fail',
   canceled: 'tag warn',
   interrupted: 'tag warn',
 }

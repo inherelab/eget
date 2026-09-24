@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
+import BrandMark from './components/BrandMark'
 import Overview from './pages/Overview'
 import Packages from './pages/Packages'
 import PackageDetail from './pages/PackageDetail'
@@ -10,15 +11,17 @@ import Cache from './pages/Cache'
 import Config from './pages/Config'
 import Tasks from './pages/Tasks'
 
+// `key` is the short form the rail shows while collapsed, so the collapsed rail
+// still names its destinations without a row of unlabelled glyphs.
 const navigation = [
-  { to: '/', label: 'Overview', icon: '◍', end: true },
-  { to: '/packages', label: 'Packages', icon: '▤' },
-  { to: '/install', label: 'Install', icon: '＋' },
-  { to: '/outdated', label: 'Outdated', icon: '↑' },
-  { to: '/ext', label: 'External', icon: '⊕' },
-  { to: '/cache', label: 'Cache', icon: '▣' },
-  { to: '/config', label: 'Config', icon: '⚙' },
-  { to: '/tasks', label: 'Tasks', icon: '⟳' },
+  { to: '/', label: 'Overview', key: 'ov', end: true },
+  { to: '/packages', label: 'Packages', key: 'pk' },
+  { to: '/install', label: 'Install', key: 'in' },
+  { to: '/outdated', label: 'Outdated', key: 'ou' },
+  { to: '/ext', label: 'External', key: 'ex' },
+  { to: '/cache', label: 'Cache', key: 'ca' },
+  { to: '/config', label: 'Config', key: 'cf' },
+  { to: '/tasks', label: 'Tasks', key: 'tk' },
 ]
 
 const sidebarKey = 'eget-web-sidebar'
@@ -38,12 +41,11 @@ export default function App() {
     <div className={collapsed ? 'shell collapsed' : 'shell'}>
       <aside className="sidebar">
         <div className="sidebar-head">
-          <div className="brand">
-            {collapsed ? 'e' : (
-              <>
-                eget<span>web</span>
-              </>
-            )}
+          <div className="brand" title="eget web">
+            <BrandMark />
+            <span className="brand-label">
+              eget<span>web</span>
+            </span>
           </div>
           <button
             type="button"
@@ -64,7 +66,7 @@ export default function App() {
               title={item.label}
               className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-key">{item.key}</span>
               <span className="nav-label">{item.label}</span>
             </NavLink>
           ))}

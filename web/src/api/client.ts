@@ -165,7 +165,8 @@ export function formatBytes(size: number): string {
     value /= 1024
     index++
   }
-  return `${value.toFixed(1)} ${units[index]}`
+  // Non-breaking space: in a table column the value and its unit must not split.
+  return `${value.toFixed(1)}\u00a0${units[index]}`
 }
 
 export function formatTime(value?: string): string {
@@ -176,5 +177,6 @@ export function formatTime(value?: string): string {
   if (Number.isNaN(date.getTime())) {
     return value
   }
-  return date.toLocaleString()
+  // One line per row: a timestamp is an atomic value in the ledger columns.
+  return date.toLocaleString().replace(/ /g, '\u00a0')
 }
