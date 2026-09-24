@@ -153,7 +153,11 @@ func (s *Server) authMiddleware(c *rux.Context) {
 	// A browser navigating to the console should get a form instead of a bare
 	// 401; API and mirror clients keep the plain unauthorized answer.
 	if htmlRequest(c.Req) && servesConsole(c.Req.URL.Path) {
+		// The token page is this request's whole answer. Without Abort the router
+		// carries on to the SPA route, which appends a second HTML document to
+		// the same 401 response.
 		c.HTMLString(http.StatusUnauthorized, tokenPage)
+		c.Abort()
 		return
 	}
 	c.Resp.Header().Set("WWW-Authenticate", "Bearer")

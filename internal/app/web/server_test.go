@@ -234,6 +234,9 @@ func TestWebShowsTokenPageForBrowserNavigation(t *testing.T) {
 	assert.Eq(t, http.StatusUnauthorized, rec.Code)
 	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
 	assert.Contains(t, rec.Body.String(), `name="token"`)
+	// The token page is the whole answer for a browser navigation: the request
+	// must not fall through to the SPA route and append a second document.
+	assert.Eq(t, 1, strings.Count(rec.Body.String(), "<!doctype"))
 
 	// Machine-facing paths keep answering without the form.
 	apiRec := get(t, server, "/api/overview", func(r *http.Request) {
