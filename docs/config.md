@@ -100,6 +100,9 @@ of re-serializing it:
 The merged document is parsed again before writing: if it would not round-trip, eget falls back to a
 full atomic rewrite, so a broken document is never written.
 
+`eget config import` is the exception: it replaces the target as a whole by design, so it does not
+keep the source file's comments or formatting.
+
 ## Sections
 
 Supported sections:
