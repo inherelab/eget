@@ -16,6 +16,12 @@ eget.1
 .worktrees/
 .xenv.toml
 dist/
+# `//go:embed all:dist` in internal/app/web needs the directory to exist even in
+# a checkout without a frontend build, so its .gitkeep placeholder stays tracked
+# while every other file under it remains ignored build output.
+!internal/app/web/dist/
+internal/app/web/dist/*
+!internal/app/web/dist/.gitkeep
 node_modules/
 tmp/
 .gitnexus
