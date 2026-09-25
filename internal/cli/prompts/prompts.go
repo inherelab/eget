@@ -11,7 +11,6 @@ import (
 	"github.com/gookit/cliui/interact/backend"
 	"github.com/gookit/cliui/interact/backend/readline"
 	interactui "github.com/gookit/cliui/interact/ui"
-	"golang.org/x/term"
 )
 
 func Index(choices []string) (int, error) {
@@ -45,7 +44,7 @@ func runSelectIndex(in io.Reader, out io.Writer, be backend.Backend, title, filt
 		selectUI.DefaultKey = items[0].Key
 	}
 
-	result, err := selectUI.RunWithIO(context.Background(), be, selectInputReader(in), out)
+	result, err := selectUI.RunWithIO(context.Background(), be, in, out)
 	if err != nil {
 		return 0, err
 	}
@@ -72,7 +71,7 @@ func runMultiSelectIndexes(in io.Reader, out io.Writer, be backend.Backend, titl
 	selectUI.FilterPrompt = filterPrompt
 	selectUI.PageSize = 12
 
-	result, err := selectUI.RunWithIO(context.Background(), be, selectInputReader(in), out)
+	result, err := selectUI.RunWithIO(context.Background(), be, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -93,40 +92,6 @@ func runMultiSelectIndexes(in io.Reader, out io.Writer, be backend.Backend, titl
 		indexes = append(indexes, picked-1)
 	}
 	return indexes, nil
-}
-
-func selectInputReader(in io.Reader) io.Reader {
-	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
-		return file
-	}
-	return &singleByteReader{reader: in}
-}
-
-// singleByteReader feeds the prompt one byte at a time and stops at the newline
-// that ends the answer. Byte-wise reads are what the prompt's key handling wants,
-// and the stop matters because the non-interactive prompt keeps reading until it
-// has filled a buffer: given the raw stream it would swallow the answers the
-// prompts after it still need (asset choice, then overwrite confirmation).
-type singleByteReader struct {
-	reader io.Reader
-	ended  bool
-}
-
-func (r *singleByteReader) Read(p []byte) (int, error) {
-	if r.ended {
-		return 0, io.EOF
-	}
-	if len(p) > 1 {
-		p = p[:1]
-	}
-	n, err := r.reader.Read(p)
-	if n > 0 && p[0] == '\n' {
-		r.ended = true
-	}
-	if err != nil {
-		r.ended = true
-	}
-	return n, err
 }
 
 func readStdinLine() (string, error) {
