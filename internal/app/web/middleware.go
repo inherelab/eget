@@ -196,28 +196,49 @@ const tokenPage = `<!doctype html>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>eget web</title>
 <style>
-body{margin:0;font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI",sans-serif;background:#f6f7f9;color:#1f242b}
-main{max-width:560px;margin:12vh auto;padding:28px;background:#fff;border:1px solid #dfe3ea;border-radius:10px}
-h1{margin:0 0 14px;font-size:22px}
-code,pre{font-family:ui-monospace,Consolas,monospace}
-pre{margin:12px 0;padding:10px 12px;background:#0f1720;color:#e6edf3;border-radius:7px;overflow:auto}
-form{display:flex;gap:8px;margin:16px 0 8px}
-input{flex:1;height:38px;padding:0 12px;border:1px solid #dfe3ea;border-radius:7px;font:inherit}
-button{height:38px;padding:0 16px;border:0;border-radius:7px;background:#0f766e;color:#fff;font:inherit;font-weight:600;cursor:pointer}
-.muted{color:#667085;font-size:13px}
+:root{--paper:#e8eaed;--ink:#0f1720;--ink-2:#3f4a57;--ink-3:#5a6572;--rule:#d3d8de;--rail:#101a23;--rail-ink:#e6edf3;--signal:#0f766e;
+--mono:ui-monospace,"JetBrains Mono","Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
+--sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;padding:52px 24px;background:var(--paper);color:var(--ink);font:14px/1.55 var(--sans)}
+main{max-width:560px;margin:0 auto}
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.brand{display:flex;align-items:center;gap:8px;font:600 14px/1 var(--mono)}
+.brand i{color:var(--signal);font-style:normal;font-weight:500}
+.state{color:var(--ink-3);font:400 11px/1 var(--mono)}
+h1{margin:22px 0 10px;font:600 17px/1.3 var(--mono);letter-spacing:-.01em}
+p{margin:0 0 14px;color:var(--ink-2)}
+dl{display:grid;grid-template-columns:60px 1fr;gap:7px 16px;margin:18px 0;padding:14px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+dt{color:var(--ink-3);font:400 11px/1.7 var(--mono)}
+dd{margin:0;font:400 12.5px/1.7 var(--mono);word-break:break-all}
+form{display:flex;gap:8px;margin:0 0 12px}
+input{flex:1;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:5px;background:#fff;color:inherit;font:13px/1 var(--mono)}
+button{height:34px;padding:0 14px;border:1px solid var(--signal);border-radius:5px;background:var(--signal);color:#fff;font:500 12.5px/1 var(--mono);cursor:pointer;transition:background 120ms linear}
+button:hover{background:#0d6a62}
+pre{margin:0 0 16px;padding:13px 15px;border-radius:5px;background:var(--rail);color:var(--rail-ink);font:12.5px/1.6 var(--mono);overflow:auto}
+.muted{color:var(--ink-3);font:400 12px/1.5 var(--mono)}
+a{color:var(--signal)}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){button{transition:none}}
 </style>
 </head>
 <body>
 <main>
-<h1>eget web</h1>
-<p>This console is protected by a token. It was printed by <code>eget web</code> in the terminal:</p>
-<pre> - token: &lt;the token&gt;
- - open:  http://127.0.0.1:&lt;port&gt;/?token=&lt;the token&gt;</pre>
+<div class="head">
+<div class="brand"><svg width="20" height="20" viewBox="0 0 512 512" role="img" aria-label="eget"><path fill="currentColor" fill-rule="evenodd" d="M136 76H280A60 60 0 0 1 340 136V216A124 124 0 0 0 216 340H136A60 60 0 0 1 76 280V136A60 60 0 0 1 136 76Z"/><rect x="300" y="300" width="136" height="136" rx="34" fill="currentColor"/></svg>eget<i>web</i></div>
+<span class="state">token required</span>
+</div>
+<h1>This console is protected by a token</h1>
+<p>eget prints it in the terminal when the server starts, together with the URL that carries it.</p>
+<dl>
+<dt>token</dt><dd>&lt;the token&gt;</dd>
+<dt>open</dt><dd>http://127.0.0.1:&lt;port&gt;/?token=&lt;the token&gt;</dd>
+</dl>
 <form method="get" action="/">
-  <input type="password" name="token" placeholder="paste the token" autofocus aria-label="Token">
-  <button type="submit">Open console</button>
+<input type="password" name="token" placeholder="paste the token" autofocus aria-label="Token">
+<button type="submit">Open console</button>
 </form>
-<p class="muted">Visiting the <code>open</code> URL above (or submitting this form) stores the token as a cookie, so this is a one-time step.</p>
+<p class="muted">Submitting this form (or visiting the open URL) stores the token as a cookie, so this is a one-time step.</p>
 </main>
 </body>
 </html>
