@@ -404,6 +404,15 @@ select:hover {
   border-color: var(--ink-3);
 }
 
+input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--signal);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
 /* Secondary actions stay quiet: they are text until hovered, so a table full of
  * row actions does not shout. The primary action carries the signal colour. */
 button {

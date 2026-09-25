@@ -1,9 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
 import StateBlock from '../components/StateBlock'
 import { useAsync } from '../hooks/useAsync'
-import type { OutdatedResponse } from '../api/types'
+import type { OutdatedItem, OutdatedResponse } from '../api/types'
+
+const rowKey = (item: OutdatedItem) => `${item.source}:${item.name}`
+
+// An update target is what the CLI accepts: the configured name, the repo, or
+// manager:package for a package owned by an external manager.
+const updateTarget = (item: OutdatedItem) => item.target?.trim() || item.repo || item.name
 
 export default function Outdated() {
   const navigate = useNavigate()
@@ -13,11 +19,23 @@ export default function Outdated() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
+  const selectAll = useRef<HTMLInputElement>(null)
   const managers = useAsync(() => api.ext(), [])
+
+  const items = result?.items ?? []
+  const allSelected = items.length > 0 && selected.length === items.length
+
+  useEffect(() => {
+    if (selectAll.current) {
+      selectAll.current.indeterminate = selected.length > 0 && !allSelected
+    }
+  }, [selected, allSelected])
 
   const check = async () => {
     setLoading(true)
     setError(null)
+    setSelected([])
     try {
       setResult(await api.outdated({ scope, manager: scope === 'ext' ? manager : '' }))
     } catch (err) {
@@ -27,11 +45,11 @@ export default function Outdated() {
     }
   }
 
-  const updateAll = async () => {
+  const runUpdate = async (submit: () => Promise<{ taskId: string }>) => {
     setSubmitting(true)
     setError(null)
     try {
-      const accepted = await api.submitUpdate({ all: true })
+      const accepted = await submit()
       navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -40,6 +58,8 @@ export default function Outdated() {
     }
   }
 
+  const selectedTargets = items.filter((item) => selected.includes(rowKey(item))).map(updateTarget)
+
   const scopeLabel = scope === 'eget' ? 'eget packages' : scope === 'ext' ? 'external packages' : 'everything'
 
   return (
@@ -47,7 +67,11 @@ export default function Outdated() {
       <div className="page-head">
         <h1>Outdated</h1>
         <div>
-          <button onClick={() => void updateAll()} disabled={submitting} style={{ marginRight: 8 }}>
+          <button
+            onClick={() => void runUpdate(() => api.submitUpdate({ all: true }))}
+            disabled={submitting}
+            style={{ marginRight: 8 }}
+          >
             Update all
           </button>
           <button className="primary" onClick={check} disabled={loading}>
@@ -73,6 +97,15 @@ export default function Outdated() {
                 </option>
               ))}
           </select>
+        )}
+        {selected.length > 0 && (
+          <button
+            className="primary"
+            disabled={submitting}
+            onClick={() => void runUpdate(() => api.submitUpdate({ targets: selectedTargets }))}
+          >
+            Update selected ({selected.length})
+          </button>
         )}
       </div>
 
@@ -104,27 +137,62 @@ export default function Outdated() {
               <table>
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        ref={selectAll}
+                        type="checkbox"
+                        aria-label="Select every outdated package"
+                        checked={allSelected}
+                        onChange={(event) => setSelected(event.target.checked ? items.map(rowKey) : [])}
+                      />
+                    </th>
                     <th>Name</th>
                     <th>Source</th>
                     <th>Current</th>
                     <th>Latest</th>
                     <th>Published</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {result.items.map((item) => (
-                    <tr key={`${item.source}:${item.name}`}>
-                      <td>{item.name}</td>
-                      <td>
-                        <span className="tag">{item.source}</span>
-                      </td>
-                      <td className="mono">{item.installedTag || '-'}</td>
-                      <td className="mono">
-                        <span className="tag warn">{item.latestTag}</span>
-                      </td>
-                      <td className="muted">{formatTime(item.publishedAt)}</td>
-                    </tr>
-                  ))}
+                  {items.map((item) => {
+                    const key = rowKey(item)
+                    return (
+                      <tr key={key}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${item.name}`}
+                            checked={selected.includes(key)}
+                            onChange={(event) =>
+                              setSelected((previous) =>
+                                event.target.checked
+                                  ? [...previous, key]
+                                  : previous.filter((entry) => entry !== key),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>{item.name}</td>
+                        <td>
+                          <span className="tag">{item.source}</span>
+                        </td>
+                        <td className="mono">{item.installedTag || '-'}</td>
+                        <td className="mono">
+                          <span className="tag warn">{item.latestTag}</span>
+                        </td>
+                        <td className="muted">{formatTime(item.publishedAt)}</td>
+                        <td>
+                          <button
+                            disabled={submitting}
+                            onClick={() => void runUpdate(() => api.submitUpdate({ targets: [updateTarget(item)] }))}
+                          >
+                            Update
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}
