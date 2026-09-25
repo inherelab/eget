@@ -229,8 +229,12 @@ func webConsoleURL(addr, token string) string {
 	return console
 }
 
+// newWebToken returns the token the console bootstraps with. Six random bytes
+// (12 hex characters) keep it short enough to retype from the terminal while
+// staying far beyond the login throttle, which allows 20 failed attempts per
+// minute per address.
 func newWebToken() (string, error) {
-	buf := make([]byte, 32)
+	buf := make([]byte, 6)
 	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
