@@ -53,15 +53,14 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 			report.Error("%s: %v", item.Name, err)
 			return
 		}
-		label := item.Name
-		if item.Manager != "" {
-			label = item.Manager + ":" + item.Name
-		}
-		if item.LatestTag != "" {
-			report.Info("updated %s %s -> %s", label, item.InstalledTag, item.LatestTag)
-			return
-		}
-		report.Info("updated %s", label)
+		report.Info("%s", updateDoneLine(app.UpdatePackageResult{
+			Name:         item.Name,
+			Target:       item.Repo,
+			Manager:      item.Manager,
+			InstalledTag: item.InstalledTag,
+			LatestTag:    item.LatestTag,
+			Updated:      true,
+		}))
 	}
 
 	if all {
@@ -79,6 +78,7 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 		if err != nil {
 			return nil, err
 		}
+		report.Info("%s", updateDoneLine(result))
 		return result, nil
 	}
 
@@ -93,9 +93,31 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 		if err != nil {
 			return map[string]any{"results": results}, fmt.Errorf("%s: %w", target, err)
 		}
+		report.Info("%s", updateDoneLine(result))
 		results = append(results, result)
 	}
 	return map[string]any{"results": results}, nil
+}
+
+// updateDoneLine reports a finished update in the CLI's own words, so a task
+// record and the terminal read the same. Every update path reports through it:
+// the batch callbacks and the single- and multi-target branches.
+func updateDoneLine(result app.UpdatePackageResult) string {
+	label := result.Name
+	if result.Manager != "" {
+		// External packages are named manager:package, as the CLI prints them.
+		label = result.Target
+	}
+	if !result.Updated {
+		if result.InstalledTag != "" {
+			return fmt.Sprintf("%s is already up to date: %s", label, result.InstalledTag)
+		}
+		return label + " is already up to date"
+	}
+	if result.LatestTag != "" && result.LatestTag != result.InstalledTag {
+		return fmt.Sprintf("updated %s %s -> %s", label, result.InstalledTag, result.LatestTag)
+	}
+	return fmt.Sprintf("updated %s", label)
 }
 
 func (s *cliService) webTaskUninstall(_ context.Context, params map[string]any, report *web.TaskReporter) (any, error) {
