@@ -1,25 +1,26 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
 import Dialog from '../components/Dialog'
 import StateBlock from '../components/StateBlock'
+import TaskStrip from '../components/TaskStrip'
 import { useAsync } from '../hooks/useAsync'
 
 export default function PackageDetail() {
   const { name = '' } = useParams()
-  const navigate = useNavigate()
   const { data, error, loading, reload } = useAsync(() => api.packageDetail(name), [name])
   const [actionError, setActionError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [purge, setPurge] = useState(false)
+  const [task, setTask] = useState<{ id: string; kind: string }>({ id: '', kind: '' })
 
-  const runTask = async (submit: () => Promise<{ taskId: string }>) => {
+  const runTask = async (submit: () => Promise<{ taskId: string }>, kind: string) => {
     setSubmitting(true)
     setActionError(null)
     try {
       const accepted = await submit()
-      navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
+      setTask({ id: accepted.taskId, kind })
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -36,7 +37,7 @@ export default function PackageDetail() {
             ← Back
           </Link>
           <button
-            onClick={() => void runTask(() => api.submitUpdate({ targets: [name] }))}
+            onClick={() => void runTask(() => api.submitUpdate({ targets: [name] }), 'update')}
             disabled={submitting}
             style={{ marginRight: 8 }}
           >
@@ -58,6 +59,21 @@ export default function PackageDetail() {
         </div>
       </div>
       {actionError && <div className="alert">{actionError}</div>}
+      {task.id && (
+        <TaskStrip
+          taskId={task.id}
+          onDismiss={() => {
+            setTask({ id: '', kind: '' })
+          }}
+          onFinished={(status) => {
+            // An update leaves the page describing an older version, so re-read
+            // it; an uninstall removes the subject, so the page is left alone.
+            if (status === 'succeeded' && task.kind === 'update') {
+              void reload()
+            }
+          }}
+        />
+      )}
       {confirming && (
         <Dialog
           title={`Uninstall ${name}`}
@@ -95,7 +111,7 @@ export default function PackageDetail() {
               disabled={submitting}
               onClick={() => {
                 setConfirming(false)
-                void runTask(() => api.submitUninstall({ target: name, purge }))
+                void runTask(() => api.submitUninstall({ target: name, purge }), 'uninstall')
               }}
             >
               Uninstall

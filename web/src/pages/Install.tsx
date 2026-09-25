@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
+import TaskStrip from '../components/TaskStrip'
 import type { InstallCandidatesResponse } from '../api/types'
 
 export default function Install() {
-  const navigate = useNavigate()
+  const [taskId, setTaskId] = useState('')
   const [target, setTarget] = useState('')
   const [version, setVersion] = useState('')
   const [asset, setAsset] = useState('')
@@ -56,7 +56,7 @@ export default function Install() {
         addToConfig,
         silent,
       })
-      navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
+      setTaskId(accepted.taskId)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -69,6 +69,15 @@ export default function Install() {
       <div className="page-head">
         <h1>Install</h1>
       </div>
+
+      {taskId && (
+        <TaskStrip
+          taskId={taskId}
+          onDismiss={() => {
+            setTaskId('')
+          }}
+        />
+      )}
 
       <div className="notice">
         Installs run as tasks with live logs. The console downloads and extracts only: it never launches a

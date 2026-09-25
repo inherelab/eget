@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
 import StateBlock from '../components/StateBlock'
+import TaskStrip from '../components/TaskStrip'
 import { useAsync } from '../hooks/useAsync'
 import type { OutdatedItem, OutdatedResponse } from '../api/types'
 
@@ -12,7 +12,6 @@ const rowKey = (item: OutdatedItem) => `${item.source}:${item.name}`
 const updateTarget = (item: OutdatedItem) => item.target?.trim() || item.repo || item.name
 
 export default function Outdated() {
-  const navigate = useNavigate()
   const [scope, setScope] = useState('eget')
   const [manager, setManager] = useState('')
   const [result, setResult] = useState<OutdatedResponse | null>(null)
@@ -20,6 +19,7 @@ export default function Outdated() {
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
+  const [taskId, setTaskId] = useState('')
   const selectAll = useRef<HTMLInputElement>(null)
   const managers = useAsync(() => api.ext(), [])
 
@@ -50,7 +50,7 @@ export default function Outdated() {
     setError(null)
     try {
       const accepted = await submit()
-      navigate(`/tasks?task=${encodeURIComponent(accepted.taskId)}`)
+      setTaskId(accepted.taskId)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -114,6 +114,22 @@ export default function Outdated() {
         {scope === 'ext' ? ' through their own manager commands' : ''}, so it can take a while. The result below
         reflects the scope selected at the last check.
       </div>
+
+      {taskId && (
+        <TaskStrip
+          taskId={taskId}
+          onDismiss={() => {
+            setTaskId('')
+          }}
+          onFinished={(status) => {
+            // The list just changed underneath the report, so ask again; the
+            // check also clears the selection.
+            if (status === 'succeeded') {
+              void check()
+            }
+          }}
+        />
+      )}
 
       <StateBlock loading={loading} error={error} empty={result?.items.length === 0} emptyText="Everything is up to date.">
         {result && (

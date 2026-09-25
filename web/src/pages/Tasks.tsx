@@ -35,7 +35,8 @@ export default function Tasks() {
     }
   }, [])
 
-  // Other pages deep-link here right after submitting a task.
+  // Pages link here with ?task=<id> for the full record of a task they reported
+  // inline.
   const [searchParams] = useSearchParams()
   const requestedTask = searchParams.get('task') ?? ''
   useEffect(() => {

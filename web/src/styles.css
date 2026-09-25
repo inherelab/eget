@@ -312,6 +312,66 @@ h2 {
   margin-bottom: 14px;
 }
 
+/* ------------------------------------------------------------ task strip --- */
+
+/* A submitted task reports where it was started: status, what it works on,
+ * progress and the latest line, with the full record one link away. */
+.task-strip {
+  margin: 0 0 20px;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.task-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font: 400 12.5px/1.4 var(--mono);
+}
+
+.task-line .task-what {
+  color: var(--ink-2);
+}
+
+.task-line .task-percent {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-line button {
+  height: 26px;
+  padding: 0 8px;
+}
+
+.task-note {
+  margin: 8px 0 0;
+  color: var(--ink-3);
+  font: 400 12px/1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.task-failure {
+  margin: 8px 0 0;
+  color: var(--fail);
+  font: 400 12.5px/1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.task-track {
+  margin-top: 9px;
+  height: 2px;
+  background: var(--rule-soft);
+}
+
+.task-track i {
+  display: block;
+  height: 2px;
+  background: var(--signal);
+}
+
 /* ---------------------------------------------------------------- dialog --- */
 
 /* Decisions that need a sentence of context get a sheet over a dimmed page, not
