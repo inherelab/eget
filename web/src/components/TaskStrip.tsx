@@ -97,7 +97,7 @@ export default function TaskStrip({ taskId, onDismiss, onFinished }: TaskStripPr
   }, [done, status, onFinished])
 
   return (
-    <section className="task-strip" aria-live="polite">
+    <section className={done ? 'task-strip finished' : 'task-strip'} aria-live="polite">
       <div className="task-line">
         <span className={statusClass[status] ?? 'tag'}>{status}</span>
         <span className="task-what">{[kind, what].filter(Boolean).join(' ')}</span>
@@ -108,7 +108,7 @@ export default function TaskStrip({ taskId, onDismiss, onFinished }: TaskStripPr
       {failure ? (
         <p className="task-failure">{failure}</p>
       ) : (
-        !done && note && <p className="task-note">{note}</p>
+        note && <p className="task-note">{note}</p>
       )}
       {!done && (
         <div className="task-track">

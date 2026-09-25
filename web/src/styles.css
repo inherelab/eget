@@ -353,6 +353,11 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+/* Once the task is done the note is its outcome, not a running commentary. */
+.task-strip.finished .task-note {
+  color: var(--ink-2);
+}
+
 .task-failure {
   margin: 8px 0 0;
   color: var(--fail);
