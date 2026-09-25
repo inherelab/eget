@@ -312,6 +312,74 @@ h2 {
   margin-bottom: 14px;
 }
 
+/* ---------------------------------------------------------------- dialog --- */
+
+/* Decisions that need a sentence of context get a sheet over a dimmed page, not
+ * a browser confirm: the choice is part of the console's language. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 20px 20px;
+  background: rgba(15, 23, 32, 0.45);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  padding: 18px 20px 16px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  outline: none;
+}
+
+/* The panel is focused programmatically so the dialog is announced; it is not a
+ * tab stop, so it does not need a ring of its own. */
+.dialog:focus-visible {
+  outline: none;
+}
+
+.dialog h2 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font: 600 15px/1.35 var(--mono);
+  letter-spacing: -0.01em;
+}
+
+.dialog p {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font: 400 13px/1.55 var(--sans);
+}
+
+.dialog .muted {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.dialog label.check {
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 10px;
+  color: var(--ink);
+  font: 400 13px/1.5 var(--sans);
+}
+
+.dialog label.check input {
+  margin-top: 2px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
 /* ------------------------------------------------------------- controls --- */
 
 input[type='search'],

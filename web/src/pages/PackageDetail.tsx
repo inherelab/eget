@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formatTime } from '../api/client'
+import Dialog from '../components/Dialog'
 import StateBlock from '../components/StateBlock'
 import { useAsync } from '../hooks/useAsync'
 
@@ -10,6 +11,8 @@ export default function PackageDetail() {
   const { data, error, loading, reload } = useAsync(() => api.packageDetail(name), [name])
   const [actionError, setActionError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [purge, setPurge] = useState(false)
 
   const runTask = async (submit: () => Promise<{ taskId: string }>) => {
     setSubmitting(true)
@@ -40,7 +43,10 @@ export default function PackageDetail() {
             Update
           </button>
           <button
-            onClick={() => void runTask(() => api.submitUninstall({ target: name }))}
+            onClick={() => {
+              setPurge(false)
+              setConfirming(true)
+            }}
             disabled={submitting}
             style={{ marginRight: 8 }}
           >
@@ -52,6 +58,51 @@ export default function PackageDetail() {
         </div>
       </div>
       {actionError && <div className="alert">{actionError}</div>}
+      {confirming && (
+        <Dialog
+          title={`Uninstall ${name}`}
+          onClose={() => {
+            setConfirming(false)
+          }}
+        >
+          <p>
+            eget stops managing this package, removes the installed binary and forgets the stored version.
+          </p>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={purge}
+              onChange={(event) => {
+                setPurge(event.target.checked)
+              }}
+            />
+            Also remove the package definition from config
+          </label>
+          <p className="muted">
+            Without this the package stays in the config file, so it can be installed again with one command.
+          </p>
+          <div className="dialog-actions">
+            <button
+              onClick={() => {
+                setConfirming(false)
+              }}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              className="primary"
+              disabled={submitting}
+              onClick={() => {
+                setConfirming(false)
+                void runTask(() => api.submitUninstall({ target: name, purge }))
+              }}
+            >
+              Uninstall
+            </button>
+          </div>
+        </Dialog>
+      )}
       <StateBlock loading={loading} error={error}>
         {data && (
           <>
