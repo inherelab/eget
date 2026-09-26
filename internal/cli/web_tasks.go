@@ -41,6 +41,9 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 	targets := web.TaskParamStrings(params, "targets")
 	all := web.TaskParamBool(params, "all")
 	opts := s.applyGlobalFlags(install.Options{})
+	// A GUI installer is downloaded and left for the reader to run; silent asks
+	// for an unattended install instead. Either way the console never asks.
+	opts.DeferInstaller = !opts.Silent
 
 	// Copy the service value so per-task callbacks cannot leak into another
 	// request or into the CLI's shared instance.
@@ -90,7 +93,7 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 		if err != nil {
 			return nil, err
 		}
-		report.Info("%s", updateDoneLine(result))
+		reportUpdateDone(report, result)
 		return result, nil
 	}
 
@@ -110,13 +113,24 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 			failed = append(failed, target)
 			continue
 		}
-		report.Info("%s", updateDoneLine(result))
+		reportUpdateDone(report, result)
 		results = append(results, result)
 	}
 	if len(failed) > 0 {
 		return map[string]any{"results": results}, fmt.Errorf("%d update failed: %s", len(failed), strings.Join(failed, ", "))
 	}
 	return map[string]any{"results": results}, nil
+}
+
+// reportUpdateDone reports one finished update. A GUI installer is only
+// downloaded, so it says that instead of claiming an update.
+func reportUpdateDone(report *web.TaskReporter, result app.UpdatePackageResult) {
+	if installer := deferredInstaller(result.Result, false); installer != "" {
+		report.Info("downloaded the GUI installer for %s to %s; the console does not launch it — run it yourself, or update with silent",
+			result.Name, installer)
+		return
+	}
+	report.Info("%s", updateDoneLine(result))
 }
 
 // updateDoneLine reports a finished update in the CLI's own words, so a task

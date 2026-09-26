@@ -28,12 +28,13 @@ func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, 
 	silent := web.TaskParamBool(params, "silent")
 
 	opts := install.Options{
-		Tag:          web.TaskParamString(params, "version"),
-		Output:       web.TaskParamString(params, "output"),
-		ExtractFile:  web.TaskParamString(params, "file"),
-		All:          web.TaskParamBool(params, "extractAll"),
-		DownloadOnly: web.TaskParamBool(params, "downloadOnly"),
-		Silent:       silent,
+		Tag:            web.TaskParamString(params, "version"),
+		Output:         web.TaskParamString(params, "output"),
+		ExtractFile:    web.TaskParamString(params, "file"),
+		All:            web.TaskParamBool(params, "extractAll"),
+		DownloadOnly:   web.TaskParamBool(params, "downloadOnly"),
+		Silent:         silent,
+		DeferInstaller: !silent,
 	}
 	if asset := strings.TrimSpace(web.TaskParamString(params, "asset")); asset != "" {
 		opts.Asset = []string{asset}
@@ -59,8 +60,21 @@ func (s *cliService) webTaskInstall(ctx context.Context, params map[string]any, 
 	if err != nil {
 		return nil, err
 	}
+	if installer := deferredInstaller(result, silent); installer != "" {
+		report.Info("downloaded the GUI installer %s; the console does not launch it — run it yourself, or install with silent", installer)
+		return result, nil
+	}
 	report.Info("installed %s %s", target, result.Version)
 	return result, nil
+}
+
+// deferredInstaller returns the installer path when the run only downloaded a GUI
+// installer: the console keeps the file and says so instead of asking.
+func deferredInstaller(result install.RunResult, silent bool) string {
+	if silent || !result.IsGUI || result.InstallMode != install.InstallModeInstaller {
+		return ""
+	}
+	return result.InstallerFile
 }
 
 // webInstallRunner builds a non-interactive runner for one console task. With
