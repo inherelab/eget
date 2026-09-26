@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	app "github.com/inherelab/eget/internal/app"
@@ -83,6 +84,7 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 	}
 
 	results := make([]app.UpdatePackageResult, 0, len(targets))
+	failed := make([]string, 0, len(targets))
 	for index, target := range targets {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -91,10 +93,17 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 		report.Info("updating %s", target)
 		result, err := updateService.UpdatePackageStatus(target, opts)
 		if err != nil {
-			return map[string]any{"results": results}, fmt.Errorf("%s: %w", target, err)
+			// One bad target must not stop the ones behind it: report it and go on,
+			// exactly as the batch paths do.
+			report.Error("update_failed %s: %v", target, err)
+			failed = append(failed, target)
+			continue
 		}
 		report.Info("%s", updateDoneLine(result))
 		results = append(results, result)
+	}
+	if len(failed) > 0 {
+		return map[string]any{"results": results}, fmt.Errorf("%d update failed: %s", len(failed), strings.Join(failed, ", "))
 	}
 	return map[string]any{"results": results}, nil
 }
