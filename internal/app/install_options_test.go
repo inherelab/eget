@@ -58,6 +58,25 @@ func TestResolveInstallOptionsPassesGlobalSys7zPath(t *testing.T) {
 	assert.Contains(t, filepath.ToSlash(opts.Sys7zPath), "bin/7z")
 }
 
+func TestResolveInstallOptionsKeepsCallerOnlyInstallerFlags(t *testing.T) {
+	cfg := cfgpkg.NewFile()
+	svc := Service{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			return cfg, nil
+		},
+	}
+
+	// Silent and DeferInstaller are the caller's decision, not the config's: they
+	// must survive the merge or the console (and --silent) silently lose them.
+	opts, err := svc.resolveInstallOptions("owner/repo", install.Options{Silent: true, DeferInstaller: true}, false)
+	if err != nil {
+		t.Fatalf("resolve install options: %v", err)
+	}
+
+	assert.Eq(t, true, opts.Silent)
+	assert.Eq(t, true, opts.DeferInstaller)
+}
+
 func TestResolveInstallOptionsUsesGlobalUserAgent(t *testing.T) {
 	cfg := cfgpkg.NewFile()
 	userAgent := "custom-agent/1.0"
