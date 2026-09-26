@@ -340,15 +340,17 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 	if opts.IsGUI && opts.InstallMode == "" {
 		opts.InstallMode = DetectGUIInstallMode(true, selectedName)
 	} else if !opts.All && DetectInstallerKind(selectedName) != InstallerKindUnknown {
-		confirmed, err := r.confirmLaunchInstaller(selectedName)
-		if err != nil {
-			return RunResult{}, err
-		}
-		if !confirmed {
-			return RunResult{}, fmt.Errorf("installer launch cancelled")
-		}
 		opts.IsGUI = true
 		opts.InstallMode = InstallModeInstaller
+		if !opts.DeferInstaller {
+			confirmed, err := r.confirmLaunchInstaller(selectedName)
+			if err != nil {
+				return RunResult{}, err
+			}
+			if !confirmed {
+				return RunResult{}, fmt.Errorf("installer launch cancelled")
+			}
+		}
 	}
 
 	result := RunResult{
@@ -364,6 +366,11 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		installerPath, err := r.materializeInstallerFile(source, url, bin, opts, directAsset)
 		if err != nil {
 			return RunResult{}, err
+		}
+		if opts.DeferInstaller {
+			// The caller runs the installer itself; the file is in place.
+			result.InstallerFile = installerPath
+			return result, nil
 		}
 		result, err := r.launchGUIInstaller(installerPath, bin, opts)
 		if err != nil {

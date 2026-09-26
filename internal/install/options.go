@@ -65,9 +65,13 @@ type Options struct {
 	Verify              string
 	// Silent asks the GUI installer to run unattended (MSI /qn). EXE installers
 	// keep their own flags; configure install_args for those.
-	Silent      bool
-	URLTemplate URLTemplateOptions
-	DisableSSL  bool
+	Silent bool
+	// DeferInstaller keeps a downloaded GUI installer on disk instead of asking
+	// about launching it: the run succeeds and reports InstallerFile. The web
+	// console sets it, because a task has no terminal to answer a prompt on.
+	DeferInstaller bool
+	URLTemplate    URLTemplateOptions
+	DisableSSL     bool
 	// Context cancels the run at its checkpoints; the web console cancels
 	// tasks with it. A nil context means "no cancellation".
 	Context context.Context
