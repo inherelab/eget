@@ -20,11 +20,16 @@ export default function Outdated() {
   const [submitting, setSubmitting] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [taskId, setTaskId] = useState('')
+  // running stays true while the submitted task is in flight, so a second click
+  // cannot queue the same update again.
+  const [running, setRunning] = useState(false)
   const selectAll = useRef<HTMLInputElement>(null)
   const managers = useAsync(() => api.ext(), [])
 
   const items = result?.items ?? []
   const allSelected = items.length > 0 && selected.length === items.length
+  const busy = submitting || running
+  const inFlight = useRef(false)
 
   useEffect(() => {
     if (selectAll.current) {
@@ -46,14 +51,22 @@ export default function Outdated() {
   }
 
   const runUpdate = async (submit: () => Promise<{ taskId: string }>) => {
+    // A second click can land before React re-renders the disabled button, so the
+    // guard cannot live in the disabled attribute alone.
+    if (inFlight.current) {
+      return
+    }
+    inFlight.current = true
     setSubmitting(true)
     setError(null)
     try {
       const accepted = await submit()
+      setRunning(true)
       setTaskId(accepted.taskId)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
+      inFlight.current = false
       setSubmitting(false)
     }
   }
@@ -69,7 +82,7 @@ export default function Outdated() {
         <div>
           <button
             onClick={() => void runUpdate(() => api.submitUpdate({ all: true }))}
-            disabled={submitting}
+            disabled={busy}
             style={{ marginRight: 8 }}
           >
             Update all
@@ -101,7 +114,7 @@ export default function Outdated() {
         {selected.length > 0 && (
           <button
             className="primary"
-            disabled={submitting}
+            disabled={busy}
             onClick={() => void runUpdate(() => api.submitUpdate({ targets: selectedTargets }))}
           >
             Update selected ({selected.length})
@@ -120,8 +133,10 @@ export default function Outdated() {
           taskId={taskId}
           onDismiss={() => {
             setTaskId('')
+            setRunning(false)
           }}
           onFinished={(status) => {
+            setRunning(false)
             // The list just changed underneath the report, so ask again; the
             // check also clears the selection.
             if (status === 'succeeded') {
@@ -159,6 +174,7 @@ export default function Outdated() {
                         type="checkbox"
                         aria-label="Select every outdated package"
                         checked={allSelected}
+                        disabled={busy}
                         onChange={(event) => setSelected(event.target.checked ? items.map(rowKey) : [])}
                       />
                     </th>
@@ -180,6 +196,7 @@ export default function Outdated() {
                             type="checkbox"
                             aria-label={`Select ${item.name}`}
                             checked={selected.includes(key)}
+                            disabled={busy}
                             onChange={(event) =>
                               setSelected((previous) =>
                                 event.target.checked
@@ -200,7 +217,7 @@ export default function Outdated() {
                         <td className="muted">{formatTime(item.publishedAt)}</td>
                         <td>
                           <button
-                            disabled={submitting}
+                            disabled={busy}
                             onClick={() => void runUpdate(() => api.submitUpdate({ targets: [updateTarget(item)] }))}
                           >
                             Update
