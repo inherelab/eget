@@ -85,7 +85,9 @@ export default function Cache() {
             </dd>
             <dt>Manifest</dt>
             <dd>
-              <a href="/manifest.json">/manifest.json</a>
+              <a href="/manifest.json" target="_blank" rel="noreferrer noopener">
+                /manifest.json
+              </a>
             </dd>
           </dl>
         </div>
@@ -143,7 +145,10 @@ export default function Cache() {
                   <td>{formatBytes(file.size)}</td>
                   <td className="muted">{formatTime(file.mod_time)}</td>
                   <td>
-                    <a href={`/files/${file.path}`}>Download</a>
+                    {/* download keeps the console page, its filters and its scroll */}
+                    <a href={`/files/${file.path}`} download>
+                      Download
+                    </a>
                   </td>
                 </tr>
               ))}

@@ -37,13 +37,20 @@ export default function Tasks() {
 
   // Pages link here with ?task=<id> for the full record of a task they reported
   // inline.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const requestedTask = searchParams.get('task') ?? ''
   useEffect(() => {
     if (requestedTask) {
       void openTask(requestedTask)
     }
   }, [requestedTask, openTask])
+
+  // Keep the address in step with the open task, without stacking history.
+  useEffect(() => {
+    if (selected && selected !== requestedTask) {
+      setSearchParams({ task: selected }, { replace: true })
+    }
+  }, [selected, requestedTask, setSearchParams])
 
   // One SSE stream per selected task: logs, progress and status frames keep the
   // panel current while the task runs.
