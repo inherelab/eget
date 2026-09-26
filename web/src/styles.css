@@ -377,6 +377,14 @@ h2 {
   background: var(--signal);
 }
 
+/* A target list can be long; the cell keeps one line and the title has it all. */
+td.subject {
+  max-width: 26ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---------------------------------------------------------------- drawer --- */
 
 /* A record opened from a list sits beside it, so the list keeps its filters,
@@ -403,6 +411,22 @@ h2 {
 /* Focused programmatically so the drawer is announced; not a tab stop. */
 .drawer:focus-visible {
   outline: none;
+}
+
+.drawer-backdrop.bottom {
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.drawer.bottom {
+  width: min(1100px, 100%);
+  height: min(72vh, 100%);
+  border-left: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.drawer.bottom .drawer-body {
+  padding-bottom: 26px;
 }
 
 .drawer-head {

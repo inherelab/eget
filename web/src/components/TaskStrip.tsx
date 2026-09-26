@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, subscribeToTask } from '../api/client'
+import { taskSubject } from '../lib/tasks'
 import type { TaskProgress, TaskStatus } from '../api/types'
 
 interface TaskStripProps {
@@ -117,19 +118,4 @@ export default function TaskStrip({ taskId, onDismiss, onFinished }: TaskStripPr
       )}
     </section>
   )
-}
-
-// taskSubject names what the task works on: a single target, a target list, or
-// nothing when the task covers everything.
-function taskSubject(params?: Record<string, unknown>): string {
-  if (!params) {
-    return ''
-  }
-  if (Array.isArray(params.targets) && params.targets.length > 0) {
-    return params.targets.join(', ')
-  }
-  if (typeof params.target === 'string') {
-    return params.target
-  }
-  return ''
 }

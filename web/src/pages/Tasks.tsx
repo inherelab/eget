@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, formatTime, subscribeToTask } from '../api/client'
 import type { Task, TaskLogLine, TaskProgress, TaskStatus } from '../api/types'
+import Drawer from '../components/Drawer'
 import StateBlock from '../components/StateBlock'
+import { taskSubject } from '../lib/tasks'
 import { useAsync } from '../hooks/useAsync'
 
 const statusClass: Record<TaskStatus, string> = {
@@ -130,6 +132,7 @@ export default function Tasks() {
               <tr>
                 <th>Task</th>
                 <th>Kind</th>
+                <th>Package</th>
                 <th>Status</th>
                 <th>Progress</th>
                 <th>Created</th>
@@ -141,6 +144,9 @@ export default function Tasks() {
                 <tr key={task.id} className="clickable" onClick={() => void openTask(task.id)}>
                   <td className="mono">{task.id}</td>
                   <td>{task.kind}</td>
+                  <td className="mono muted subject" title={taskSubject(task.params)}>
+                    {taskSubject(task.params) || '-'}
+                  </td>
                   <td>
                     <span className={statusClass[task.status] ?? 'tag'}>{task.status}</span>
                   </td>
@@ -159,35 +165,45 @@ export default function Tasks() {
       </StateBlock>
 
       {selected && (
-        <div className="panel" style={{ marginTop: 18 }}>
-          <div className="page-head">
-            <h2>
-              {selected} {live && <span className="tag">live</span>}
-            </h2>
-            <div>
-              {detail?.status === 'running' || detail?.status === 'queued' ? (
-                <button onClick={cancel}>Cancel</button>
-              ) : null}
-            </div>
+        <Drawer
+          placement="bottom"
+          title={`task ${selected}`}
+          onClose={() => {
+            setSelected('')
+          }}
+        >
+          <div className="task-line">
+            <span className={detail ? statusClass[detail.status] ?? 'tag' : 'tag'}>
+              {detail?.status ?? 'loading'}
+            </span>
+            <span className="task-what">{taskSubject(detail?.params)}</span>
+            {live && <span className="tag live">live</span>}
+            <span className="task-percent">{Math.round(detail?.progress?.percent ?? 0)}%</span>
+            {detail?.status === 'running' || detail?.status === 'queued' ? (
+              <button onClick={cancel}>Cancel</button>
+            ) : null}
           </div>
 
           {detail?.error && <div className="alert">{detail.error}</div>}
 
-          <pre style={{ maxHeight: '40vh' }}>
-            {logs.length === 0
-              ? 'No log lines yet.'
-              : logs
-                  .map((line) => `${new Date(line.time).toLocaleTimeString()} [${line.level}] ${line.message}`)
-                  .join('\n')}
-          </pre>
+          <div className="panel">
+            <h2>Log</h2>
+            <pre>
+              {logs.length === 0
+                ? 'No log lines yet.'
+                : logs
+                    .map((line) => `${new Date(line.time).toLocaleTimeString()} [${line.level}] ${line.message}`)
+                    .join('\n')}
+            </pre>
+          </div>
 
           {detail?.result ? (
-            <>
-              <h2 style={{ marginTop: 16 }}>Result</h2>
-              <pre style={{ maxHeight: '30vh' }}>{JSON.stringify(detail.result, null, 2)}</pre>
-            </>
+            <div className="panel">
+              <h2>Result</h2>
+              <pre>{JSON.stringify(detail.result, null, 2)}</pre>
+            </div>
           ) : null}
-        </div>
+        </Drawer>
       )}
     </section>
   )
