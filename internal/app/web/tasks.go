@@ -133,6 +133,12 @@ type queuedTask struct {
 	params map[string]any
 }
 
+// runnerOutcome carries one finished runner back to the worker.
+type runnerOutcome struct {
+	result any
+	err    error
+}
+
 // NewEngine restores persisted task history and starts the single worker.
 func NewEngine(storePath string, runners map[string]TaskRunner) *Engine {
 	engine := &Engine{
@@ -243,6 +249,16 @@ func (e *Engine) Cancel(id string) error {
 		if cancel != nil {
 			cancel()
 		}
+		// Report the cancellation now. A runner that ignores its context (a prompt
+		// on stdin, a package manager command) would otherwise leave the task
+		// "running" and hold the queue behind it; run() drops such a late outcome.
+		e.mu.Lock()
+		if current, ok := e.tasks[id]; ok && current.Status == StatusRunning {
+			e.finishLocked(id, StatusCanceled, nil, "canceled while running")
+		}
+		e.mu.Unlock()
+		e.persist()
+		e.publishDone(id)
 		return nil
 	default:
 		return fmt.Errorf("task %s already finished", id)
@@ -326,20 +342,37 @@ func (e *Engine) run(job *queuedTask) {
 	e.publishStatus(job.id)
 
 	report := &TaskReporter{engine: e, taskID: job.id}
-	result, err := job.runner(ctx, job.params, report)
+	// The runner runs beside the worker: a runner that ignores cancellation must
+	// not hold the queue. Its outcome is dropped once the task is canceled.
+	outcome := make(chan runnerOutcome, 1)
+	go func() {
+		result, err := job.runner(ctx, job.params, report)
+		outcome <- runnerOutcome{result: result, err: err}
+	}()
 
-	e.mu.Lock()
-	switch {
-	case ctx.Err() != nil:
-		e.finishLocked(job.id, StatusCanceled, nil, "canceled while running")
-	case err != nil:
-		e.finishLocked(job.id, StatusFailed, nil, err.Error())
-	default:
-		e.finishLocked(job.id, StatusSucceeded, result, "")
+	select {
+	case got := <-outcome:
+		e.mu.Lock()
+		switch {
+		case ctx.Err() != nil:
+			e.finishLocked(job.id, StatusCanceled, nil, "canceled while running")
+		case got.err != nil:
+			e.finishLocked(job.id, StatusFailed, nil, got.err.Error())
+		default:
+			e.finishLocked(job.id, StatusSucceeded, got.result, "")
+		}
+		e.mu.Unlock()
+		e.persist()
+		e.publishDone(job.id)
+	case <-ctx.Done():
+		e.mu.Lock()
+		if current, ok := e.tasks[job.id]; ok && current.Status != StatusCanceled && current.Status != StatusInterrupted {
+			e.finishLocked(job.id, StatusCanceled, nil, "canceled while running")
+		}
+		e.mu.Unlock()
+		e.persist()
+		e.publishDone(job.id)
 	}
-	e.mu.Unlock()
-	e.persist()
-	e.publishDone(job.id)
 }
 
 func (e *Engine) appendLog(id, level, message string) {

@@ -109,6 +109,49 @@ func TestEngineCancelCancelableTask(t *testing.T) {
 	waitForStatus(t, engine, id, StatusCanceled)
 }
 
+// A runner that ignores its context (a prompt on stdin, a package manager
+// command) must not hold the queue: cancel has to take effect, the next task has
+// to run, and the blocked runner's late outcome must be dropped.
+func TestEngineCancelReleasesTheQueueWhenTheRunnerIgnoresIt(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	runners := map[string]TaskRunner{
+		"block": func(context.Context, map[string]any, *TaskReporter) (any, error) {
+			close(started)
+			<-release
+			return "late", nil
+		},
+		"quick": func(context.Context, map[string]any, *TaskReporter) (any, error) { return "done", nil },
+	}
+	engine := NewEngine("", runners)
+	defer engine.Close()
+
+	first, err := engine.Submit("block", nil)
+	assert.NoErr(t, err)
+	second, err := engine.Submit("quick", nil)
+	assert.NoErr(t, err)
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("blocked task never started")
+	}
+
+	assert.NoErr(t, engine.Cancel(first))
+	canceled, ok := engine.Get(first)
+	assert.True(t, ok)
+	assert.Eq(t, StatusCanceled, canceled.Status)
+
+	// The queue moves on even though the blocked runner never returned.
+	waitForStatus(t, engine, second, StatusSucceeded)
+
+	// When it finally returns, its outcome is ignored.
+	close(release)
+	time.Sleep(50 * time.Millisecond)
+	still, ok := engine.Get(first)
+	assert.True(t, ok)
+	assert.Eq(t, StatusCanceled, still.Status)
+}
+
 func TestEngineRejectsUnknownKindAndCancelOfFinished(t *testing.T) {
 	engine := NewEngine("", map[string]TaskRunner{
 		"demo": func(context.Context, map[string]any, *TaskReporter) (any, error) { return nil, nil },
