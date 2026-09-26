@@ -377,6 +377,91 @@ h2 {
   background: var(--signal);
 }
 
+/* ---------------------------------------------------------------- drawer --- */
+
+/* A record opened from a list sits beside it, so the list keeps its filters,
+ * its rows and its scroll position. */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15, 23, 32, 0.35);
+}
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  height: 100%;
+  background: var(--paper);
+  border-left: 1px solid var(--rule);
+  outline: none;
+}
+
+/* Focused programmatically so the drawer is announced; not a tab stop. */
+.drawer:focus-visible {
+  outline: none;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.drawer-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font: 600 15px/1.35 var(--mono);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.drawer-body {
+  flex: 1;
+  padding: 18px 20px 40px;
+  overflow-y: auto;
+}
+
+/* Action row above a record's content, on a page or in a drawer. */
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* A table cell that opens a record reads as text with an affordance, not as a
+ * button: the row click stays as the mouse shortcut. */
+.row-open {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.row-open:hover:not(:disabled) {
+  border: 0;
+  background: none;
+  color: var(--signal);
+  text-decoration-color: currentColor;
+}
+
+.row-open + .tag {
+  margin-left: 8px;
+}
+
 /* ---------------------------------------------------------------- dialog --- */
 
 /* Decisions that need a sentence of context get a sheet over a dimmed page, not
