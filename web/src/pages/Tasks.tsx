@@ -4,7 +4,7 @@ import { api, formatTime, subscribeToTask } from '../api/client'
 import type { Task, TaskLogLine, TaskProgress, TaskStatus } from '../api/types'
 import Drawer from '../components/Drawer'
 import StateBlock from '../components/StateBlock'
-import { taskSubject } from '../lib/tasks'
+import { markTasksSeen, taskSubject } from '../lib/tasks'
 import { useAsync } from '../hooks/useAsync'
 
 const statusClass: Record<TaskStatus, string> = {
@@ -53,6 +53,14 @@ export default function Tasks() {
       setSearchParams({ task: selected }, { replace: true })
     }
   }, [selected, requestedTask, setSearchParams])
+
+  // Everything this page has shown counts as seen: the console's global notice
+  // only reports failures that happened while the reader was elsewhere.
+  useEffect(() => {
+    if (data) {
+      markTasksSeen()
+    }
+  }, [data])
 
   // One SSE stream per selected task: logs, progress and status frames keep the
   // panel current while the task runs.

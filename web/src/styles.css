@@ -47,6 +47,7 @@
   --fail: #a5231b;
   --fail-edge: #e4bdb8;
   --fail-soft: #f8e8e6;
+  --fail-bright: #f0a49c;
 
   --mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
   --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -189,6 +190,41 @@ body {
   padding: 0 2px;
   color: #8b9aa9;
   font: 400 10.5px/1.5 var(--mono);
+}
+
+/* The console's one global notice: work in flight, and failures that finished
+ * while the reader was on another page. Never a question. */
+.task-activity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px;
+  text-decoration: none;
+}
+
+.task-activity .tag {
+  border-color: var(--rail-rule);
+  color: var(--rail-ink);
+}
+
+.task-activity .tag.live {
+  border-color: #2c6b64;
+  background: #12312e;
+  color: var(--signal-bright);
+}
+
+.task-activity .tag.fail {
+  border-color: #6f3733;
+  background: #32201e;
+  color: var(--fail-bright);
+}
+
+.shell.collapsed .task-activity {
+  justify-content: center;
+}
+
+.shell.collapsed .activity-word {
+  display: none;
 }
 
 .shell.collapsed .nav-label,

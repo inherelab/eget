@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
 import BrandMark from './components/BrandMark'
+import TaskActivity from './components/TaskActivity'
 import Overview from './pages/Overview'
 import Packages from './pages/Packages'
 import PackageDetail from './pages/PackageDetail'
@@ -71,6 +72,7 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
+        <TaskActivity />
         <div className="sidebar-foot">served by eget web</div>
       </aside>
       <main className="content">
