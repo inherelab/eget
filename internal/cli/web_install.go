@@ -77,13 +77,15 @@ func (s *cliService) webInstallRunner(report *web.TaskReporter, silent bool) (*i
 		return 0, fmt.Errorf("%s: %d assets match, pass \"asset\" to pick one: %s",
 			title, len(choices), strings.Join(choices, ", "))
 	}
+	// The console never asks and never launches a GUI installer on its own: with
+	// silent it runs unattended, otherwise it refuses with the reason, because a
+	// task has no terminal to answer a prompt on.
 	runner.ConfirmLaunchInstaller = func(file string) (bool, error) {
 		if silent {
 			report.Info("launching installer %s unattended", file)
 			return true, nil
 		}
-		report.Info("downloaded installer %s; set silent to install unattended, or run it yourself", file)
-		return false, nil
+		return false, fmt.Errorf("refusing to launch the GUI installer %s from the console: pass silent to install it unattended, or run the downloaded file yourself", file)
 	}
 	runner.AssetRunner = func(path string, _ []string, _, _ io.Writer) error {
 		return fmt.Errorf("refusing to execute the downloaded asset %s from the console", path)

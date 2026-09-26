@@ -45,6 +45,17 @@ func (s *cliService) webTaskUpdate(ctx context.Context, params map[string]any, r
 	// Copy the service value so per-task callbacks cannot leak into another
 	// request or into the CLI's shared instance.
 	updateService := s.updService
+	// The console has no terminal to answer a prompt on, so updates get the same
+	// non-interactive runner the install task uses: a GUI installer is downloaded
+	// (or launched unattended with silent) instead of asking, and a multi-asset
+	// release fails with a message naming the choices.
+	runner, err := s.webInstallRunner(report, opts.Silent)
+	if err != nil {
+		return nil, err
+	}
+	service := s.appService
+	service.Runner = runner
+	updateService.Install = &service
 	updateService.OnUpdateStart = func(index, total int, name string) {
 		report.Progress(float64(index)/float64(maxInt(total, 1))*100, "update")
 		report.Info("[%d/%d] updating %s", index+1, total, name)
