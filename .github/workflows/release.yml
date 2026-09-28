@@ -35,10 +35,13 @@ jobs:
           go mod tidy -diff
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
+        with:
+          # Same as the test workflow: the version lives in web/package.json.
+          package_json_file: web/package.json
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
