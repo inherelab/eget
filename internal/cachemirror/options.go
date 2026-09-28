@@ -12,10 +12,14 @@ type Options struct {
 	URL      string
 	Timeout  time.Duration
 	Fallback bool
+	// Token is sent as a bearer token: the mirror endpoints of eget web are
+	// protected by the console token, so a remote mirror needs it.
+	Token string
 }
 
 func NormalizeOptions(opts Options) Options {
 	opts.URL = strings.TrimRight(strings.TrimSpace(opts.URL), "/")
+	opts.Token = strings.TrimSpace(opts.Token)
 	if opts.Timeout <= 0 {
 		opts.Timeout = defaultTimeoutSeconds * time.Second
 	}

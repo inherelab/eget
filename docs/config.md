@@ -212,6 +212,7 @@ enable = true
 url = "http://192.168.1.10:8787"
 timeout = 5
 fallback = true
+token = "<the token printed by eget web>"
 ```
 
 Fields:
@@ -220,6 +221,7 @@ Fields:
 - `url`: mirror base URL, usually an `eget web --host 0.0.0.0 --token <token>` instance (default port `8787`).
 - `timeout`: mirror connect, TLS handshake, and response-header timeout in seconds. Values less than or equal to `0` use the default 5 seconds. The timeout does not cap the full file body download duration, so large LAN mirror downloads can exceed this value once the server starts responding.
 - `fallback`: when `true`, mirror miss or error falls back to the original source. When `false`, mirror miss or error stops the download.
+- `token`: the mirror server's console token, the same value `eget web` was started with. The mirror endpoints are protected by it, so a client on another machine has to present it; a request without it is answered with `401`.
 
 The first mirror protocol uses a path key based on the normalized cache relative path. It can reuse old cache files already present on the mirror server. The mirror is an optimization, not a trust root; checksum verification still uses existing package verification when configured.
 
@@ -253,7 +255,7 @@ eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 
 `eget web` prints text request logs by default. Add `--json-log` when structured JSON lines are preferred.
 
-Do not put bearer tokens in `[cache_mirror]`; current mirror client downloads do not send a token. If authenticated mirror client downloads are needed later, they should be designed as a separate client/server contract.
+The mirror endpoints are protected by the console token. A client on another machine presents the same value through `[cache_mirror] token`; leaving it empty means every mirror request is answered with `401`, which `fallback` then turns into either an origin download or an error.
 
 ## GitHub Proxy
 

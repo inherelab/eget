@@ -207,6 +207,7 @@ enable = true
 url = "http://192.168.1.10:8787"
 timeout = 5
 fallback = true
+token = "<eget web 启动时打印的 token>"
 ```
 
 字段说明：
@@ -215,6 +216,7 @@ fallback = true
 - `url`: mirror 服务基础地址，通常指向 `eget web --host 0.0.0.0 --token <token>` 启动的服务（默认端口 `8787`）。
 - `timeout`: mirror 连接、TLS 握手和响应头超时时间，单位为秒。小于等于 `0` 时使用默认 5 秒。该值不限制完整文件 body 下载耗时，因此大文件在服务端开始响应后可以继续下载超过该时长。
 - `fallback`: 为 `true` 时，mirror miss 或错误后继续回源；为 `false` 时，mirror miss 或错误会直接终止下载。
+- `token`: mirror 服务端的控制台 token，与服务端 `eget web` 启动时传入的值相同。mirror 端点受该 token 保护，因此另一台机器必须携带；不带 token 的请求会被回答 `401`。
 
 第一版 mirror 协议使用基于缓存相对路径的 path-key，因此可以直接复用 mirror 机器上已有的老缓存文件。mirror 只是下载优化，不是信任根；已有 checksum 配置仍会在后续流程中执行校验。
 
@@ -248,7 +250,7 @@ eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 
 `eget web` 默认输出 text 请求日志；需要结构化 JSON lines 时再增加 `--json-log`。
 
-不要把 bearer token 写入 `[cache_mirror]`；当前 mirror client 下载不会发送 token。如果后续需要认证的 mirror client 下载，应作为独立的客户端/服务端协议另行设计。
+mirror 端点受控制台 token 保护。另一台机器通过 `[cache_mirror] token` 传入同一个值；留空时每个 mirror 请求都会得到 `401`，随后由 `fallback` 决定是回源还是报错终止。
 
 ## GitHub Proxy
 

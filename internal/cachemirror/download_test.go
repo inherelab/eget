@@ -33,6 +33,50 @@ func TestDownloadToFileWritesMirrorHit(t *testing.T) {
 	assert.Eq(t, "archive", string(data))
 }
 
+func TestDownloadToFileSendsTokenWhenConfigured(t *testing.T) {
+	var gotAuth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte("archive"))
+	}))
+	defer server.Close()
+
+	result, err := DownloadToFile(context.Background(),
+		Options{Enable: true, URL: server.URL, Token: "lan-token"},
+		"path-md5:abc", filepath.Join(t.TempDir(), "tool.zip"))
+
+	assert.NoErr(t, err)
+	assert.True(t, result.Hit)
+	assert.Eq(t, "Bearer lan-token", gotAuth)
+}
+
+// A mirror protected by the console token rejects a client without one; the
+// caller then decides whether to fall back to the origin.
+func TestDownloadToFileUnauthorizedWithoutToken(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer lan-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte("archive"))
+	}))
+	defer server.Close()
+	target := filepath.Join(t.TempDir(), "tool.zip")
+
+	_, err := DownloadToFile(context.Background(), Options{Enable: true, URL: server.URL}, "path-md5:abc", target)
+	assert.Err(t, err)
+	assert.Contains(t, err.Error(), "401")
+
+	result, err := DownloadToFile(context.Background(),
+		Options{Enable: true, URL: server.URL, Token: "lan-token"}, "path-md5:abc", target)
+
+	assert.NoErr(t, err)
+	assert.True(t, result.Hit)
+	data, err := os.ReadFile(target)
+	assert.NoErr(t, err)
+	assert.Eq(t, "archive", string(data))
+}
+
 func TestDownloadToFileWritesProgress(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "7")

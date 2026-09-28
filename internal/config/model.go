@@ -96,6 +96,9 @@ type CacheMirrorSection struct {
 	URL      *string `toml:"url" mapstructure:"url"`
 	Timeout  *int    `toml:"timeout" mapstructure:"timeout"`
 	Fallback *bool   `toml:"fallback" mapstructure:"fallback"`
+	// Token is the mirror server's console token: eget web protects its mirror
+	// endpoints with it, so a client on another machine has to present it.
+	Token *string `toml:"token" mapstructure:"token"`
 }
 
 type HTTPProxySection struct {

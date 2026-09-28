@@ -40,6 +40,10 @@ func DownloadToFile(ctx context.Context, opts Options, key, target string, getba
 	if err != nil {
 		return DownloadResult{}, err
 	}
+	if opts.Token != "" {
+		// eget web protects its mirror endpoints with the console token.
+		req.Header.Set("Authorization", "Bearer "+opts.Token)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return DownloadResult{}, err

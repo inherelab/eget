@@ -124,7 +124,10 @@ enable = true
 url = "http://192.168.1.10:8787"
 timeout = 5
 fallback = true
+token = "<eget web 启动时打印的 token>"
 ```
+
+镜像端点与服务端控制台共用同一个 token：另一台机器把 `--token` 的值填进 `[cache_mirror] token`，客户端会带 `Authorization: Bearer` 请求；留空则镜像请求得到 `401`，由 `fallback` 决定回源或报错。
 
 ## 从 `eget cache serve` 迁移
 

@@ -24,5 +24,8 @@ func CacheMirrorOptionsFromConfig(cfg *cfgpkg.File) cachemirror.Options {
 	if cfg.CacheMirror.Fallback != nil {
 		opts.Fallback = *cfg.CacheMirror.Fallback
 	}
+	if cfg.CacheMirror.Token != nil {
+		opts.Token = *cfg.CacheMirror.Token
+	}
 	return cachemirror.NormalizeOptions(opts)
 }
