@@ -50,6 +50,7 @@ The dotenv file is optional. It is loaded before `eget.toml`, so config values c
 GITHUB_TOKEN=...
 PROXY_URL=http://127.0.0.1:7890
 EGET_SELF_UPDATE_SOURCE=https://example.com/tools/eget/
+EGET_WEB_TOKEN=your-console-token
 ```
 
 ```toml
@@ -59,6 +60,10 @@ github_token = "${GITHUB_TOKEN}"
 [http_proxy]
 url = "${PROXY_URL}"
 ```
+
+Values set here are ordinary environment variables, so `eget web` picks up `EGET_WEB_TOKEN`
+from the `.env` of the active config directory (that is, of `EGET_CONFIG_DIR` when it is set);
+`--token` still wins, and a token is generated when neither is present.
 
 Keep `.env` out of version control.
 

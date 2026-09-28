@@ -50,6 +50,7 @@ $XDG_CONFIG_HOME/eget/.env
 GITHUB_TOKEN=...
 PROXY_URL=http://127.0.0.1:7890
 EGET_SELF_UPDATE_SOURCE=https://example.com/tools/eget/
+EGET_WEB_TOKEN=your-console-token
 ```
 
 ```toml
@@ -59,6 +60,8 @@ github_token = "${GITHUB_TOKEN}"
 [http_proxy]
 url = "${PROXY_URL}"
 ```
+
+这里设置的都是普通环境变量，因此 `eget web` 会读取**当前配置目录**（设置了 `EGET_CONFIG_DIR` 时即该目录）下 `.env` 中的 `EGET_WEB_TOKEN`；`--token` 仍然优先，两者都没有才自动生成。
 
 不要把 `.env` 提交到版本库。
 
