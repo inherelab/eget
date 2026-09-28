@@ -56,6 +56,12 @@ jobs:
     - name: Setup pnpm
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
       uses: pnpm/action-setup@v4
+      with:
+        # The frontend project owns the pnpm version: read packageManager from
+        # web/package.json (the action defaults to the repository root, where
+        # there is no package.json, and fails with "No pnpm version is
+        # specified").
+        package_json_file: web/package.json
 
     - name: Setup Node
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
