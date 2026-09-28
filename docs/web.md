@@ -36,6 +36,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 - 默认只绑 `127.0.0.1`；非 loopback 监听必须有显式 `--token`，否则拒绝启动（fail closed）。
 - `--token` 未给时先读环境变量 `EGET_WEB_TOKEN`（便于写进 systemd unit / 脚本，不必把密钥放在命令行里）；两者都没有才自动生成。
 - 自动生成的 token 为 6 字节随机值的十六进制（12 位字符，便于从终端重新输入），打印到 stderr，**不会写入配置文件或日志**；来自 `--token` 或 `EGET_WEB_TOKEN` 时只提示来源，不回显明文。
+- 带 token 的 `open:` 行**仅在 loopback 监听时打印**：LAN 监听（`--host 0.0.0.0` 等）的日志里只有来源提示，密钥不会进 journal；那种情况下在 token 页表单里粘贴一次即可。
 - 三种携带方式：
   - `Authorization: Bearer <token>` —— 缓存镜像客户端与脚本；
   - `X-EGET-Token: <token>` —— 控制台前端；

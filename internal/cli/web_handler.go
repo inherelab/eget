@@ -146,6 +146,20 @@ func (s *cliService) printWebStartup(addr, cacheDir, token, tokenSource string, 
 	}
 	ccolor.Fprintf(out, " - cache dir: %s (mirror scope: %s)\n", cacheDir, root)
 	ccolor.Fprintf(out, " - cache mirror: /manifest.json, /download/*, /files/*\n")
+	// The open URL carries the token, so it is only printed for a loopback
+	// listener: a console reachable from the network keeps its secret out of the
+	// log, and the operator pastes it once into the form on the token page.
+	loopback := web.IsLoopbackHost(resolved.Host)
+	printOpen := func(green bool) {
+		if !loopback {
+			return
+		}
+		if green {
+			ccolor.Fprintf(out, " - open:  <green>%s</>\n", webConsoleURL(addr, token))
+			return
+		}
+		ccolor.Fprintf(out, " - open:  %s\n", webConsoleURL(addr, token))
+	}
 	switch {
 	case opts.NoAuth:
 		ccolor.Fprintf(out, " - auth: <ylw>disabled</> (loopback only)\n")
@@ -153,13 +167,13 @@ func (s *cliService) printWebStartup(addr, cacheDir, token, tokenSource string, 
 		ccolor.Fprintf(out, " - token: <ylw>hidden</> (pass --token or open the console from this terminal)\n")
 	case tokenSource == webTokenGenerated:
 		ccolor.Fprintf(out, " - token: <green>%s</>\n", token)
-		ccolor.Fprintf(out, " - open:  <green>%s</>\n", webConsoleURL(addr, token))
+		printOpen(true)
 	case tokenSource == webTokenFromEnv:
 		ccolor.Fprintf(out, " - token: from <green>%s</>\n", webTokenEnv)
-		ccolor.Fprintf(out, " - open:  %s\n", webConsoleURL(addr, token))
+		printOpen(false)
 	case tokenSource == webTokenFromFlag:
 		ccolor.Fprintf(out, " - token: from --token\n")
-		ccolor.Fprintf(out, " - open:  %s\n", webConsoleURL(addr, token))
+		printOpen(false)
 	case tokenSource == webTokenFromNoSource:
 		// Without --no-auth the source is never empty: a token is generated above.
 		ccolor.Fprintf(out, " - token: <ylw>none</> (--no-auth)\n")
