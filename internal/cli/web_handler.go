@@ -36,19 +36,18 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 	}
 
 	host := strings.TrimSpace(resolved.Host)
-	token := strings.TrimSpace(opts.Token)
-	generated := false
+	token, tokenSource := webResolveToken(opts.Token, os.LookupEnv)
 	if token == "" && !opts.NoAuth {
 		// A generated token is convenient for a local console, but a listener
 		// reachable from other machines must be an explicit choice.
 		if !web.IsLoopbackHost(host) {
-			return fmt.Errorf("listening on %s requires an explicit --token (or use a loopback host)", host)
+			return fmt.Errorf("listening on %s requires an explicit --token or %s (or use a loopback host)", host, webTokenEnv)
 		}
 		var err error
 		if token, err = newWebToken(); err != nil {
 			return err
 		}
-		generated = true
+		tokenSource = webTokenGenerated
 	}
 
 	cacheDir, err := s.cacheService.ResolveCacheDir()
@@ -113,7 +112,7 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 	defer stop()
 
 	onReady := func(addr string) {
-		s.printWebStartup(addr, cacheDir, token, generated, allowMutations, resolved, opts)
+		s.printWebStartup(addr, cacheDir, token, tokenSource, allowMutations, resolved, opts)
 		if !resolved.AutoOpen {
 			return
 		}
@@ -134,7 +133,7 @@ func (s *cliService) webAssetCandidates(ctx context.Context, target string) ([]s
 	return runner.ListAssetCandidates(target, install.Options{Context: ctx})
 }
 
-func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, allowMutations bool, resolved webResolved, opts *WebOptions) {
+func (s *cliService) printWebStartup(addr, cacheDir, token, tokenSource string, allowMutations bool, resolved webResolved, opts *WebOptions) {
 	out := s.stderrWriter()
 	root := resolved.CacheRoot
 	ccolor.Fprintf(out, "Serving eget web console on <green>http://%s</>\n", addr)
@@ -150,14 +149,20 @@ func (s *cliService) printWebStartup(addr, cacheDir, token string, generated, al
 	switch {
 	case opts.NoAuth:
 		ccolor.Fprintf(out, " - auth: <ylw>disabled</> (loopback only)\n")
-	case generated && opts.NoTokenPrint:
+	case tokenSource == webTokenGenerated && opts.NoTokenPrint:
 		ccolor.Fprintf(out, " - token: <ylw>hidden</> (pass --token or open the console from this terminal)\n")
-	case generated:
+	case tokenSource == webTokenGenerated:
 		ccolor.Fprintf(out, " - token: <green>%s</>\n", token)
 		ccolor.Fprintf(out, " - open:  <green>%s</>\n", webConsoleURL(addr, token))
-	default:
+	case tokenSource == webTokenFromEnv:
+		ccolor.Fprintf(out, " - token: from <green>%s</>\n", webTokenEnv)
+		ccolor.Fprintf(out, " - open:  %s\n", webConsoleURL(addr, token))
+	case tokenSource == webTokenFromFlag:
 		ccolor.Fprintf(out, " - token: from --token\n")
 		ccolor.Fprintf(out, " - open:  %s\n", webConsoleURL(addr, token))
+	case tokenSource == webTokenFromNoSource:
+		// Without --no-auth the source is never empty: a token is generated above.
+		ccolor.Fprintf(out, " - token: <ylw>none</> (--no-auth)\n")
 	}
 	if resolved.ReadOnly {
 		ccolor.Fprintf(out, " - mode: <ylw>read-only</>\n")
@@ -227,6 +232,34 @@ func webConsoleURL(addr, token string) string {
 		console += "?token=" + url.QueryEscape(token)
 	}
 	return console
+}
+
+const (
+	// webTokenEnv supplies the console token when --token is not given, so a
+	// service unit or script can keep the secret out of the command line.
+	webTokenEnv = "EGET_WEB_TOKEN"
+
+	webTokenFromFlag     = "flag"
+	webTokenFromEnv      = "env"
+	webTokenGenerated    = "generated"
+	webTokenFromNoSource = ""
+)
+
+// webResolveToken picks the console token and names where it came from: the flag
+// wins, then EGET_WEB_TOKEN. An empty result leaves generation to the caller,
+// which only allows it for a loopback listener.
+func webResolveToken(flagValue string, lookupEnv func(string) (string, bool)) (string, string) {
+	if token := strings.TrimSpace(flagValue); token != "" {
+		return token, webTokenFromFlag
+	}
+	if lookupEnv != nil {
+		if token, ok := lookupEnv(webTokenEnv); ok {
+			if token = strings.TrimSpace(token); token != "" {
+				return token, webTokenFromEnv
+			}
+		}
+	}
+	return "", webTokenFromNoSource
 }
 
 // newWebToken returns the token the console bootstraps with. Six random bytes

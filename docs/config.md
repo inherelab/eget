@@ -112,7 +112,7 @@ Supported sections:
 - `[http_proxy]`: preferred global HTTP-layer proxy settings.
 - `[api_cache]`: metadata API response cache.
 - `[cache_mirror]`: LAN cache mirror client settings.
-- `[web]`: defaults for the `eget web` console (host, read_only, auto_open, cache_root, ...; the token is never persisted).
+- `[web]`: defaults for the `eget web` console (host, read_only, auto_open, cache_root, ...; the token is never persisted — it comes from `--token` or the `EGET_WEB_TOKEN` environment variable, and is generated when neither is set).
 - `[ghproxy]`: GitHub URL rewrite proxy.
 - `["owner/repo"]`: legacy direct package section.
 - `[packages.<name>]`: named package section.

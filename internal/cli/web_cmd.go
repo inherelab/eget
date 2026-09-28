@@ -36,7 +36,7 @@ func newWebCmd(handler CommandHandler) (*gcli.Command, func()) {
 	cmd.Config = func(c *gcli.Command) {
 		c.StrOpt(&opts.Host, "host", "", "", "Listen host (default 127.0.0.1, or [web].host); a non-loopback host requires a token")
 		c.IntOpt(&opts.Port, "port", "p", web.DefaultPort, "Listen port, 0 means a random free port")
-		c.StrOpt(&opts.Token, "token", "", "", "Bearer token for the console and the cache mirror; generated when empty")
+		c.StrOpt(&opts.Token, "token", "", "", "Bearer token for the console and the cache mirror; defaults to $EGET_WEB_TOKEN, otherwise generated")
 		c.BoolOpt(&opts.NoAuth, "no-auth", "", false, "Disable token checks (loopback hosts only)")
 		c.BoolOpt(&opts.ReadOnly, "read-only", "", false, "Serve read endpoints only")
 		c.BoolOpt(&opts.AllowMutations, "allow-mutations", "", false, "Required to enable write endpoints on a non-loopback host")

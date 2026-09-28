@@ -18,7 +18,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 |---|---|---|
 | `--host` | `127.0.0.1` | 监听地址；非 loopback 时必须显式提供 `--token` |
 | `--port, -p` | `8787` | 监听端口，`0` 表示随机空闲端口 |
-| `--token` | 自动生成 | 控制台与缓存镜像共用的 Bearer token |
+| `--token` | `EGET_WEB_TOKEN`，否则自动生成 | 控制台与缓存镜像共用的 Bearer token |
 | `--no-auth` | 关 | 关闭 token 校验（仅 loopback 允许） |
 | `--read-only` | 关 | 只提供读取接口 |
 | `--allow-mutations` | 关 | 非 loopback 监听时启用写入接口的必要开关 |
@@ -34,7 +34,8 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 ## 认证
 
 - 默认只绑 `127.0.0.1`；非 loopback 监听必须有显式 `--token`，否则拒绝启动（fail closed）。
-- 自动生成的 token 为 6 字节随机值的十六进制（12 位字符，便于从终端重新输入），打印到 stderr，**不会写入配置文件或日志**。
+- `--token` 未给时先读环境变量 `EGET_WEB_TOKEN`（便于写进 systemd unit / 脚本，不必把密钥放在命令行里）；两者都没有才自动生成。
+- 自动生成的 token 为 6 字节随机值的十六进制（12 位字符，便于从终端重新输入），打印到 stderr，**不会写入配置文件或日志**；来自 `--token` 或 `EGET_WEB_TOKEN` 时只提示来源，不回显明文。
 - 三种携带方式：
   - `Authorization: Bearer <token>` —— 缓存镜像客户端与脚本；
   - `X-EGET-Token: <token>` —— 控制台前端；
