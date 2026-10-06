@@ -70,6 +70,15 @@ func (s SelfUpdateService) Update(opts SelfUpdateOptions) (SelfUpdateResult, err
 	if err != nil {
 		return SelfUpdateResult{}, err
 	}
+	// Remove the download directory once the binary has been installed in place.
+	// On Windows the replacer schedules a deferred move that still needs the
+	// extracted binary, so leave the directory alone in that case.
+	cleanupTemp := true
+	defer func() {
+		if cleanupTemp {
+			_ = os.RemoveAll(output)
+		}
+	}()
 	downloadTarget := SelfUpdateRepo
 	installOpts.Tag = firstNonEmpty(opts.Tag, installOpts.Tag)
 	installOpts.Name = selfUpdateDownloadName(goos)
@@ -108,6 +117,9 @@ func (s SelfUpdateService) Update(opts SelfUpdateOptions) (SelfUpdateResult, err
 	replaceResult, err := s.replacer().Replace(executable, replacement)
 	if err != nil {
 		return SelfUpdateResult{}, err
+	}
+	if replaceResult.Deferred {
+		cleanupTemp = false
 	}
 
 	result.Replacement = replacement
