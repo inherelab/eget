@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
 
@@ -14,7 +15,7 @@ type DefaultExecutableReplacer struct{}
 func (DefaultExecutableReplacer) Replace(currentPath, replacementPath string) (SelfReplaceResult, error) {
 	backup := currentPath + ".old"
 	logPath := replacementPath + ".replace.log"
-	script := windowsSelfReplaceScript(currentPath, replacementPath, backup, logPath, os.Getpid())
+	script := windowsSelfReplaceScript(currentPath, replacementPath, backup, logPath, os.Getpid(), filepath.Dir(replacementPath))
 	scriptFile, err := os.CreateTemp("", "eget-self-update-*.cmd")
 	if err != nil {
 		return SelfReplaceResult{}, err
@@ -34,7 +35,7 @@ func (DefaultExecutableReplacer) Replace(currentPath, replacementPath string) (S
 	return SelfReplaceResult{Deferred: true}, nil
 }
 
-func windowsSelfReplaceScript(currentPath, replacementPath, backupPath, logPath string, parentPID int) string {
+func windowsSelfReplaceScript(currentPath, replacementPath, backupPath, logPath string, parentPID int, tempDir string) string {
 	return fmt.Sprintf(`@echo off
 setlocal
 setlocal EnableDelayedExpansion
@@ -68,7 +69,7 @@ set attempts=0
 if not exist "%[2]s" (
   echo replacement missing, restore backup >> "%[4]s"
   move /Y "%[3]s" "%[1]s" >nul 2>nul
-  exit /B 1
+  goto cleanup
 )
 move /Y "%[2]s" "%[1]s" >nul 2>nul
 if errorlevel 1 (
@@ -82,6 +83,12 @@ if errorlevel 1 (
 )
 del /F /Q "%[3]s" >nul 2>nul
 echo replace succeeded >> "%[4]s"
+
+:cleanup
+rem Remove the download dir once the move is done or has failed. Only touch it
+rem when it is the eget self-update temp dir, never an arbitrary location.
+for %%%%A in ("%[6]s") do set "temp_base=%%%%~nxA"
+if /I "!temp_base:~0,17!"=="eget-self-update-" rmdir /S /Q "%[6]s" >nul 2>nul
 del /F /Q "%%~f0" >nul 2>nul
-`, currentPath, replacementPath, backupPath, logPath, parentPID)
+`, currentPath, replacementPath, backupPath, logPath, parentPID, tempDir)
 }

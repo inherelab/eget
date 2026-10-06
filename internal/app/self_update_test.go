@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -296,12 +297,13 @@ type fakeSelfUpdateInstaller struct {
 	target string
 	opts   install.Options
 	result RunResult
+	err    error
 }
 
 func (f *fakeSelfUpdateInstaller) DownloadTarget(target string, opts install.Options) (RunResult, error) {
 	f.target = target
 	f.opts = opts
-	return f.result, nil
+	return f.result, f.err
 }
 
 type fakeSelfReplacer struct{}
@@ -349,4 +351,66 @@ func TestSelfUpdateCleansTempDirAfterReplace(t *testing.T) {
 
 	_, statErr := os.Stat(dir)
 	assert.True(t, os.IsNotExist(statErr), "self-update temp dir should be removed after a successful replace")
+}
+
+func TestSelfUpdateRemovesTempDirWhenUpdateFails(t *testing.T) {
+	dir, err := os.MkdirTemp("", "eget-self-update-fail-*")
+	assert.NoErr(t, err)
+	installer := &fakeSelfUpdateInstaller{err: errors.New("download failed")}
+	svc := SelfUpdateService{
+		CurrentVersion: "1.7.1",
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			return LatestInfo{Tag: "v1.7.2"}, nil
+		},
+		Installer:      installer,
+		Replacer:       fakeSelfReplacer{},
+		RuntimeGOOS:    "linux",
+		RuntimeGOARCH:  "amd64",
+		TempDir:        func() (string, error) { return dir, nil },
+		ExecutablePath: func() (string, error) { return filepath.Join(t.TempDir(), "eget"), nil },
+	}
+
+	_, err = svc.Update(SelfUpdateOptions{})
+	assert.Err(t, err)
+
+	_, statErr := os.Stat(dir)
+	assert.True(t, os.IsNotExist(statErr), "self-update temp dir should be removed after a failed update")
+}
+
+func TestSelfUpdateKeepsTempDirWhenReplaceIsDeferred(t *testing.T) {
+	dir, err := os.MkdirTemp("", "eget-self-update-deferred-*")
+	assert.NoErr(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	replacement := filepath.Join(dir, "eget.exe")
+	assert.NoErr(t, os.WriteFile(replacement, []byte("new"), 0o755))
+	installer := &fakeSelfUpdateInstaller{
+		result: RunResult{ExtractedFiles: []string{replacement}},
+	}
+	current := filepath.Join(t.TempDir(), "eget.exe")
+	assert.NoErr(t, os.WriteFile(current, []byte("old"), 0o755))
+	svc := SelfUpdateService{
+		CurrentVersion: "1.7.1",
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			return LatestInfo{Tag: "v1.7.2"}, nil
+		},
+		Installer:      installer,
+		Replacer:       deferredSelfReplacer{},
+		RuntimeGOOS:    "windows",
+		RuntimeGOARCH:  "amd64",
+		TempDir:        func() (string, error) { return dir, nil },
+		ExecutablePath: func() (string, error) { return current, nil },
+	}
+
+	result, err := svc.Update(SelfUpdateOptions{})
+	assert.NoErr(t, err)
+	assert.True(t, result.Deferred)
+
+	_, statErr := os.Stat(dir)
+	assert.NoErr(t, statErr, "a deferred replace must keep the temp dir for the helper script")
+}
+
+type deferredSelfReplacer struct{}
+
+func (deferredSelfReplacer) Replace(currentPath, replacementPath string) (SelfReplaceResult, error) {
+	return SelfReplaceResult{Deferred: true}, nil
 }
