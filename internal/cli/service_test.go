@@ -18,31 +18,32 @@ import (
 )
 
 type fakeSDKService struct {
-	installTargets  []string
-	installOpts     sdk.InstallOptions
-	installResults  []sdk.InstallResult
-	downloadTargets []string
-	downloadOpts    sdk.SDKDownloadOptions
-	downloadResults []sdk.SDKDownloadResult
-	listName        string
-	listEntries     []sdk.InstalledEntry
-	removeTarget    string
-	removeResult    sdk.RemoveResult
-	pathTarget      string
-	pathEntry       sdk.InstalledEntry
-	indexName       string
-	indexAll        bool
-	index           sdk.Index
-	indexes         []sdk.Index
-	cachedIndexes   []sdk.CachedIndexInfo
-	searchName      string
-	searchKeywords  []string
-	searchNumber    int
-	searchSort      string
-	searchResults   []sdk.SearchResult
-	clearName       string
-	clearAll        bool
-	err             error
+	installTargets   []string
+	installOpts      sdk.InstallOptions
+	installResults   []sdk.InstallResult
+	downloadTargets  []string
+	downloadOpts     sdk.SDKDownloadOptions
+	downloadResults  []sdk.SDKDownloadResult
+	listName         string
+	listEntries      []sdk.InstalledEntry
+	removeTarget     string
+	removeResult     sdk.RemoveResult
+	pathTarget       string
+	pathEntry        sdk.InstalledEntry
+	indexName        string
+	indexAll         bool
+	index            sdk.Index
+	indexes          []sdk.Index
+	cachedIndexes    []sdk.CachedIndexInfo
+	searchName       string
+	searchKeywords   []string
+	searchNumber     int
+	searchSort       string
+	searchPrerelease bool
+	searchResults    []sdk.SearchResult
+	clearName        string
+	clearAll         bool
+	err              error
 }
 
 type fakeUninstallStoreForCLI struct {
@@ -136,6 +137,7 @@ func (f *fakeSDKService) SearchIndex(name string, opts sdk.SearchOptions) ([]sdk
 	f.searchKeywords = append([]string(nil), opts.Keywords...)
 	f.searchNumber = opts.Number
 	f.searchSort = opts.Sort
+	f.searchPrerelease = opts.IncludePrerelease
 	return f.searchResults, f.err
 }
 

@@ -312,7 +312,7 @@ var commandFlagSpecs = map[string]flagSpec{
 			"remove":   {},
 			"rm":       {},
 			"path":     {},
-			"search":   {bools: setOf("json", "j"), values: setOf("number", "n", "sort")},
+			"search":   {bools: setOf("json", "j", "prerelease"), values: setOf("number", "n", "sort")},
 			"config": {
 				subs: map[string]flagSpec{
 					"add": {bools: setOf("all", "a", "force", "f"), values: setOf("mirror", "m")},

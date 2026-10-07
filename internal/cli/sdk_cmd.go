@@ -33,11 +33,12 @@ type SDKPathOptions struct {
 }
 
 type SDKSearchOptions struct {
-	Name     string
-	Keywords []string
-	JSON     bool
-	Number   int
-	Sort     string
+	Name       string
+	Keywords   []string
+	JSON       bool
+	Number     int
+	Sort       string
+	Prerelease bool
 }
 
 type SDKIndexOptions struct {
@@ -76,6 +77,7 @@ func newSDKCmd(handler CommandHandler) (*gcli.Command, func()) {
   eget sdk path java:17
   eget sdk search go 1.22 amd64 ^windows
   eget sdk search --sort desc node REG:^22
+  eget sdk search --prerelease go 1.22
   eget sdk config add jdk --mirror huawei
   eget sdk config add jdk --mirror zulu
   eget sdk config add --all
@@ -205,6 +207,7 @@ func newSDKSearchCmd(opts *SDKSearchOptions, handler CommandHandler) *gcli.Comma
 		c.BoolOpt(&opts.JSON, "json", "j", false, "Output as JSON")
 		c.IntOpt(&opts.Number, "number", "n", 20, "Maximum search results, <= 0 means unlimited")
 		c.StrOpt(&opts.Sort, "sort", "", "", "Sort by version: asc, desc")
+		c.BoolOpt(&opts.Prerelease, "prerelease", "", false, "Include prerelease (non-stable) versions")
 		c.AddArg("name", "SDK name", true)
 		c.AddArg("keyword", "Search keyword(s), prefix with ^ to exclude", false, true)
 	}

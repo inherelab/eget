@@ -21,6 +21,9 @@ func (s Service) SearchIndex(name string, opts SearchOptions) ([]SearchResult, e
 	}
 	results := make([]SearchResult, 0)
 	for _, item := range index.Items {
+		if !opts.IncludePrerelease && !item.Stable {
+			continue
+		}
 		for _, file := range item.Files {
 			result := SearchResult{
 				SDK:      index.SDK,

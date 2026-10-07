@@ -34,7 +34,7 @@ func TestServiceSearchIndexMatchesKeywordsAndExcludes(t *testing.T) {
 		t.Fatalf("save index: %v", err)
 	}
 
-	results, err := svc.SearchIndex("go", SearchOptions{Keywords: []string{"1.22 amd64", "^windows ^rc"}, Number: 20})
+	results, err := svc.SearchIndex("go", SearchOptions{Keywords: []string{"1.22 amd64", "^windows ^rc"}, Number: 20, IncludePrerelease: true})
 	if err != nil {
 		t.Fatalf("search index: %v", err)
 	}
@@ -46,6 +46,45 @@ func TestServiceSearchIndexMatchesKeywordsAndExcludes(t *testing.T) {
 	assert.Eq(t, "linux", results[0].OS)
 	assert.Eq(t, "amd64", results[0].Arch)
 	assert.Eq(t, "go1.22.0.linux-amd64.tar.gz", results[0].Filename)
+}
+
+func TestServiceSearchIndexHidesPrereleaseByDefault(t *testing.T) {
+	root := t.TempDir()
+	cfg := testSDKConfig(root)
+	svc := Service{
+		Config:     cfg,
+		IndexCache: IndexCache{Dir: filepath.Join(root, "index")},
+		GOOS:       "linux",
+		GOARCH:     "amd64",
+	}
+	err := svc.IndexCache.Save(Index{
+		Schema: 1,
+		SDK:    "go",
+		Items: []IndexItem{
+			{Version: "1.22.0", Stable: true, Files: []IndexFile{
+				{OS: "linux", Arch: "amd64", Ext: "tar.gz", Filename: "go1.22.0.linux-amd64.tar.gz"},
+			}},
+			{Version: "1.23.0-rc.1", Stable: false, Files: []IndexFile{
+				{OS: "linux", Arch: "amd64", Ext: "tar.gz", Filename: "go1.23.0-rc.1.linux-amd64.tar.gz"},
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("save index: %v", err)
+	}
+
+	stable, err := svc.SearchIndex("go", SearchOptions{Keywords: []string{"amd64"}, Number: 0})
+	if err != nil {
+		t.Fatalf("search stable index: %v", err)
+	}
+	assert.Eq(t, 1, len(stable))
+	assert.Eq(t, "1.22.0", stable[0].Version)
+
+	all, err := svc.SearchIndex("go", SearchOptions{Keywords: []string{"amd64"}, Number: 0, IncludePrerelease: true})
+	if err != nil {
+		t.Fatalf("search all index: %v", err)
+	}
+	assert.Eq(t, 2, len(all))
 }
 
 func TestServiceSearchIndexLimitsResults(t *testing.T) {

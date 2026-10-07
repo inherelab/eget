@@ -283,6 +283,18 @@ func TestMain_SDKRoutesAndBindsOptions(t *testing.T) {
 			},
 		},
 		{
+			name:    "search prerelease",
+			args:    []string{"sdk", "search", "--prerelease", "go", "1.22"},
+			wantCmd: "sdk.search",
+			assertOpts: func(t *testing.T, options any) {
+				opts, ok := options.(*SDKSearchOptions)
+				assert.True(t, ok)
+				assert.Eq(t, "go", opts.Name)
+				assert.Eq(t, []string{"1.22"}, opts.Keywords)
+				assert.True(t, opts.Prerelease)
+			},
+		},
+		{
 			name:    "index refresh name",
 			args:    []string{"sdk", "index", "refresh", "go"},
 			wantCmd: "sdk.index.refresh",

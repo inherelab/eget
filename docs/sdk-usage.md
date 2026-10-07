@@ -117,7 +117,10 @@ eget sdk search go 1.22 amd64 ^windows ^rc
 eget sdk search --sort desc node REG:^22
 eget sdk search -n 0 go 1.22 amd64
 eget sdk search --json node 20 linux
+eget sdk search --prerelease go 1.22
 ```
+
+默认只展示 stable 版本；需要连同 prerelease（非正式版本）一起列出时加 `--prerelease`，此时才与旧行为一致。
 
 多个关键词使用 AND 匹配，所有普通关键词都必须命中。以 `^` 开头的关键词表示排除，语义和 asset filter 的 exclude 类似：
 

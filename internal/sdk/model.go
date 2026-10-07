@@ -54,6 +54,9 @@ type SearchOptions struct {
 	Keywords []string
 	Number   int
 	Sort     string
+	// IncludePrerelease keeps non-stable versions in the results. By default
+	// only stable versions are returned.
+	IncludePrerelease bool
 }
 
 type IndexRefreshStage string
