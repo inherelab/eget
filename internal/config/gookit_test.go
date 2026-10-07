@@ -49,6 +49,36 @@ func TestDumpExportOmitsGlobalByDefault(t *testing.T) {
 	assert.Contains(t, out.String(), "/machine/bin")
 }
 
+func TestDumpExportOmitsWebTokenByDefault(t *testing.T) {
+	cfg := NewFile()
+	cfg.Web.Token = stringPtr("s3cret")
+	cfg.Web.AllowHosts = []string{"*"}
+
+	var out bytes.Buffer
+	assert.NoErr(t, DumpExport(&out, cfg, false))
+	assert.NotContains(t, out.String(), "s3cret")
+	assert.Contains(t, out.String(), "allow_host")
+
+	out.Reset()
+	assert.NoErr(t, DumpExport(&out, cfg, true))
+	assert.Contains(t, out.String(), "s3cret")
+}
+
+func TestDumpConfigStringIncludesWebSection(t *testing.T) {
+	cfg := NewFile()
+	cfg.Web.Host = stringPtr("0.0.0.0")
+	cfg.Web.Token = stringPtr("s3cret")
+	cfg.Web.AllowHosts = []string{"192.168.1.10", "*"}
+
+	text, err := dumpConfigString(cfg)
+
+	assert.NoErr(t, err)
+	assert.Contains(t, text, "[web]")
+	assert.Contains(t, text, `host = "0.0.0.0"`)
+	assert.Contains(t, text, `token = "s3cret"`)
+	assert.Contains(t, text, `allow_host = ["192.168.1.10", "*"]`)
+}
+
 func TestSaveAtomic(t *testing.T) {
 	t.Run("writes a loadable replacement", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "eget.toml")

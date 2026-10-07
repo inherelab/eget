@@ -101,18 +101,27 @@ func (s *Server) securityHeadersMiddleware(c *rux.Context) {
 // hostMiddleware rejects requests whose Host header is not a known local name.
 // This blocks DNS-rebinding attacks against the loopback listener.
 func (s *Server) hostMiddleware(c *rux.Context) {
-	host := requestHost(c.Req)
-	if host == "" || s.opts.allowedHosts()[host] {
+	if s.opts.hostAllowed(requestHost(c.Req)) {
 		c.Next()
 		return
 	}
-	for _, allowed := range s.opts.AllowHosts {
-		if strings.EqualFold(host, strings.TrimSpace(strings.ToLower(allowed))) {
-			c.Next()
-			return
+	c.AbortWithStatus(http.StatusForbidden, "host not allowed")
+}
+
+// hostAllowed reports whether a Host header value is accepted. The built-in
+// loopback aliases always pass; --allow-host / [web].allow_host entries are
+// compared case-insensitively, and a single "*" allows every Host.
+func (o Options) hostAllowed(host string) bool {
+	if host == "" || o.allowedHosts()[host] {
+		return true
+	}
+	for _, allowed := range o.AllowHosts {
+		allowed = strings.TrimSpace(strings.ToLower(allowed))
+		if allowed == "*" || allowed == host {
+			return true
 		}
 	}
-	c.AbortWithStatus(http.StatusForbidden, "host not allowed")
+	return false
 }
 
 func requestHost(r *http.Request) string {

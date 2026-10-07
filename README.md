@@ -196,10 +196,19 @@ eget web --open                   # open the console in a browser
 eget web --cache-root sdk --no-cache-index
 ```
 
-It listens on `127.0.0.1` only by default. Serving a mirror to other machines requires an explicit host and token (plain HTTP; put it behind a TLS reverse proxy):
+It listens on `127.0.0.1` only by default. Serving a mirror to other machines requires an explicit host and token (plain HTTP; put it behind a TLS reverse proxy). A remote client must also pass the Host allowlist: list its IP or hostname with `--allow-host`, or allow any Host with `[web].allow_host = ["*"]`.
 
 ```bash
-eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --json-log
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --allow-host 192.168.1.10 --json-log
+```
+
+Long options like these can live in `[web]`, so `eget web` alone is enough:
+
+```toml
+[web]
+host = "0.0.0.0"
+token = "<the token>"
+allow_host = ["*"]
 ```
 
 > `eget cache serve` was removed; its capabilities moved into `eget web`. Option mapping (`--root` → `--cache-root`, `--no-index` → `--no-cache-index`, ...) and the changed defaults are documented in [docs/web.md](docs/web.md).
@@ -210,6 +219,7 @@ Enable a client to try the cache mirror before origin downloads (note the new de
 [cache_mirror]
 enable = true
 url = "http://192.168.1.10:8787"
+token = "<the token>"
 ```
 
 ### Query Examples

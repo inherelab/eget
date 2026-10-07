@@ -126,10 +126,28 @@ func DumpExport(out io.Writer, file *File, withGlobal bool) error {
 	if !withGlobal {
 		data := cfg.Data()
 		delete(data, "global")
+		removeWebToken(data)
 		cfg.SetData(data)
 	}
 	_, err := cfg.DumpTo(out)
 	return err
+}
+
+// removeWebToken drops web.token from an exported data tree so a portable
+// config never carries the console secret.
+func removeWebToken(data map[string]any) {
+	web, ok := data["web"].(map[string]any)
+	if !ok {
+		return
+	}
+	trimmed := make(map[string]any, len(web))
+	for key, value := range web {
+		if key == "token" {
+			continue
+		}
+		trimmed[key] = value
+	}
+	data["web"] = trimmed
 }
 
 func dumpConfigString(file *File) (string, error) {
@@ -262,7 +280,7 @@ func normalizePathValue(key string, value any) (any, bool) {
 		}
 		return parsed, true
 	case "asset_filters", "fallbacks", "ignore_update_packages", "install_args",
-		"list_args", "outdated_args", "upgrade_args", "upgrade_all_args":
+		"list_args", "outdated_args", "upgrade_args", "upgrade_all_args", "allow_host":
 		return splitAndTrim(text), true
 	case "exclude":
 		if strings.HasPrefix(key, "http_proxy.") {
@@ -578,6 +596,12 @@ func webToMap(section WebSection) map[string]any {
 	data := map[string]any{}
 	if section.Host != nil {
 		data["host"] = *section.Host
+	}
+	if section.Token != nil {
+		data["token"] = *section.Token
+	}
+	if len(section.AllowHosts) > 0 {
+		data["allow_host"] = append([]string(nil), section.AllowHosts...)
 	}
 	if section.ReadOnly != nil {
 		data["read_only"] = *section.ReadOnly

@@ -17,19 +17,25 @@ func TestWebResolveToken(t *testing.T) {
 	tests := []struct {
 		name       string
 		flag       string
+		config     string
 		env        map[string]string
 		wantToken  string
 		wantSource string
 	}{
 		{
-			name: "the flag wins over the environment",
-			flag: "from-flag", env: map[string]string{webTokenEnv: "from-env"},
+			name: "the flag wins over the environment and config",
+			flag: "from-flag", config: "from-config", env: map[string]string{webTokenEnv: "from-env"},
 			wantToken: "from-flag", wantSource: webTokenFromFlag,
 		},
 		{
 			name: "the environment is used when the flag is blank",
-			flag: "  ", env: map[string]string{webTokenEnv: " from-env "},
+			flag: "  ", config: "from-config", env: map[string]string{webTokenEnv: " from-env "},
 			wantToken: "from-env", wantSource: webTokenFromEnv,
+		},
+		{
+			name:   "config fills in when the flag and environment are blank",
+			config: " from-config ", env: map[string]string{webTokenEnv: "   "},
+			wantToken: "from-config", wantSource: webTokenFromConfig,
 		},
 		{
 			name:      "a blank environment is ignored",
@@ -44,10 +50,16 @@ func TestWebResolveToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, source := webResolveToken(tt.flag, lookup(tt.env))
+			token, source := webResolveToken(tt.flag, tt.config, lookup(tt.env))
 
 			assert.Eq(t, tt.wantToken, token)
 			assert.Eq(t, tt.wantSource, source)
 		})
 	}
+}
+
+func TestWebAllowHosts(t *testing.T) {
+	got := webAllowHosts([]string{" 192.168.1.10 ", "MyHost", ""}, "myhost, build.local ,*")
+
+	assert.Eq(t, []string{"192.168.1.10", "MyHost", "build.local", "*"}, got)
 }

@@ -16,9 +16,9 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 
 | 选项 | 默认 | 说明 |
 |---|---|---|
-| `--host` | `127.0.0.1` | 监听地址；非 loopback 时必须显式提供 `--token` |
+| `--host` | `[web].host`，默认 `127.0.0.1` | 监听地址；非 loopback 时必须显式提供 `--token` |
 | `--port, -p` | `8787` | 监听端口，`0` 表示随机空闲端口 |
-| `--token` | `EGET_WEB_TOKEN`，否则自动生成 | 控制台与缓存镜像共用的 Bearer token |
+| `--token` | 依次取 `EGET_WEB_TOKEN`、`[web].token`，否则自动生成 | 控制台与缓存镜像共用的 Bearer token |
 | `--no-auth` | 关 | 关闭 token 校验（仅 loopback 允许） |
 | `--read-only` | 关 | 只提供读取接口 |
 | `--allow-mutations` | 关 | 非 loopback 监听时启用写入接口的必要开关 |
@@ -26,7 +26,7 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 | `--no-token-print` | 关 | 自动生成 token 时不打印 |
 | `--cache-root` | `all` | 缓存镜像范围：`all`、`pkg`、`api`、`sdk`、`sdk-index` |
 | `--no-cache-index` | 关 | 禁止缓存目录列表 |
-| `--allow-host` | 空 | 追加允许的 Host 头名称，逗号分隔 |
+| `--allow-host` | `[web].allow_host` | 追加允许的 Host 头名称，逗号分隔；`*` 表示允许所有 |
 | `--json-log` | 关 | 每请求输出一行 JSON 日志 |
 
 写入接口的开关规则：**loopback 监听默认允许**（可用 `--read-only` 关闭）；**非 loopback 监听默认只读**，需要 `--allow-mutations` 显式开启。
@@ -34,8 +34,10 @@ eget web -p 0               # 随机端口，实际地址在启动信息里
 ## 认证
 
 - 默认只绑 `127.0.0.1`；非 loopback 监听必须有显式 `--token`，否则拒绝启动（fail closed）。
-- `--token` 未给时先读环境变量 `EGET_WEB_TOKEN`（便于写进 systemd unit / 脚本，不必把密钥放在命令行里）；两者都没有才自动生成。
-- 自动生成的 token 为 6 字节随机值的十六进制（12 位字符，便于从终端重新输入），打印到 stderr，**不会写入配置文件或日志**；来自 `--token` 或 `EGET_WEB_TOKEN` 时只提示来源，不回显明文。
+- `--token` 未给时先读环境变量 `EGET_WEB_TOKEN`（便于写进 systemd unit / 脚本，不必把密钥放在命令行里），再读配置 `[web].token`；都没有才自动生成。优先级：`--token` > `EGET_WEB_TOKEN` > `[web].token`。
+- 自动生成的 token 为 6 字节随机值的十六进制（12 位字符，便于从终端重新输入），打印到 stderr，**不会写入配置文件或日志**；来自 `--token`、`EGET_WEB_TOKEN` 或 `[web].token` 时只提示来源，不回显明文。
+- `[web].token` 以明文存于配置文件，仅适合长期固定的 LAN 镜像机；配置文件权限应设为仅所有者可读。`eget config export`（不加 `--with-global`）会剔除该键，避免随可移植配置外泄。
+- **Host 白名单**：默认只接受 `localhost`、`127.0.0.1`、`::1`、`0.0.0.0` 和监听用的 `--host` 值；其他 Host 一律 403（在 token 校验之前判定）。LAN 客户端用 IP 或主机名访问时，需在 `--allow-host` / `[web].allow_host` 中列出，或设为 `["*"]` 允许任意 Host。
 - 带 token 的 `open:` 行**仅在 loopback 监听时打印**：LAN 监听（`--host 0.0.0.0` 等）的日志里只有来源提示，密钥不会进 journal；那种情况下在 token 页表单里粘贴一次即可。
 - 三种携带方式：
   - `Authorization: Bearer <token>` —— 缓存镜像客户端与脚本；
@@ -157,7 +159,7 @@ token = "<eget web 启动时打印的 token>"
 
 - 非 loopback 监听必须提供 token，启动时会打印明文传输警告。
 - **不提供内置 TLS**：对外部署请置于反向代理之后，由代理终止 TLS。
-- 中间件已包含：Host 白名单（防 DNS rebinding）、变更请求的同源/自定义头校验（防 CSRF）、CSP 等安全响应头、认证失败限速、请求日志脱敏（不记录查询串，避免 token 入日志）。
+- 中间件已包含：Host 白名单（防 DNS rebinding）、变更请求的同源/自定义头校验（防 CSRF）、CSP 等安全响应头、认证失败限速、请求日志脱敏（不记录查询串，避免 token 入日志）。`allow_host = ["*"]` 会关闭 Host 白名单这一层防护，仅建议在受信任的 LAN 内网使用。
 - 缓存文件服务通过 `os.Root` 打开文件并从同一个 fd 提供内容（`/download` 用 `ServeContent`，`/files` 用 `FileServerFS`）：符号链接无法逃出缓存目录，也不存在"检查后替换"的 TOCTOU 窗口。
 - **永久不在 web 上提供**：`self-update`、任意命令执行、执行下载得到的可执行文件、交互式启动 GUI 安装器。
 
@@ -168,6 +170,8 @@ token = "<eget web 启动时打印的 token>"
 ```toml
 [web]
 host = "127.0.0.1"
+token = ""            # 可选；--token > EGET_WEB_TOKEN > 此处，空则自动生成
+allow_host = []       # 追加 Host 白名单；["*"] 允许任意 Host
 read_only = false
 allow_mutations = false
 auto_open = false
@@ -176,8 +180,27 @@ no_cache_index = false
 ```
 
 - 端口只能通过 `--port` 指定（`0` 表示随机空闲端口），不放进配置。
-- **token 永不写入配置文件**：只能通过 `--token` 传入，或由 `eget web` 每次随机生成。
-- 非 loopback 监听时，`host = "0.0.0.0"` 这类配置仍需配合显式的 `--token`，否则拒绝启动。
+- `token` 只作为兜底来源：`--token` 优先，其次 `EGET_WEB_TOKEN`，再读 `[web].token`；三者都没有才随机生成。留空即维持旧行为。
+- `allow_host` 与 `--allow-host` 合并（逗号分隔），`"*"` 允许任意 Host。
+- 非 loopback 监听时，`host = "0.0.0.0"` 这类配置仍需有 token 来源（`--token`、`EGET_WEB_TOKEN` 或 `[web].token` 任一），否则拒绝启动。
+
+LAN 镜像机的常用写法，把命令行长参数都收进配置：
+
+```toml
+[web]
+host = "0.0.0.0"
+token = "<the token>"
+allow_host = ["*"]
+allow_mutations = false
+cache_root = "all"
+
+[cache_mirror]
+enable = true
+url = "http://192.168.1.10:8787"
+token = "<the token>"
+```
+
+之后启动只需 `eget web`。
 
 ## 前端资源
 

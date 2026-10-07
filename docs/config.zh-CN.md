@@ -61,7 +61,7 @@ github_token = "${GITHUB_TOKEN}"
 url = "${PROXY_URL}"
 ```
 
-这里设置的都是普通环境变量，因此 `eget web` 会读取**当前配置目录**（设置了 `EGET_CONFIG_DIR` 时即该目录）下 `.env` 中的 `EGET_WEB_TOKEN`；`--token` 仍然优先，两者都没有才自动生成。
+这里设置的都是普通环境变量，因此 `eget web` 会读取**当前配置目录**（设置了 `EGET_CONFIG_DIR` 时即该目录）下 `.env` 中的 `EGET_WEB_TOKEN`；`--token` 仍然优先，其次 `EGET_WEB_TOKEN`，再取 `[web].token`，三者都没有才自动生成。
 
 不要把 `.env` 提交到版本库。
 
@@ -110,7 +110,7 @@ eget config import --force portable.toml
 - `[http_proxy]`: 首选的全局 HTTP 层代理配置。
 - `[api_cache]`: provider 元数据 API 响应缓存。
 - `[cache_mirror]`: 局域网缓存 mirror 客户端配置。
-- `[web]`: `eget web` 控制台的默认值（host、read_only、auto_open、cache_root 等；token 不落盘，来自 `--token` 或环境变量 `EGET_WEB_TOKEN`，两者都没有才自动生成）。
+- `[web]`: `eget web` 控制台的默认值（host、token、allow_host、read_only、auto_open、cache_root 等）。token 可选：`--token` 优先，其次 `EGET_WEB_TOKEN`，再取 `[web].token`，都没有才自动生成。
 - `[ghproxy]`: GitHub URL 重写代理。
 - `["owner/repo"]`: ~旧版直接 package 配置~。
 - `[packages.<name>]`: 命名 package 配置。
@@ -219,7 +219,7 @@ token = "<eget web 启动时打印的 token>"
 - `url`: mirror 服务基础地址，通常指向 `eget web --host 0.0.0.0 --token <token>` 启动的服务（默认端口 `8787`）。
 - `timeout`: mirror 连接、TLS 握手和响应头超时时间，单位为秒。小于等于 `0` 时使用默认 5 秒。该值不限制完整文件 body 下载耗时，因此大文件在服务端开始响应后可以继续下载超过该时长。
 - `fallback`: 为 `true` 时，mirror miss 或错误后继续回源；为 `false` 时，mirror miss 或错误会直接终止下载。
-- `token`: mirror 服务端的控制台 token，与服务端 `eget web` 启动时传入的值相同。mirror 端点受该 token 保护，因此另一台机器必须携带；不带 token 的请求会被回答 `401`。
+- `token`: mirror 服务端的控制台 token，与服务端 `eget web` 实际使用的值相同（来自 `--token`、`EGET_WEB_TOKEN` 或服务端 `[web].token`）。mirror 端点受该 token 保护，因此另一台机器必须携带；不带 token 的请求会被回答 `401`。
 
 第一版 mirror 协议使用基于缓存相对路径的 path-key，因此可以直接复用 mirror 机器上已有的老缓存文件。mirror 只是下载优化，不是信任根；已有 checksum 配置仍会在后续流程中执行校验。
 
@@ -245,7 +245,7 @@ fallback = false
 
 一期只支持客户端已经知道的 target，不支持从 mirror 服务搜索或列出可安装工具。package/version/platform catalog 属于后续独立阶段。
 
-`[cache_mirror]` 是客户端侧的 mirror 查询配置。服务端访问保护是 `eget web` 的运行时参数：
+`[cache_mirror]` 是客户端侧的 mirror 查询配置。服务端访问保护是 `eget web` 的运行时配置：
 
 ```bash
 eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
@@ -254,6 +254,48 @@ eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 `eget web` 默认输出 text 请求日志；需要结构化 JSON lines 时再增加 `--json-log`。
 
 mirror 端点受控制台 token 保护。另一台机器通过 `[cache_mirror] token` 传入同一个值；留空时每个 mirror 请求都会得到 `401`，随后由 `fallback` 决定是回源还是报错终止。
+
+远程客户端还要通过服务端的 **Host 白名单**：`eget web` 只接受 `localhost`、`127.0.0.1`、`::1`、`0.0.0.0` 和监听用的 `--host` 值，不匹配时在**校验 token 之前**就返回 `403 host not allowed`。客户端用 IP 或主机名访问时，需在服务端用 `--allow-host 192.168.1.10` 列出该名称，或在 `[web]` 中设 `allow_host = ["*"]`。服务端的长参数也可以全部收进 `[web]`：
+
+```toml
+[web]
+host = "0.0.0.0"
+token = "<the token>"
+allow_host = ["*"]
+```
+
+之后只需 `eget web` 即可提供 mirror。
+
+## Web 控制台
+
+`[web]` 是 `eget web` 服务端的默认值，命令行参数优先，其取值同时作用于 cache mirror 端点。
+
+示例：
+
+```toml
+[web]
+host = "0.0.0.0"
+token = ""
+allow_host = ["192.168.1.10", "*.lan"]
+read_only = false
+allow_mutations = false
+auto_open = false
+cache_root = "all"
+no_cache_index = false
+```
+
+字段说明：
+
+- `host`: 监听地址。默认 `127.0.0.1`；非 loopback 时必须有 token 来源。
+- `token`: 可选的控制台与 cache mirror token。优先级：`--token` > `EGET_WEB_TOKEN` > 此处；都没有时 loopback 监听下自动生成。以明文保存，请确保配置文件仅所有者可读。`eget config export`（不加 `--with-global`）会剔除该键。
+- `allow_host`: 追加允许的 `Host` 头，与逗号分隔的 `--allow-host` 合并。单个 `"*"` 允许任意 Host（关闭防 DNS rebinding 的白名单，仅在可信内网使用）。
+- `read_only`: 只提供读取接口。
+- `allow_mutations`: 非 loopback 监听时启用写入接口的必要开关。
+- `auto_open`: 启动后用默认浏览器打开控制台。
+- `cache_root`: cache mirror 范围：`all`、`pkg`、`api`、`sdk`、`sdk-index`。
+- `no_cache_index`: 禁止缓存目录列表。
+
+端口只能用 `--port` 指定（`0` 表示随机空闲端口），刻意不放进 `[web]`。
 
 ## GitHub Proxy
 

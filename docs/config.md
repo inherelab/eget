@@ -63,7 +63,8 @@ url = "${PROXY_URL}"
 
 Values set here are ordinary environment variables, so `eget web` picks up `EGET_WEB_TOKEN`
 from the `.env` of the active config directory (that is, of `EGET_CONFIG_DIR` when it is set);
-`--token` still wins, and a token is generated when neither is present.
+`--token` still wins, then `EGET_WEB_TOKEN`, then `[web].token`, and a token is generated when
+none is present.
 
 Keep `.env` out of version control.
 
@@ -117,7 +118,7 @@ Supported sections:
 - `[http_proxy]`: preferred global HTTP-layer proxy settings.
 - `[api_cache]`: metadata API response cache.
 - `[cache_mirror]`: LAN cache mirror client settings.
-- `[web]`: defaults for the `eget web` console (host, read_only, auto_open, cache_root, ...; the token is never persisted — it comes from `--token` or the `EGET_WEB_TOKEN` environment variable, and is generated when neither is set).
+- `[web]`: defaults for the `eget web` console (host, token, allow_host, read_only, auto_open, cache_root, ...). The token is optional: `--token` wins, then `EGET_WEB_TOKEN`, then `[web].token`, and one is generated when none is set.
 - `[ghproxy]`: GitHub URL rewrite proxy.
 - `["owner/repo"]`: legacy direct package section.
 - `[packages.<name>]`: named package section.
@@ -226,7 +227,7 @@ Fields:
 - `url`: mirror base URL, usually an `eget web --host 0.0.0.0 --token <token>` instance (default port `8787`).
 - `timeout`: mirror connect, TLS handshake, and response-header timeout in seconds. Values less than or equal to `0` use the default 5 seconds. The timeout does not cap the full file body download duration, so large LAN mirror downloads can exceed this value once the server starts responding.
 - `fallback`: when `true`, mirror miss or error falls back to the original source. When `false`, mirror miss or error stops the download.
-- `token`: the mirror server's console token, the same value `eget web` was started with. The mirror endpoints are protected by it, so a client on another machine has to present it; a request without it is answered with `401`.
+- `token`: the mirror server's console token, the same value `eget web` runs with (from `--token`, `EGET_WEB_TOKEN`, or the server's `[web].token`). The mirror endpoints are protected by it, so a client on another machine has to present it; a request without it is answered with `401`.
 
 The first mirror protocol uses a path key based on the normalized cache relative path. It can reuse old cache files already present on the mirror server. The mirror is an optimization, not a trust root; checksum verification still uses existing package verification when configured.
 
@@ -252,7 +253,7 @@ fallback = false
 
 Phase one supports only targets already known to the client. It does not search or list installable tools from the mirror server. A package/version/platform catalog belongs to a later, separate phase.
 
-`[cache_mirror]` is client-side lookup configuration. Server access protection is a runtime `eget web` option:
+`[cache_mirror]` is client-side lookup configuration. Server access protection is runtime `eget web` configuration:
 
 ```bash
 eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
@@ -261,6 +262,48 @@ eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN"
 `eget web` prints text request logs by default. Add `--json-log` when structured JSON lines are preferred.
 
 The mirror endpoints are protected by the console token. A client on another machine presents the same value through `[cache_mirror] token`; leaving it empty means every mirror request is answered with `401`, which `fallback` then turns into either an origin download or an error.
+
+A remote client also has to pass the server's **Host allowlist**: `eget web` only accepts `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, and the configured `--host` value, and a mismatch is answered with `403 host not allowed` **before** the token is checked. When the client reaches the mirror by IP or hostname, list that name on the server with `--allow-host 192.168.1.10` or set `allow_host = ["*"]` in `[web]`. The server's own long options can live in `[web]` too:
+
+```toml
+[web]
+host = "0.0.0.0"
+token = "<the token>"
+allow_host = ["*"]
+```
+
+Then `eget web` alone serves the mirror.
+
+## Web Console
+
+`[web]` holds defaults for the `eget web` server. Command-line flags override it, and its values also feed the cache mirror endpoints.
+
+Example:
+
+```toml
+[web]
+host = "0.0.0.0"
+token = ""
+allow_host = ["192.168.1.10", "*.lan"]
+read_only = false
+allow_mutations = false
+auto_open = false
+cache_root = "all"
+no_cache_index = false
+```
+
+Fields:
+
+- `host`: listen host. Defaults to `127.0.0.1`; a non-loopback host requires a token source.
+- `token`: optional console and cache-mirror token. Precedence is `--token`, then `EGET_WEB_TOKEN`, then this value; when none is set, a token is generated for a loopback listener. It is stored in plain text, so keep the config file owner-readable only. `eget config export` omits this key unless `--with-global` is given.
+- `allow_host`: extra accepted `Host` header values, merged with the comma-separated `--allow-host` flag. A single `"*"` allows any Host (disables the DNS-rebinding guard; use it only on a trusted LAN).
+- `read_only`: serve read endpoints only.
+- `allow_mutations`: required to enable write endpoints on a non-loopback host.
+- `auto_open`: open the console in the default browser on startup.
+- `cache_root`: cache mirror scope: `all`, `pkg`, `api`, `sdk`, `sdk-index`.
+- `no_cache_index`: disable cache directory listing.
+
+The port is only settable with `--port` (`0` means a random free port) and is deliberately not part of `[web]`.
 
 ## GitHub Proxy
 

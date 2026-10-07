@@ -27,6 +27,26 @@ cache_time = 1800 # unit: s
 host_url = ""
 fallbacks = []
 
+# LAN 缓存镜像服务端：`eget web` 的默认值，命令行参数优先。
+# 长参数可收进这里，之后 `eget web` 即可启动。
+[web]
+host = "127.0.0.1"
+# token = "change-me"        # 可选；--token > EGET_WEB_TOKEN > 此处，空则自动生成
+# allow_host = ["*"]         # LAN 客户端用 IP/主机名访问时列出；["*"] 允许任意 Host
+read_only = false
+allow_mutations = false
+auto_open = false
+cache_root = "all"
+no_cache_index = false
+
+# LAN 缓存镜像客户端：`install`/`download`/`sdk install` 回源前优先尝试 mirror。
+[cache_mirror]
+enable = false
+url = ""
+timeout = 5
+fallback = true
+# token = "<mirror server token>"
+
 [packages]
 
 [packages."chlog"]

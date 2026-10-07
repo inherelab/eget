@@ -36,12 +36,12 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 	}
 
 	host := strings.TrimSpace(resolved.Host)
-	token, tokenSource := webResolveToken(opts.Token, os.LookupEnv)
+	token, tokenSource := webResolveToken(opts.Token, webDerefString(webCfg.Token), os.LookupEnv)
 	if token == "" && !opts.NoAuth {
 		// A generated token is convenient for a local console, but a listener
 		// reachable from other machines must be an explicit choice.
 		if !web.IsLoopbackHost(host) {
-			return fmt.Errorf("listening on %s requires an explicit --token or %s (or use a loopback host)", host, webTokenEnv)
+			return fmt.Errorf("listening on %s requires an explicit --token, %s or [web].token (or use a loopback host)", host, webTokenEnv)
 		}
 		var err error
 		if token, err = newWebToken(); err != nil {
@@ -98,7 +98,7 @@ func (s *cliService) handleWeb(opts *WebOptions) error {
 		Version:        BuildInfo().Version,
 		CacheRoot:      resolved.CacheRoot,
 		NoCacheIndex:   resolved.NoCacheIndex,
-		AllowHosts:     splitCommaList(opts.AllowHosts),
+		AllowHosts:     webAllowHosts(webCfg.AllowHosts, opts.AllowHosts),
 		JSONLog:        opts.JSONLog,
 		LogWriter:      s.stderrWriter(),
 		TaskStore:      webTaskStorePath(),
@@ -170,6 +170,9 @@ func (s *cliService) printWebStartup(addr, cacheDir, token, tokenSource string, 
 		printOpen(true)
 	case tokenSource == webTokenFromEnv:
 		ccolor.Fprintf(out, " - token: from <green>%s</>\n", webTokenEnv)
+		printOpen(false)
+	case tokenSource == webTokenFromConfig:
+		ccolor.Fprintf(out, " - token: from <green>[web].token</>\n")
 		printOpen(false)
 	case tokenSource == webTokenFromFlag:
 		ccolor.Fprintf(out, " - token: from --token\n")
@@ -255,14 +258,15 @@ const (
 
 	webTokenFromFlag     = "flag"
 	webTokenFromEnv      = "env"
+	webTokenFromConfig   = "config"
 	webTokenGenerated    = "generated"
 	webTokenFromNoSource = ""
 )
 
 // webResolveToken picks the console token and names where it came from: the flag
-// wins, then EGET_WEB_TOKEN. An empty result leaves generation to the caller,
-// which only allows it for a loopback listener.
-func webResolveToken(flagValue string, lookupEnv func(string) (string, bool)) (string, string) {
+// wins, then EGET_WEB_TOKEN, then [web].token. An empty result leaves generation
+// to the caller, which only allows it for a loopback listener.
+func webResolveToken(flagValue, configValue string, lookupEnv func(string) (string, bool)) (string, string) {
 	if token := strings.TrimSpace(flagValue); token != "" {
 		return token, webTokenFromFlag
 	}
@@ -273,7 +277,36 @@ func webResolveToken(flagValue string, lookupEnv func(string) (string, bool)) (s
 			}
 		}
 	}
+	if token := strings.TrimSpace(configValue); token != "" {
+		return token, webTokenFromConfig
+	}
 	return "", webTokenFromNoSource
+}
+
+// webAllowHosts merges [web].allow_host with the comma-separated --allow-host
+// flag, keeping the first spelling of each entry. A "*" entry allows every Host.
+func webAllowHosts(config []string, flagValue string) []string {
+	var out []string
+	seen := map[string]bool{}
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		key := strings.ToLower(value)
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		out = append(out, value)
+	}
+	for _, value := range config {
+		add(value)
+	}
+	for _, value := range splitCommaList(flagValue) {
+		add(value)
+	}
+	return out
 }
 
 // newWebToken returns the token the console bootstraps with. Six random bytes

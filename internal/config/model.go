@@ -107,16 +107,18 @@ type HTTPProxySection struct {
 	Exclude []string `toml:"exclude" mapstructure:"exclude"`
 }
 
-// WebSection holds the defaults for `eget web`. Command flags override it; the
-// access token is deliberately absent — it only ever comes from the CLI or is
-// generated per run.
+// WebSection holds the defaults for `eget web`. Command flags override it. The
+// token may be stored here for a long-lived LAN mirror; it is a plain-text
+// secret, so keep the config file readable only by its owner.
 type WebSection struct {
-	Host           *string `toml:"host" mapstructure:"host"`
-	ReadOnly       *bool   `toml:"read_only" mapstructure:"read_only"`
-	AllowMutations *bool   `toml:"allow_mutations" mapstructure:"allow_mutations"`
-	AutoOpen       *bool   `toml:"auto_open" mapstructure:"auto_open"`
-	CacheRoot      *string `toml:"cache_root" mapstructure:"cache_root"`
-	NoCacheIndex   *bool   `toml:"no_cache_index" mapstructure:"no_cache_index"`
+	Host           *string  `toml:"host" mapstructure:"host"`
+	Token          *string  `toml:"token" mapstructure:"token"`
+	AllowHosts     []string `toml:"allow_host" mapstructure:"allow_host"`
+	ReadOnly       *bool    `toml:"read_only" mapstructure:"read_only"`
+	AllowMutations *bool    `toml:"allow_mutations" mapstructure:"allow_mutations"`
+	AutoOpen       *bool    `toml:"auto_open" mapstructure:"auto_open"`
+	CacheRoot      *string  `toml:"cache_root" mapstructure:"cache_root"`
+	NoCacheIndex   *bool    `toml:"no_cache_index" mapstructure:"no_cache_index"`
 }
 
 type File struct {

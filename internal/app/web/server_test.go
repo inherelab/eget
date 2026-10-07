@@ -266,6 +266,28 @@ func TestWebRejectsUnknownHost(t *testing.T) {
 	assert.Eq(t, http.StatusForbidden, rec.Code)
 }
 
+func TestWebAllowsConfiguredHost(t *testing.T) {
+	server := testServer(t, Options{Token: "secret", AllowHosts: []string{"192.168.1.10"}})
+
+	rec := get(t, server, "/api/overview", func(r *http.Request) {
+		r.Host = "192.168.1.10:8787"
+		r.Header.Set("Authorization", "Bearer secret")
+	})
+
+	assert.Eq(t, http.StatusOK, rec.Code)
+}
+
+func TestWebWildcardHostAllowsAny(t *testing.T) {
+	server := testServer(t, Options{Token: "secret", AllowHosts: []string{"*"}})
+
+	rec := get(t, server, "/api/overview", func(r *http.Request) {
+		r.Host = "mirror.lan:8787"
+		r.Header.Set("Authorization", "Bearer secret")
+	})
+
+	assert.Eq(t, http.StatusOK, rec.Code)
+}
+
 func TestWebRejectsNonLoopbackWithoutToken(t *testing.T) {
 	_, err := NewServer(Deps{}, Options{Host: "0.0.0.0"})
 

@@ -196,10 +196,19 @@ eget web --open                   # 启动后用浏览器打开
 eget web --cache-root sdk --no-cache-index
 ```
 
-默认只监听 `127.0.0.1`。对外提供镜像时必须显式指定监听地址与 token（明文 HTTP，建议放在反向代理之后）：
+默认只监听 `127.0.0.1`。对外提供镜像时必须显式指定监听地址与 token（明文 HTTP，建议放在反向代理之后）；远程客户端还需通过 Host 白名单：用 `--allow-host` 列出它的 IP 或主机名，或用 `[web].allow_host = ["*"]` 允许任意 Host。
 
 ```bash
-eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --json-log
+eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --allow-host 192.168.1.10 --json-log
+```
+
+这些长参数可以收进 `[web]`，之后 `eget web` 即可：
+
+```toml
+[web]
+host = "0.0.0.0"
+token = "<the token>"
+allow_host = ["*"]
 ```
 
 > `eget cache serve` 已删除，能力并入 `eget web`。选项对照（`--root` → `--cache-root`、`--no-index` → `--no-cache-index` 等）与默认值差异见 [docs/web.md](docs/web.md)。
@@ -210,6 +219,7 @@ eget web --host 0.0.0.0 --token "$EGET_WEB_TOKEN" --json-log
 [cache_mirror]
 enable = true
 url = "http://192.168.1.10:8787"
+token = "<the token>"
 ```
 
 ### 查询命令示例
