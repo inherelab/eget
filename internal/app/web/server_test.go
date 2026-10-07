@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -264,6 +265,23 @@ func TestWebRejectsUnknownHost(t *testing.T) {
 	})
 
 	assert.Eq(t, http.StatusForbidden, rec.Code)
+	// The rejected Host is named so the operator knows which allow_host entry
+	// to add.
+	assert.Contains(t, rec.Body.String(), "evil.example.com")
+}
+
+func TestWebLogsRejectedHost(t *testing.T) {
+	var logs bytes.Buffer
+	server := testServer(t, Options{Token: "secret", LogWriter: &logs})
+
+	rec := get(t, server, "/api/overview", func(r *http.Request) {
+		r.Host = "bad.lan:8787"
+		r.Header.Set("Authorization", "Bearer secret")
+	})
+
+	assert.Eq(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, logs.String(), "rejected host")
+	assert.Contains(t, logs.String(), "bad.lan")
 }
 
 func TestWebAllowsConfiguredHost(t *testing.T) {

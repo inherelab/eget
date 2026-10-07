@@ -101,11 +101,16 @@ func (s *Server) securityHeadersMiddleware(c *rux.Context) {
 // hostMiddleware rejects requests whose Host header is not a known local name.
 // This blocks DNS-rebinding attacks against the loopback listener.
 func (s *Server) hostMiddleware(c *rux.Context) {
-	if s.opts.hostAllowed(requestHost(c.Req)) {
+	host := requestHost(c.Req)
+	if s.opts.hostAllowed(host) {
 		c.Next()
 		return
 	}
-	c.AbortWithStatus(http.StatusForbidden, "host not allowed")
+	// The Host header, not the source address, is what failed here; name it so
+	// the operator can add the right --allow-host / [web].allow_host entry.
+	s.logf("rejected host %q from %s (listen host=%q, allow_host=%v)",
+		host, c.Req.RemoteAddr, s.opts.Host, s.opts.AllowHosts)
+	c.AbortWithStatus(http.StatusForbidden, "host not allowed: "+host)
 }
 
 // hostAllowed reports whether a Host header value is accepted. The built-in
