@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	storepkg "github.com/inherelab/eget/internal/installed"
+	"github.com/inherelab/eget/internal/tagfilter"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -13,6 +14,9 @@ var versionTagPattern = regexp.MustCompile(`(?i)(^|[-_/@])v?\d+\.\d+(\.\d+)?([-.
 const (
 	tagPolicyLatest = "latest"
 	tagPolicyTag    = "tag"
+	// tagPolicyPattern follows a tag family (PRE:/SUF:/REG:) and re-resolves the
+	// newest matching release on update, instead of pinning one exact tag.
+	tagPolicyPattern = "pattern"
 )
 
 func trackingTag(tag string) string {
@@ -24,7 +28,7 @@ func trackingTagWithPolicy(tag, policy string) string {
 	switch cleanTagPolicy(policy) {
 	case tagPolicyLatest:
 		return ""
-	case tagPolicyTag:
+	case tagPolicyTag, tagPolicyPattern:
 		return tag
 	}
 	if tag == "" || isVersionTag(tag) {
@@ -35,10 +39,17 @@ func trackingTagWithPolicy(tag, policy string) string {
 
 func tagPolicyForInstall(tag, policy string) string {
 	if policy := cleanTagPolicy(policy); policy != "" {
+		if policy == tagPolicyTag && tagfilter.IsPattern(tag) {
+			return tagPolicyPattern
+		}
 		return policy
 	}
-	if strings.TrimSpace(tag) == "" {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
 		return tagPolicyLatest
+	}
+	if tagfilter.IsPattern(tag) {
+		return tagPolicyPattern
 	}
 	if isVersionTag(tag) {
 		return tagPolicyLatest
@@ -62,7 +73,7 @@ func itemTagPolicy(item ListItem, entry storepkg.Entry) string {
 
 func cleanTagPolicy(policy string) string {
 	switch strings.TrimSpace(policy) {
-	case tagPolicyLatest, tagPolicyTag:
+	case tagPolicyLatest, tagPolicyTag, tagPolicyPattern:
 		return strings.TrimSpace(policy)
 	default:
 		return ""

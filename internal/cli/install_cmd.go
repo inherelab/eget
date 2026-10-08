@@ -36,7 +36,7 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 	cmd := gcli.NewCommand("install", "Install one or more targets")
 	cmd.Aliases = []string{"i", "ins"}
 	cmd.Config = func(c *gcli.Command) {
-		c.StrOpt(&opts.Tag, "tag", "", "", "Release tag")
+		c.StrOpt(&opts.Tag, "tag", "", "", "Release tag, or tag pattern (PRE:/SUF:/REG:), eg v1.2.3 or PRE:app-v")
 		c.StrOpt(&opts.System, "system", "", "", "Target system. eg: linux/amd64")
 		c.StrOpt(&opts.To, "to", "", "", "Install destination")
 		c.StrOpt(&opts.File, "file", "", "", "File to extract, multi use comma split, support glob")
@@ -47,7 +47,7 @@ func newInstallCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.IntOpt(&opts.StripComponents, "strip-components", "", 0, "Strip leading archive path components when extracting all files")
 		c.BoolOpt(&opts.Source, "source", "", false, "Download source archive")
 		c.BoolOpt(&opts.Prerelease, "prerelease", "p", false, "Select latest release including prereleases")
-		c.BoolOpt(&opts.TrackTag, "track-tag", "", false, "Track the selected release tag on updates")
+		c.BoolOpt(&opts.TrackTag, "track-tag", "", false, "Track the selected tag, or tag pattern, on updates")
 		c.BoolOpt(&opts.All, "extract-all", "ea", false, "Extract all files")
 		c.BoolOpt(&opts.InstallAll, "all", "", false, "Install all managed packages from config")
 		c.BoolOpt(&opts.GUI, "gui", "", false, "Install as GUI application")

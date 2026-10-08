@@ -408,7 +408,13 @@ The target argument accepted by `install` and `download` can be:
 
 `install`, `download`, and `add` share these installation-related options:
 
-- `--tag`: Select a release tag; defaults to `latest` when omitted.
+- `--tag`: Select a release tag, or a tag pattern; defaults to `latest` when omitted. A
+  pattern uses the same grammar as `--asset`: `PRE:` / `SUF:` / `REG:`, while a plain value
+  is an anchored prefix (not a substring). A pattern resolves the newest release whose tag
+  matches, which is how a monorepo product is followed when the repository-wide `latest`
+  points at a different product, for example `eget install --tag PRE:cua-driver-rs-v trycua/cua`.
+  Installing with a pattern records `tag_policy = "pattern"`, so `update` re-resolves the
+  newest match. A plain tag is tried as an exact release first, then as an anchored prefix.
 - `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
 - `--to`: Set the install or download output path; accepts either a directory or a full file path.
 - `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`. Exclusions can use `^`, such as `*.exe,^*x86*,^*.sig`; exclude-only expressions such as `^*.sig` match all files except excluded entries. Use `REG:<expr>` for a Go regular-expression include or `^REG:<expr>` for an exclude; regexes match both normalized archive paths and basenames. For 7z-readable `.exe` installers, system 7z is required.
@@ -437,6 +443,7 @@ The target argument accepted by `install` and `download` can be:
 - `--gui`: Install as a GUI application; with `--add`, persist `is_gui = true`. Installer-like assets selected without `--gui` prompt before launch and also persist `is_gui = true` when confirmed with `--add`.
 - `--install-mode portable|installer`: Override GUI install mode for this run. By default, `--gui` treats selected `.exe` / `.msi` files as installers unless the selected asset or extracted file name contains `portable`.
 - `--name`: Override the managed package name; for single executable assets, it also acts as the default output-name hint.
+- `--track-tag`: Persist the selected tag so `update` follows it instead of the repository `latest`. A version tag is pinned to that exact tag; a tag pattern re-resolves the newest match.
 
 `update` options:
 

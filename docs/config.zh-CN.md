@@ -339,7 +339,8 @@ strip_components = 1
 - `repo`: package 来源。支持 GitHub 风格 `owner/repo`、直接 URL、SourceForge、已支持的 forge 前缀和 `template:<id>`。
 - `target`: 当前 package 的安装目录。
 - `system`: 当前 package 的目标平台，格式为 `GOOS/GOARCH`。
-- `tag`: 版本 tag 或 release tag 偏好。
+- `tag`: 版本 tag 或 release tag 偏好。也可以是标签模式（`PRE:` / `SUF:` / `REG:`；普通值为锚定前缀），会解析出标签匹配的最新 release，适合标签共享前缀的 monorepo 产品。
+- `tag_policy`: `update` 如何使用 `tag`。`latest` 跟随仓库级最新，`tag` 钉住精确标签，`pattern` 重新解析匹配模式的最新标签。
 - `source_path`: SourceForge files 路径过滤，例如 `stable`。
 - `file`: 文件过滤或输出文件名，具体语义取决于命令上下文。
 - `asset_filters`: 用于匹配 release asset 的子串列表。

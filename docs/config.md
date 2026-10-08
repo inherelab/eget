@@ -347,7 +347,11 @@ Common fields:
 - `repo`: package source. Supports GitHub-style `owner/repo`, direct URLs, SourceForge, supported forge prefixes, and `template:<id>`.
 - `target`: install directory for this package.
 - `system`: package-specific target platform in `GOOS/GOARCH` form.
-- `tag`: version tag or release tag preference.
+- `tag`: version tag or release tag preference. It may also be a tag pattern (`PRE:` /
+  `SUF:` / `REG:`; a plain value is an anchored prefix), which resolves the newest
+  matching release; useful for a monorepo product whose tags share a prefix.
+- `tag_policy`: how `update` treats `tag`. `latest` follows the repository-wide latest,
+  `tag` pins that exact tag, and `pattern` re-resolves the newest tag matching the pattern.
 - `source_path`: SourceForge files path filter, for example `stable`.
 - `file`: file filter or output filename depending on command context.
 - `asset_filters`: substrings used to match release assets.
