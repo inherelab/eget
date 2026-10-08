@@ -194,6 +194,26 @@ func TestShowPackageUsesConfiguredGUIFields(t *testing.T) {
 	assert.Eq(t, "portable", got.InstallMode)
 }
 
+func TestShowPackageReportsTagPolicy(t *testing.T) {
+	store := &storepkg.Config{Installed: map[string]storepkg.Entry{
+		"trycua/cua": {
+			Repo:    "trycua/cua",
+			Target:  "trycua/cua",
+			Tag:     "PRE:cua-driver-rs-v",
+			Options: map[string]any{"tag": "PRE:cua-driver-rs-v", "tag_policy": "pattern"},
+		},
+	}}
+	svc := ShowService{
+		LoadConfig:    func() (*cfgpkg.File, error) { return cfgpkg.NewFile(), nil },
+		LoadInstalled: func() (*storepkg.Config, error) { return store, nil },
+	}
+
+	got, err := svc.ShowPackage("trycua/cua")
+	assert.NoErr(t, err)
+	assert.Eq(t, "pattern", got.TagPolicy)
+	assert.Eq(t, "PRE:cua-driver-rs-v", got.Tag)
+}
+
 func TestShowPackageReturnsErrorForMissingTarget(t *testing.T) {
 	svc := ShowService{
 		LoadConfig: func() (*cfgpkg.File, error) {

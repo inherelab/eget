@@ -29,6 +29,7 @@ type ShowResult struct {
 	InstallTarget  string
 	Version        string
 	Tag            string
+	TagPolicy      string
 	InstalledAt    time.Time
 	UpdatedAt      time.Time
 	Asset          string
@@ -71,6 +72,7 @@ func (s ShowService) ShowPackage(target string) (ShowResult, error) {
 			result.IsGUI = *pkg.IsGUI
 		}
 		result.InstallMode = util.DerefString(pkg.InstallMode)
+		result.TagPolicy = util.DerefString(pkg.TagPolicy)
 	}
 	if installedOK {
 		applyInstalledEntryToShowResult(&result, entry)
@@ -152,6 +154,7 @@ func applyInstalledEntryToShowResult(result *ShowResult, entry storepkg.Entry) {
 	result.InstallTarget = entry.Target
 	result.Version = firstNonEmpty(entry.Version, entry.Tag)
 	result.Tag = entry.Tag
+	result.TagPolicy = firstNonEmpty(installedTagPolicy(entry), result.TagPolicy)
 	result.InstalledAt = entry.InstalledAt
 	result.UpdatedAt = entry.UpdatedAt
 	result.Asset = entry.Asset

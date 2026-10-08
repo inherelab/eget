@@ -58,6 +58,7 @@ type showResultDisplay struct {
 	InstallTarget  string         `mapstructure:"InstallTarget"`
 	Version        string         `mapstructure:"Version"`
 	Tag            string         `mapstructure:"Tag"`
+	TagPolicy      string         `mapstructure:"TagPolicy"`
 	InstalledAt    string         `mapstructure:"InstalledAt"`
 	UpdatedAt      string         `mapstructure:"UpdatedAt"`
 	Asset          string         `mapstructure:"Asset"`
@@ -219,6 +220,7 @@ func ShowResultToDisplay(result app.ShowResult) showResultDisplay {
 		InstallTarget:  result.InstallTarget,
 		Version:        result.Version,
 		Tag:            result.Tag,
+		TagPolicy:      result.TagPolicy,
 		InstalledAt:    CompactTime(result.InstalledAt),
 		UpdatedAt:      CompactTime(result.UpdatedAt),
 		Asset:          result.Asset,

@@ -415,6 +415,9 @@ The target argument accepted by `install` and `download` can be:
   points at a different product, for example `eget install --tag PRE:cua-driver-rs-v trycua/cua`.
   Installing with a pattern records `tag_policy = "pattern"`, so `update` re-resolves the
   newest match. A plain tag is tried as an exact release first, then as an anchored prefix.
+  A stable match is preferred; when a product only publishes prereleases (common in a
+  monorepo, which marks them prerelease to protect the repository-wide Latest pointer) the
+  newest prerelease is used, so a tag pattern does not need `-p`.
 - `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
 - `--to`: Set the install or download output path; accepts either a directory or a full file path.
 - `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`. Exclusions can use `^`, such as `*.exe,^*x86*,^*.sig`; exclude-only expressions such as `^*.sig` match all files except excluded entries. Use `REG:<expr>` for a Go regular-expression include or `^REG:<expr>` for an exclude; regexes match both normalized archive paths and basenames. For 7z-readable `.exe` installers, system 7z is required.

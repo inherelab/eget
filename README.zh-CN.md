@@ -407,7 +407,7 @@ eget config set global.target ~/.local/bin
 
 `install`、`download`、`add` 共享这些安装相关选项：
 
-- `--tag`: 指定发布版本标签，或标签模式；未提供时默认使用 `latest`。模式与 `--asset` 语法一致：`PRE:` / `SUF:` / `REG:`，普通值按锚定的前缀匹配（非子串包含）。标签模式会解析出标签匹配的最新 release，适合 monorepo 产品（仓库级 `latest` 指向别的产品时），例如 `eget install --tag PRE:cua-driver-rs-v trycua/cua`。使用模式安装会记录 `tag_policy = "pattern"`，因此 `update` 会重新解析最新匹配。普通标签会先尝试精确 release，再退化为锚定前缀匹配。
+- `--tag`: 指定发布版本标签，或标签模式；未提供时默认使用 `latest`。模式与 `--asset` 语法一致：`PRE:` / `SUF:` / `REG:`，普通值按锚定的前缀匹配（非子串包含）。标签模式会解析出标签匹配的最新 release，适合 monorepo 产品（仓库级 `latest` 指向别的产品时），例如 `eget install --tag PRE:cua-driver-rs-v trycua/cua`。使用模式安装会记录 `tag_policy = "pattern"`，因此 `update` 会重新解析最新匹配。普通标签会先尝试精确 release，再退化为锚定前缀匹配。优先匹配稳定版；若该产品只发布 pre-release（monorepo 常见做法，为保护仓库级 Latest 指针），会回退到最新 pre-release，因此标签模式不再需要 `-p`。
 - `--system`: 指定目标系统与架构，例如 `windows/amd64`、`linux/arm64`。
 - `--to`: 指定安装或下载输出路径；可传目录，也可传完整文件路径。
 - `--file`: 指定归档内要提取的文件；支持逗号分隔多个文件或 glob 模式，例如 `README.md,LICENSE`。排除可用 `^`，例如 `*.exe,^*x86*,^*.sig`；只有排除项时（如 `^*.sig`）表示匹配除被排除条目外的全部文件。使用 `REG:<expr>` 添加 Go 正则包含规则，使用 `^REG:<expr>` 添加正则排除规则；正则同时匹配规范化后的归档路径和 basename。对 7z 可读取的 `.exe` 安装包使用时，需要系统 7z。
