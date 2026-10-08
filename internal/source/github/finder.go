@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/inherelab/eget/internal/tagfilter"
 )
 
 var verboseWriter io.Writer = os.Stderr
@@ -95,6 +97,11 @@ func (f *AssetFinder) Find() ([]string, error) {
 	if f.Getter == nil {
 		return nil, fmt.Errorf("github getter is required")
 	}
+	// A tag pattern never names a concrete release, so skip the exact-tag
+	// lookup and go straight to the release scan.
+	if tagfilter.IsPattern(strings.TrimPrefix(f.Tag, "tags/")) {
+		return f.FindMatch()
+	}
 	if f.Prerelease && f.Tag == "latest" {
 		tag, err := f.getLatestTag()
 		if err != nil {
@@ -149,11 +156,26 @@ func (f *AssetFinder) ReleaseVersion() string {
 	return f.tag
 }
 
+// FindMatch scans releases newest-first and returns the first whose tag
+// satisfies the filter. Unlike a plain substring match, a bare filter anchors
+// at the tag prefix so it cannot select an unrelated product's release inside a
+// monorepo.
+//
+// A stable tag is preferred. When only prerelease tags match — common when a
+// monorepo marks each product release prerelease so the repository-wide Latest
+// pointer does not jump between products — the newest prerelease is used.
 func (f *AssetFinder) FindMatch() ([]string, error) {
 	if f.Getter == nil {
 		return nil, fmt.Errorf("github getter is required")
 	}
-	tag := strings.TrimPrefix(f.Tag, "tags/")
+	raw := strings.TrimPrefix(f.Tag, "tags/")
+	matcher, err := tagfilter.Parse(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	var newestAny, newestStable *Release
+	staleMatch := false
 
 	for page := 1; ; page++ {
 		url := fmt.Sprintf("https://api.github.com/repos/%s/releases?page=%d", f.Repo, page)
@@ -162,10 +184,10 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			if err != nil {
 				return nil, err
 			}
@@ -173,6 +195,7 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 		}
 
 		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			return nil, err
 		}
@@ -183,13 +206,22 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 			return nil, err
 		}
 
-		for _, r := range releases {
-			if !f.Prerelease && r.Prerelease {
+		for i := range releases {
+			r := releases[i]
+			if !matcher.Match(r.Tag) {
 				continue
 			}
-			if strings.Contains(r.Tag, tag) && !r.CreatedAt.Before(f.MinTime) {
-				f.storeReleaseAssets(r.Assets)
-				return releaseAssetURLs(r.Assets), nil
+			if !f.MinTime.IsZero() && r.CreatedAt.Before(f.MinTime) {
+				staleMatch = true
+				continue
+			}
+			if newestAny == nil {
+				candidate := r
+				newestAny = &candidate
+			}
+			if !r.Prerelease && newestStable == nil {
+				candidate := r
+				newestStable = &candidate
 			}
 		}
 
@@ -198,7 +230,23 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no matching tag for '%s'", tag)
+	chosen := newestAny
+	if !f.Prerelease && newestStable != nil {
+		chosen = newestStable
+	}
+	if chosen == nil {
+		if staleMatch {
+			return nil, ErrNoUpgrade
+		}
+		return nil, fmt.Errorf("no matching tag for '%s'", raw)
+	}
+	if !f.Prerelease && newestStable == nil {
+		verbosef("github finder: only prerelease tags match %q; using %s", raw, chosen.Tag)
+	}
+
+	f.tag = chosen.Tag
+	f.storeReleaseAssets(chosen.Assets)
+	return releaseAssetURLs(chosen.Assets), nil
 }
 
 func (f *AssetFinder) getLatestTag() (string, error) {
