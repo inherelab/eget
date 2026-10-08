@@ -162,6 +162,19 @@ func TestResolveCandidateKeepsPromptWhenPreviousVariantDiffersByNumberedFeature(
 	assert.True(t, prompted)
 }
 
+func TestResolveCandidateErrorListsCandidatesWithoutPrompt(t *testing.T) {
+	runner := &InstallRunner{Stderr: io.Discard}
+
+	_, err := runner.resolveCandidate("trycua/cua", []string{
+		"https://github.com/trycua/cua/releases/download/cua-driver-rs-v0.34.0/cua-driver-rs-0.34.0-windows-x86_64.zip",
+		"https://github.com/trycua/cua/releases/download/cua-driver-rs-v0.34.0/cua-driver-rs-0.34.0-windows-x86_64-binary.zip",
+	}, Options{System: "windows/amd64"}, "cua-driver-rs-v0.34.0")
+
+	assert.True(t, err != nil)
+	assert.Contains(t, err.Error(), "2 candidates found")
+	assert.Contains(t, err.Error(), "cua-driver-rs-0.34.0-windows-x86_64-binary.zip")
+}
+
 func TestResolveCandidateKeepsPromptForNonToolchainWindowsVariants(t *testing.T) {
 	runner := &InstallRunner{Stderr: io.Discard}
 	prompted := false

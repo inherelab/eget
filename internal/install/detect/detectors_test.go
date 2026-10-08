@@ -20,6 +20,8 @@ func TestReleaseAssetMetadataClassification(t *testing.T) {
 		{name: "signature", asset: "tool.exe.sig", metadata: true},
 		{name: "ascii signature", asset: "tool.tar.gz.asc", metadata: true},
 		{name: "minisig", asset: "tool.tar.gz.minisig", metadata: true},
+		{name: "sigstore json", asset: "tool-x86_64.zip.sigstore.json", metadata: true},
+		{name: "sigstore", asset: "tool-x86_64.zip.sigstore", metadata: true},
 		{name: "sbom", asset: "tool.zip.sbom.json", metadata: true},
 		{name: "spdx", asset: "tool.spdx.json", metadata: true},
 		{name: "cyclonedx", asset: "tool.cyclonedx.json", metadata: true},

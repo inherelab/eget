@@ -290,7 +290,9 @@ func classifyReleaseAsset(asset string) releaseAssetKind {
 		strings.HasSuffix(name, ".pem") ||
 		strings.HasSuffix(name, ".crt") ||
 		strings.HasSuffix(name, ".cert") ||
-		strings.HasSuffix(name, ".gpg"):
+		strings.HasSuffix(name, ".gpg") ||
+		strings.HasSuffix(name, ".sigstore") ||
+		strings.HasSuffix(name, ".sigstore.json"):
 		return releaseAssetSignature
 	default:
 		return releaseAssetInstallable

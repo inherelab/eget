@@ -77,7 +77,7 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string, opt
 		return candidates[0], nil
 	}
 	if r.Prompt == nil {
-		return "", fmt.Errorf("%d candidates found for asset chain", len(candidates))
+		return "", fmt.Errorf("%d candidates found for asset chain: %s", len(candidates), strings.Join(candidateBaseNames(candidates), ", "))
 	}
 
 	choices := make([]string, len(candidates))
@@ -95,6 +95,18 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string, opt
 		return "", fmt.Errorf("selection %d is out of bounds", choice)
 	}
 	return candidates[choice], nil
+}
+
+func candidateBaseNames(candidates []string) []string {
+	names := make([]string, len(candidates))
+	for i, candidate := range candidates {
+		name := path.Base(candidate)
+		if decoded, err := url.PathUnescape(name); err == nil {
+			name = decoded
+		}
+		names[i] = name
+	}
+	return names
 }
 
 func promptReleaseVersion(finder Finder) string {
