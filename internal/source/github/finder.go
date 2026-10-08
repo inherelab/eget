@@ -29,6 +29,13 @@ type HTTPGetter interface {
 	Get(url string) (*http.Response, error)
 }
 
+// HTTPGetterFunc adapts a plain function to HTTPGetter.
+type HTTPGetterFunc func(url string) (*http.Response, error)
+
+func (f HTTPGetterFunc) Get(url string) (*http.Response, error) {
+	return f(url)
+}
+
 type Finder interface {
 	Find() ([]string, error)
 }
@@ -154,6 +161,31 @@ func (f *AssetFinder) Find() ([]string, error) {
 
 func (f *AssetFinder) ReleaseVersion() string {
 	return f.tag
+}
+
+// ResolveTag resolves a tag, or a tag pattern, to a concrete release tag. An
+// empty tag resolves the repository's latest release and a pattern resolves the
+// newest matching release, so callers such as `query` accept the same tag
+// grammar as an install without selecting an asset.
+func ResolveTag(repo, tag string, prerelease bool, getter HTTPGetter) (string, error) {
+	finder := NewAssetFinder(repo, finderTag(tag), prerelease, time.Time{})
+	finder.Getter = getter
+	if _, err := finder.Find(); err != nil {
+		return "", err
+	}
+	resolved := finder.ReleaseVersion()
+	if resolved == "" {
+		return "", fmt.Errorf("no matching tag for '%s'", strings.TrimSpace(tag))
+	}
+	return resolved, nil
+}
+
+func finderTag(tag string) string {
+	tag = strings.TrimSpace(tag)
+	if tag == "" || tag == "latest" {
+		return "latest"
+	}
+	return "tags/" + tag
 }
 
 // FindMatch scans releases newest-first and returns the first whose tag

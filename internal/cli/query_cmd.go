@@ -38,7 +38,7 @@ Direct URLs show HTTP file metadata. SourceForge targets support latest, release
 
 	cmd.Config = func(c *gcli.Command) {
 		c.StrOpt(&opts.Action, "action", "a", "latest", "Query action: latest, releases, assets, info")
-		c.StrOpt(&opts.Tag, "tag", "t", "", "Release tag for assets action")
+		c.StrOpt(&opts.Tag, "tag", "t", "", "Release tag or tag pattern for assets action")
 		c.IntOpt(&opts.Limit, "limit", "l", 10, "Limit release count for releases action")
 		c.BoolOpt(&opts.JSON, "json", "j", false, "Output as JSON")
 		c.BoolOpt(&opts.Prerelease, "prerelease", "p", false, "Include prerelease entries")

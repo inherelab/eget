@@ -41,6 +41,7 @@ type QueryClient interface {
 	RepoInfo(repo string) (QueryRepoInfo, error)
 	LatestRelease(repo string, includePrerelease bool) (QueryRelease, error)
 	ListReleases(repo string, limit int, includePrerelease bool) ([]QueryRelease, error)
+	ResolveTag(repo, tag string, includePrerelease bool) (string, error)
 	ReleaseAssets(repo, tag string) ([]QueryAsset, error)
 }
 
@@ -116,6 +117,10 @@ func (s QueryService) Query(opts QueryOptions) (QueryResult, error) {
 				return QueryResult{}, err
 			}
 			tag = latest.Tag
+		} else if resolved, err := s.Client.ResolveTag(repo, tag, opts.Prerelease); err != nil {
+			return QueryResult{}, err
+		} else {
+			tag = resolved
 		}
 		assets, err := s.Client.ReleaseAssets(repo, tag)
 		if err != nil {

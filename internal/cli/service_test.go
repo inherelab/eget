@@ -338,6 +338,16 @@ func (f *fakeQueryClientForCLI) ListReleases(repo string, limit int, includePrer
 	return f.releases, nil
 }
 
+func (f *fakeQueryClientForCLI) ResolveTag(repo, tag string, includePrerelease bool) (string, error) {
+	if tag != "" {
+		return tag, nil
+	}
+	if len(f.releases) == 0 {
+		return "", nil
+	}
+	return f.releases[0].Tag, nil
+}
+
 func (f *fakeQueryClientForCLI) ReleaseAssets(repo, tag string) ([]app.QueryAsset, error) {
 	return f.assets, nil
 }

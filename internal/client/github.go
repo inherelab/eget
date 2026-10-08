@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	sourcegithub "github.com/inherelab/eget/internal/source/github"
 )
 
 type HTTPGetFunc func(url string, opts Options) (*http.Response, error)
@@ -221,6 +223,15 @@ func (c *GitHubClient) ListReleases(repo string, limit int, includePrerelease bo
 		}
 	}
 	return items, nil
+}
+
+// ResolveTag resolves a tag, or a tag pattern (PRE:/SUF:/REG:), to a concrete
+// release tag, reusing the installer's tag-matching semantics.
+func (c *GitHubClient) ResolveTag(repo, tag string, includePrerelease bool) (string, error) {
+	getter := sourcegithub.HTTPGetterFunc(func(rawURL string) (*http.Response, error) {
+		return c.get(rawURL, c.opts)
+	})
+	return sourcegithub.ResolveTag(repo, tag, includePrerelease, getter)
 }
 
 func (c *GitHubClient) ReleaseAssets(repo, tag string) ([]Asset, error) {

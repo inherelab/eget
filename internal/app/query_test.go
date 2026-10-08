@@ -10,16 +10,18 @@ import (
 )
 
 type fakeQueryClient struct {
-	repoInfo    QueryRepoInfo
-	releases    []QueryRelease
-	assets      []QueryAsset
-	repoCalls   int
-	latestCalls int
-	listCalls   int
-	assetCalls  int
-	lastRepo    string
-	lastTag     string
-	lastLimit   int
+	repoInfo     QueryRepoInfo
+	releases     []QueryRelease
+	assets       []QueryAsset
+	resolvedTag  string
+	repoCalls    int
+	latestCalls  int
+	listCalls    int
+	assetCalls   int
+	resolveCalls int
+	lastRepo     string
+	lastTag      string
+	lastLimit    int
 }
 
 func (f *fakeQueryClient) RepoInfo(repo string) (QueryRepoInfo, error) {
@@ -39,6 +41,16 @@ func (f *fakeQueryClient) ListReleases(repo string, limit int, includePrerelease
 	f.lastRepo = repo
 	f.lastLimit = limit
 	return f.releases, nil
+}
+
+func (f *fakeQueryClient) ResolveTag(repo, tag string, includePrerelease bool) (string, error) {
+	f.resolveCalls++
+	f.lastRepo = repo
+	f.lastTag = tag
+	if f.resolvedTag != "" {
+		return f.resolvedTag, nil
+	}
+	return tag, nil
 }
 
 func (f *fakeQueryClient) ReleaseAssets(repo, tag string) ([]QueryAsset, error) {
@@ -300,6 +312,28 @@ func TestQueryServiceAssetsUsesLatestTagWhenMissing(t *testing.T) {
 	}
 	if result.Tag != "v1.2.3" {
 		t.Fatalf("expected resolved tag v1.2.3, got %q", result.Tag)
+	}
+}
+
+func TestQueryServiceAssetsResolvesTagPattern(t *testing.T) {
+	client := &fakeQueryClient{
+		resolvedTag: "cua-driver-rs-v0.34.0",
+		assets:      []QueryAsset{{Name: "cua-driver-rs-0.34.0-windows-x86_64-binary.zip"}},
+	}
+	svc := QueryService{Client: client}
+
+	result, err := svc.Query(QueryOptions{Repo: "trycua/cua", Action: "assets", Tag: "PRE:cua-driver-rs-v"})
+	if err != nil {
+		t.Fatalf("Query(): %v", err)
+	}
+	if client.resolveCalls != 1 {
+		t.Fatalf("expected ResolveTag call, got %d", client.resolveCalls)
+	}
+	if client.assetCalls != 1 || client.lastTag != "cua-driver-rs-v0.34.0" {
+		t.Fatalf("expected ReleaseAssets on the resolved tag, got calls=%d tag=%q", client.assetCalls, client.lastTag)
+	}
+	if result.Tag != "cua-driver-rs-v0.34.0" {
+		t.Fatalf("expected resolved tag in result, got %q", result.Tag)
 	}
 }
 
