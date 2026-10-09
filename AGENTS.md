@@ -10,16 +10,6 @@
 - 当前项目的文件路径输出，不要包含绝对路径，只需相对路径
 - 没有明确指定时，如果当前功能改动涉及的逻辑文件超过3个或者超过100行代码，需要向用户确认后再实施
 
-## 正在进行的工作
-
-> **IMPORTANT**: 需要实时更新，正在进行的工作和关键md文档链接；**已完成的需要移除**，不能一直累计，总数不能超过10条。
-
-<!-- PROCESSING WORKS:START -->
-
-- eget web 控制台（多阶段）：M1a/M1b/M2/M3 已完成（服务骨架 + 只读与写入 API、缓存镜像接管并删除 `eget cache serve`、任务引擎 + SSE + `tasks.json` 持久化、更新/卸载/安装/SDK/配置编辑、Vite/React 前端与 embed 产物）。M4 剩余：cache 文件服务的 symlink TOCTOU 加固、CLI 侧静默安装器参数。设计：`docs/superpowers/specs/2026-09-23-web-console-design.md`，使用：`docs/web.md`，rux 反馈：`docs/superpowers/notes/2026-09-23-rux-v2-feedback.md`。
-
-<!-- PROCESSING WORKS:END -->
-
 ## 核心原则
 
 **权衡：** 这些指南倾向于谨慎而非速度。对于琐碎任务，使用判断。
