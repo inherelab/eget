@@ -37,9 +37,14 @@ jobs:
       with:
         go-version: ${{ matrix.go_version }}
 
+    # staticcheck 2026.2.1, pinned by reviewdog/action-staticcheck@v1, cannot
+    # read the export data Go 1.27.2 writes: every run fails with
+    # "internal error in importing ... export data version 5 is greater than
+    # maximum supported version 4" for stdlib packages. go.mod targets Go 1.25,
+    # so lint on that leg and leave the stable leg to build and test.
     - name: Run staticcheck
       uses: reviewdog/action-staticcheck@v1
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == 'stable' }}
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == '1.25' }}
       with:
         github_token: ${{ secrets.github_token }}
         # Change reviewdog reporter if you need [github-pr-check,github-check,github-pr-review].
