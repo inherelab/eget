@@ -220,6 +220,28 @@ ignore_update_packages = ["fzf", "rg"]
 	assert.Eq(t, []string{"fzf", "rg"}, cfg.Global.IgnoreUpdatePackages)
 }
 
+func TestLoadFileReadsPackageIgnoreUpdate(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+
+	writeTestFile(t, configPath, `
+[packages.vault]
+repo = "https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip"
+ignore_update = true
+
+[packages.rg]
+repo = "BurntSushi/ripgrep"
+`)
+
+	cfg, err := LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	assert.True(t, *cfg.Packages["vault"].IgnoreUpdate)
+	assert.Nil(t, cfg.Packages["rg"].IgnoreUpdate)
+}
+
 func TestLoadFileReadsSDKSections(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")

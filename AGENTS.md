@@ -16,6 +16,7 @@
 
 <!-- PROCESSING WORKS:START -->
 
+- 按 package 配置忽略更新检查（gh#61）：新增 `[packages.<name>] ignore_update`，静态 URL 包不再报 `installed tag is empty`；显式 `eget update <name>` 给跳过提示。计划：`docs/superpowers/plans/2026-10-09-package-ignore-update.md`。
 - eget web 控制台（多阶段）：M1a/M1b/M2/M3 已完成（服务骨架 + 只读与写入 API、缓存镜像接管并删除 `eget cache serve`、任务引擎 + SSE + `tasks.json` 持久化、更新/卸载/安装/SDK/配置编辑、Vite/React 前端与 embed 产物）。M4 剩余：cache 文件服务的 symlink TOCTOU 加固、CLI 侧静默安装器参数。设计：`docs/superpowers/specs/2026-09-23-web-console-design.md`，使用：`docs/web.md`，rux 反馈：`docs/superpowers/notes/2026-09-23-rux-v2-feedback.md`。
 
 <!-- PROCESSING WORKS:END -->

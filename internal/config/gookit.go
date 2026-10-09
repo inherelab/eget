@@ -267,7 +267,7 @@ func normalizePathValue(key string, value any) (any, bool) {
 		}
 		return text, true
 	case "extract_all", "is_gui", "download_only", "quiet", "show_hash", "download_source", "upgrade_only", "disable_ssl", "enable", "enabled", "fallback",
-		"read_only", "allow_mutations", "auto_open", "no_cache_index":
+		"read_only", "allow_mutations", "auto_open", "no_cache_index", "ignore_update":
 		parsed, err := strconv.ParseBool(text)
 		if err != nil {
 			return nil, false
@@ -345,6 +345,9 @@ func sectionToMap(section Section) map[string]any {
 	}
 	if section.GuiTarget != nil {
 		data["gui_target"] = *section.GuiTarget
+	}
+	if section.IgnoreUpdate != nil {
+		data["ignore_update"] = *section.IgnoreUpdate
 	}
 	if len(section.IgnoreUpdatePackages) > 0 {
 		data["ignore_update_packages"] = append([]string(nil), section.IgnoreUpdatePackages...)

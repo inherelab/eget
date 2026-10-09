@@ -455,6 +455,36 @@ func TestSetByPathSupportsGlobalIgnoreUpdatePackages(t *testing.T) {
 	assert.Eq(t, []string{"fzf", "rg"}, cfg.Global.IgnoreUpdatePackages)
 }
 
+func TestDumpConfigStringIncludesPackageIgnoreUpdate(t *testing.T) {
+	cfg := NewFile()
+	cfg.Packages["vault"] = Section{
+		Repo:         stringPtr("https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip"),
+		IgnoreUpdate: boolPtr(true),
+	}
+
+	text, err := dumpConfigString(cfg)
+	if err != nil {
+		t.Fatalf("dump config string: %v", err)
+	}
+
+	assert.Contains(t, text, "ignore_update = true")
+}
+
+func TestSetByPathSupportsPackageIgnoreUpdate(t *testing.T) {
+	cfg := NewFile()
+
+	if err := SetByPath(cfg, "packages.vault.ignore_update", "true"); err != nil {
+		t.Fatalf("set packages.vault.ignore_update: %v", err)
+	}
+
+	value, ok := GetByPath(cfg, "packages.vault.ignore_update")
+	if !ok {
+		t.Fatal("expected packages.vault.ignore_update to be set")
+	}
+	assert.Eq(t, true, value)
+	assert.True(t, *cfg.Packages["vault"].IgnoreUpdate)
+}
+
 func TestSetByPathSupportsGlobalSys7zPath(t *testing.T) {
 	cfg := NewFile()
 

@@ -12,6 +12,7 @@ type Section struct {
 	File                 *string           `toml:"file" mapstructure:"file"`
 	GithubToken          *string           `toml:"github_token" mapstructure:"github_token"`
 	GuiTarget            *string           `toml:"gui_target" mapstructure:"gui_target"`
+	IgnoreUpdate         *bool             `toml:"ignore_update" mapstructure:"ignore_update"`
 	IgnoreUpdatePackages []string          `toml:"ignore_update_packages,omitempty" mapstructure:"ignore_update_packages"`
 	IsGUI                *bool             `toml:"is_gui" mapstructure:"is_gui"`
 	ExtPackageMode       *string           `toml:"ext_package_mode,omitempty" mapstructure:"ext_package_mode"`
