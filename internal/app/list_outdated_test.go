@@ -106,6 +106,40 @@ func TestListOutdatedPackagesIgnoresConfiguredPackageNames(t *testing.T) {
 	assert.Eq(t, "rg", items[0].Name)
 }
 
+func TestListOutdatedPackagesIgnoresPackageIgnoreUpdate(t *testing.T) {
+	staticURL := "https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip"
+	svc := ListService{
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["vault"] = cfgpkg.Section{
+				Repo:         util.StringPtr(staticURL),
+				IgnoreUpdate: util.BoolPtr(true),
+			}
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				staticURL:           {Repo: staticURL, Target: "vault"},
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			if target.Repo == staticURL {
+				t.Fatal("expected ignored package vault not to be checked")
+			}
+			return LatestInfo{Tag: "v14.0.0"}, nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListOutdatedPackages()
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "rg", items[0].Name)
+}
+
 func TestListOutdatedPackagesSkipsFailedChecks(t *testing.T) {
 	now := time.Unix(1710000000, 0).UTC()
 	svc := ListService{

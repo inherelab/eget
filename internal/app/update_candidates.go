@@ -62,6 +62,12 @@ func (s UpdateService) externalCandidates(cfg *cfgpkg.File) ([]OutdatedItem, []O
 	return outdated, failures, checked, nil
 }
 
+func (s UpdateService) notifyIgnoredTarget(name string) {
+	if s.OnIgnoredTarget != nil {
+		s.OnIgnoredTarget(name)
+	}
+}
+
 func sortOutdatedItems(items []OutdatedItem) {
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Name != items[j].Name {
@@ -108,6 +114,13 @@ func (s UpdateService) ListUpdateCandidatesForTargets(targets []string) ([]Outda
 			return nil, nil, 0, fmt.Errorf("update target %q is not installed; use install first", target)
 		}
 		enrichListItemFromInstalledEntry(&item, entry)
+		if item.IgnoreUpdate {
+			// Batch paths skip ignored items silently inside
+			// checkOutdatedItems; an explicitly named target gets a notice
+			// so the run does not look like a no-op for no reason.
+			s.notifyIgnoredTarget(item.Name)
+			continue
+		}
 		key := item.Name
 		if key == "" {
 			key = item.Repo

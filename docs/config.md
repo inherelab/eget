@@ -157,7 +157,7 @@ Fields:
 - `sys7z_path`: optional 7z executable path. When empty, eget searches `PATH` for `7z`, `7zz`, then `7za`.
 - `chunk_concurrency`: default remote download chunk concurrency. `0` means the built-in default behavior.
 - `batch_concurrency`: default concurrency for batch package operations and outdated checks. `0` auto-selects up to 6 workers, `1` forces serial execution, and values greater than `1` use that many workers up to the package count.
-- `ignore_update_packages`: package names skipped by `list --outdated`, `update --check`, and `update --all`.
+- `ignore_update_packages`: package names skipped by `list --outdated`, `update --check`, and `update --all`. A package can opt out on its own with `ignore_update = true` in its own section, which is easier to share as one block.
 - `sdk_target`: SDK installation root. Relative SDK `target` values are resolved under this root.
 - `sdk_ext_map`: default SDK archive extension map by Go OS name. SDK-level `ext_map` overrides it.
 - `ext_package_mode`: whether packages owned by external managers take part in `list` and `update`. `off` (default) keeps the current behavior and starts no manager process; `on` makes both commands include every configured manager, as if `--with-ext all` was passed. Any other value is an error.
@@ -362,6 +362,7 @@ Common fields:
 - `install_mode`: optional GUI install mode. With `is_gui = true`, selected `.exe` and `.msi` files default to `installer` unless the selected asset or extracted file name contains `portable`. Set `portable` or `installer` here to override detection for a package; for one-off installs, use `install --gui --install-mode portable|installer ...`.
 - `quiet`: reduce output for this package.
 - `upgrade_only`: only update when an installed package already exists.
+- `ignore_update`: skip this package in `list --outdated`, `update --check`, and `update --all`. Useful for static URL packages that have no tag information to compare. An explicit `eget update <name>` on such a package reports the skip instead of checking and failing it.
 
 Legacy direct sections are also supported:
 

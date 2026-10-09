@@ -69,6 +69,50 @@ func TestListUpdateCandidatesIncludesInstalledOnlyEntries(t *testing.T) {
 	assert.Eq(t, "v0.24.0", items[0].LatestTag)
 }
 
+func TestListUpdateCandidatesForTargetsNotifiesIgnoredTarget(t *testing.T) {
+	ignored := make([]string, 0, 1)
+	checkedRepos := make([]string, 0, 2)
+	var checkedMu sync.Mutex
+	svc := UpdateService{
+		OnIgnoredTarget: func(name string) {
+			ignored = append(ignored, name)
+		},
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["vault"] = cfgpkg.Section{
+				Repo:         util.StringPtr("https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip"),
+				IgnoreUpdate: util.BoolPtr(true),
+			}
+			cfg.Packages["rg"] = cfgpkg.Section{Repo: util.StringPtr("BurntSushi/ripgrep")}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				"https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip": {
+					Repo:   "https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip",
+					Target: "vault",
+				},
+				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			checkedMu.Lock()
+			checkedRepos = append(checkedRepos, target.Repo)
+			checkedMu.Unlock()
+			return LatestInfo{Tag: "v14.0.0"}, nil
+		},
+	}
+
+	items, failures, checked, err := svc.ListUpdateCandidatesForTargets([]string{"vault", "rg"})
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, checked)
+	assert.Eq(t, 0, len(failures))
+	assert.Eq(t, 1, len(items))
+	assert.Eq(t, "rg", items[0].Name)
+	assert.Eq(t, []string{"vault"}, ignored)
+	assert.Eq(t, []string{"BurntSushi/ripgrep"}, checkedRepos)
+}
+
 func TestListUpdateCandidatesForTargetsChecksOnlyRequestedPackages(t *testing.T) {
 	checkedRepos := make([]string, 0, 2)
 	var checkedMu sync.Mutex

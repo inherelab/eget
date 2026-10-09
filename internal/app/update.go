@@ -21,6 +21,10 @@ type UpdateService struct {
 	LatestInfo    LatestInfoFunc
 	OnCheckDone   func(checked, total int)
 	OnUpdateStart func(index, total int, name string)
+	// OnIgnoredTarget reports an explicitly requested update target that is
+	// skipped because its package opts out of update checks, so the caller
+	// can tell the user instead of staying silent.
+	OnIgnoredTarget func(name string)
 	// OnUpdateDone reports every finished candidate update. External
 	// candidates are silent otherwise: their manager output is captured, not
 	// printed like the installer's own progress. Concurrent batch updates
@@ -43,7 +47,10 @@ type UpdatePackageResult struct {
 	Name   string
 	Target string
 	// Manager is set for packages owned by an external package manager.
-	Manager      string
+	Manager string
+	// Skipped is set when the package opts out of update checks, so no
+	// latest-version lookup was made for it.
+	Skipped      bool
 	InstalledTag string
 	LatestTag    string
 	Updated      bool
@@ -77,6 +84,14 @@ func (s UpdateService) UpdatePackageStatus(nameOrRepo string, cli install.Option
 	}
 	if !item.Installed {
 		return UpdatePackageResult{}, fmt.Errorf("update target %q is not installed; use install first", nameOrRepo)
+	}
+	if item.IgnoreUpdate {
+		return UpdatePackageResult{
+			Name:         item.Name,
+			Target:       item.Repo,
+			InstalledTag: item.InstalledTag,
+			Skipped:      true,
+		}, nil
 	}
 	if s.LatestInfo == nil {
 		return UpdatePackageResult{}, fmt.Errorf("latest info checker is required")

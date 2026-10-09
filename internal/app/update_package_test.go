@@ -582,3 +582,37 @@ asset_filters = ["AppImage"]
 	assert.Eq(t, "v3.2.5", runner.opts.Tag)
 	assert.Eq(t, "tag", runner.opts.TagPolicy)
 }
+
+// A package that opts out of update checks is reported as skipped: no latest
+// lookup runs, so a static URL package with no tag stays quiet.
+func TestUpdatePackageSkipsIgnoredPackage(t *testing.T) {
+	installer := &fakeInstallService{}
+	staticURL := "https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip"
+	svc := UpdateService{
+		Install: installer,
+		LoadConfig: func() (*cfgpkg.File, error) {
+			cfg := cfgpkg.NewFile()
+			cfg.Packages["vault"] = cfgpkg.Section{
+				Repo:         util.StringPtr(staticURL),
+				IgnoreUpdate: util.BoolPtr(true),
+			}
+			return cfg, nil
+		},
+		LoadInstalled: func() (*storepkg.Config, error) {
+			return &storepkg.Config{Installed: map[string]storepkg.Entry{
+				staticURL: {Repo: staticURL, Target: "vault"},
+			}}, nil
+		},
+		LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+			t.Fatalf("expected ignored package %s not to be checked", target.Name)
+			return LatestInfo{}, nil
+		},
+	}
+
+	result, err := svc.UpdatePackageStatus("vault", install.Options{})
+	assert.NoErr(t, err)
+	assert.True(t, result.Skipped)
+	assert.False(t, result.Updated)
+	assert.Eq(t, "vault", result.Name)
+	assert.Eq(t, 0, len(installer.targets))
+}

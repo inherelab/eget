@@ -149,7 +149,7 @@ ext_package_mode = "off"
 - `sys7z_path`: 可选 7z 可执行文件路径。为空时会从 `PATH` 依次查找 `7z`、`7zz`、`7za`。
 - `chunk_concurrency`: 远程下载分块并发数。`0` 表示使用内置默认行为。
 - `batch_concurrency`: 批量 package 操作和更新检查并发数。`0` 自动选择最多 6 个 worker，`1` 强制串行，大于 `1` 表示最多使用该数量的 worker。
-- `ignore_update_packages`: 在 `list --outdated`、`update --check`、`update --all` 中跳过的 package 名称。
+- `ignore_update_packages`: 在 `list --outdated`、`update --check`、`update --all` 中跳过的 package 名称。也可以在 package 配置里用 `ignore_update = true` 单独声明，这样的配置更内聚、便于分享。
 - `sdk_target`: SDK 安装根目录。SDK 配置里的相对 `target` 会基于该目录解析。
 - `sdk_ext_map`: SDK 默认归档扩展名映射，key 使用 Go OS 名称。SDK 级别 `ext_map` 会覆盖它。
 - `ext_package_mode`: 外部管理器安装的包是否参与 `list` / `update`。`off`（默认）保持现有行为且不启动任何管理器进程；`on` 让两个命令默认包含全部已配置管理器，等价于默认带 `--with-ext all`。其他取值会报错。
@@ -351,6 +351,7 @@ strip_components = 1
 - `install_mode`: 可选 GUI 安装模式。配合 `is_gui = true` 时，最终选中的 `.exe` / `.msi` 默认按 `installer` 处理；如果最终选中的 asset 或归档内文件名包含 `portable`，则自动按免安装模式处理。可在这里设置 `portable` 或 `installer` 覆盖 package 自动判断；一次性安装可使用 `install --gui --install-mode portable|installer ...`。
 - `quiet`: 减少当前 package 的输出。
 - `upgrade_only`: 仅当 package 已安装时才更新。
+- `ignore_update`: 在 `list --outdated`、`update --check`、`update --all` 中跳过当前 package。适合没有 tag 信息可比较的静态 URL package。显式 `eget update <name>` 更新该 package 时会提示跳过，不会执行检查。
 
 也兼容旧版直接配置：
 

@@ -157,7 +157,7 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 			Package:      pkg,
 			Target:       util.DerefString(pkg.Target),
 			Tag:          util.DerefString(pkg.Tag),
-			IgnoreUpdate: ignoredUpdates[name],
+			IgnoreUpdate: ignoredUpdates[name] || (pkg.IgnoreUpdate != nil && *pkg.IgnoreUpdate),
 		}
 		if pkg.Prerelease != nil && *pkg.Prerelease {
 			item.Prerelease = true

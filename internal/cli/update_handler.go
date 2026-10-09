@@ -148,6 +148,10 @@ func (s *cliService) handleUpdate(opts *UpdateOptions) error {
 			failedTargets = append(failedTargets, target)
 			continue
 		}
+		if result.Skipped {
+			ccolor.Cyanf("%s update skipped: ignore_update is set\n", target)
+			continue
+		}
 		if !result.Updated {
 			ccolor.Cyanf("%s is already up to date: %s\n", target, result.InstalledTag)
 			continue
@@ -173,6 +177,39 @@ func printExternalUpdateDone(ref, from, to string) {
 	ccolor.Successf("✅ updated %s\n", ref)
 }
 
+// ignoredTargetCollector records the update targets that checkOutdatedItems
+// skipped because of ignore_update, so an explicit target run can say so
+// instead of looking like a silent no-op.
+type ignoredTargetCollector struct {
+	names   []string
+	restore func()
+}
+
+func (s *cliService) collectIgnoredUpdateTargets() *ignoredTargetCollector {
+	collector := &ignoredTargetCollector{}
+	prev := s.updService.OnIgnoredTarget
+	s.updService.OnIgnoredTarget = func(name string) {
+		collector.names = append(collector.names, name)
+	}
+	collector.restore = func() {
+		s.updService.OnIgnoredTarget = prev
+	}
+	return collector
+}
+
+func (c *ignoredTargetCollector) Names() []string {
+	if c == nil {
+		return nil
+	}
+	return c.names
+}
+
+func (c *ignoredTargetCollector) Restore() {
+	if c != nil && c.restore != nil {
+		c.restore()
+	}
+}
+
 func (s *cliService) updateCandidatesForPrompt(targets []string) ([]app.OutdatedItem, error) {
 	ccolor.Infoln("🚀 Checking outdated packages")
 	s.printOutdatedProxyNotice()
@@ -185,6 +222,8 @@ func (s *cliService) updateCandidatesForPrompt(targets []string) ([]app.Outdated
 	defer func() {
 		s.updService.OnCheckDone = prevOnDone
 	}()
+	ignoredTargets := s.collectIgnoredUpdateTargets()
+	defer ignoredTargets.Restore()
 
 	var (
 		items    []app.OutdatedItem
@@ -206,6 +245,9 @@ func (s *cliService) updateCandidatesForPrompt(targets []string) ([]app.Outdated
 
 	for _, failure := range failures {
 		ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
+	}
+	for _, name := range ignoredTargets.Names() {
+		ccolor.Cyanf("%s update skipped: ignore_update is set\n", name)
 	}
 	return items, nil
 }
@@ -252,6 +294,8 @@ func (s *cliService) handleUpdateCheckTargets(targets []string) error {
 	defer func() {
 		s.updService.OnCheckDone = prevOnDone
 	}()
+	ignoredTargets := s.collectIgnoredUpdateTargets()
+	defer ignoredTargets.Restore()
 
 	items, failures, checked, err := s.updService.ListUpdateCandidatesForTargets(targets)
 	reporter.Finish()
@@ -263,6 +307,9 @@ func (s *cliService) handleUpdateCheckTargets(targets []string) error {
 
 	for _, failure := range failures {
 		ccolor.Fprintf(os.Stderr, "<yellow>check_failed</> %s (%s): %v\n", failure.Name, failure.Repo, failure.Error)
+	}
+	for _, name := range ignoredTargets.Names() {
+		ccolor.Cyanf("%s update skipped: ignore_update is set\n", name)
 	}
 	if len(items) == 0 {
 		ccolor.Cyanln("🎉 No outdated packages found")
