@@ -6,7 +6,7 @@ require (
 	github.com/bodgit/sevenzip v1.6.2
 	github.com/gobwas/glob v0.2.3
 	github.com/gookit/cliui v0.5.1
-	github.com/gookit/color v1.6.2
+	github.com/gookit/color v1.6.3
 	github.com/gookit/config/v2 v2.2.9
 	github.com/gookit/ext v0.1.2
 	github.com/gookit/gcli/v3 v3.8.3
