@@ -16,36 +16,39 @@ import (
 )
 
 type Options struct {
-	Tag                 string
-	TagPolicy           string
-	Prerelease          bool
-	Operation           string
-	CurrentVersion      string
-	TargetVersion       string
-	Name                string
-	Verbose             bool
-	Source              bool
-	SourcePath          string
-	Sys7zPath           string
-	Output              string
-	OutputExplicit      bool
-	GuiTarget           string
-	IsGUI               bool
-	InstallMode         string
-	CacheDir            string
-	CacheName           string
-	CacheVersion        string
-	ProxyURL            string
-	ProxyExclude        []string
-	NoProxy             bool
-	UserAgent           string
-	APICacheEnabled     bool
-	APICacheDir         string
-	APICacheTime        int
-	CacheMirror         cachemirror.Options
-	GhproxyEnabled      bool
-	GhproxyHostURL      string
-	GhproxyFallbacks    []string
+	Tag              string
+	TagPolicy        string
+	Prerelease       bool
+	Operation        string
+	CurrentVersion   string
+	TargetVersion    string
+	Name             string
+	Verbose          bool
+	Source           bool
+	SourcePath       string
+	Sys7zPath        string
+	Output           string
+	OutputExplicit   bool
+	GuiTarget        string
+	IsGUI            bool
+	InstallMode      string
+	CacheDir         string
+	CacheName        string
+	CacheVersion     string
+	ProxyURL         string
+	ProxyExclude     []string
+	NoProxy          bool
+	UserAgent        string
+	APICacheEnabled  bool
+	APICacheDir      string
+	APICacheTime     int
+	CacheMirror      cachemirror.Options
+	GhproxyEnabled   bool
+	GhproxyHostURL   string
+	GhproxyFallbacks []string
+	// GithubToken from --github-token / [global] github_token; api.github.com
+	// requests authenticate with it or the env/gh/git fallbacks (see client).
+	GithubToken         string
 	System              string
 	ExtractFile         string
 	All                 bool

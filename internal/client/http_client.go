@@ -81,7 +81,7 @@ func requestWithOptions(method, rawURL, rangeHeader string, opts Options) (*http
 			if rangeHeader != "" {
 				req.Header.Set("Range", rangeHeader)
 			}
-			if err := setAuthHeader(req, opts.DisableSSL); err != nil {
+			if err := setAuthHeader(req, opts); err != nil {
 				return nil, err
 			}
 			setDefaultHeaders(req, opts)

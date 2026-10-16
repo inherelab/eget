@@ -74,6 +74,9 @@ func applyGlobalNetworkConfig(opts *install.Options, cfg *cfgpkg.File) {
 	if len(cfg.Ghproxy.Fallbacks) > 0 {
 		opts.GhproxyFallbacks = append([]string(nil), cfg.Ghproxy.Fallbacks...)
 	}
+	if cfg.Global.GithubToken != nil {
+		opts.GithubToken = *cfg.Global.GithubToken
+	}
 }
 
 func installOptionsFromDownload(opts *DownloadOptions) install.Options {

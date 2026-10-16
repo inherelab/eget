@@ -312,6 +312,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		GhproxyEnabled:   cli.GhproxyEnabled,
 		GhproxyHostURL:   ghproxyHostURL,
 		GhproxyFallbacks: append([]string(nil), cfg.Ghproxy.Fallbacks...),
+		GithubToken:      merged.GithubToken,
 		System:           merged.System,
 		ExtractFile:      merged.File,
 		All:              merged.ExtractAll,

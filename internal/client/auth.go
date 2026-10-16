@@ -27,18 +27,21 @@ func tokenFrom(value string) (string, error) {
 
 var ErrNoToken = errors.New("no github token")
 
-func getGitHubToken() (string, error) {
+func getGitHubToken(external string) (string, error) {
+	if external != "" {
+		return tokenFrom(external)
+	}
 	if os.Getenv("EGET_GITHUB_TOKEN") != "" {
 		return tokenFrom(os.Getenv("EGET_GITHUB_TOKEN"))
 	}
 	if os.Getenv("GITHUB_TOKEN") != "" {
 		return tokenFrom(os.Getenv("GITHUB_TOKEN"))
 	}
-	return "", ErrNoToken
+	return externalGitHubToken()
 }
 
-func setAuthHeader(req *http.Request, disableSSL bool) error {
-	token, err := getGitHubToken()
+func setAuthHeader(req *http.Request, opts Options) error {
+	token, err := getGitHubToken(opts.GithubToken)
 	if err != nil {
 		if errors.Is(err, ErrNoToken) {
 			return nil
@@ -48,7 +51,7 @@ func setAuthHeader(req *http.Request, disableSSL bool) error {
 	}
 
 	if req.URL.Scheme == "https" && req.Host == "api.github.com" {
-		if disableSSL {
+		if opts.DisableSSL {
 			return fmt.Errorf("cannot use GitHub token if SSL verification is disabled")
 		}
 		req.Header.Set("Authorization", fmt.Sprintf("token %s", token))

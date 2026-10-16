@@ -84,5 +84,8 @@ func sdkClientOptionsFromConfig(cfg *cfgpkg.File, noProxyOpt ...bool) client.Opt
 		opts.GhproxyFallbacks = append([]string(nil), cfg.Ghproxy.Fallbacks...)
 	}
 	opts.CacheMirror = CacheMirrorOptionsFromConfig(cfg)
+	if cfg.Global.GithubToken != nil {
+		opts.GithubToken = *cfg.Global.GithubToken
+	}
 	return opts
 }

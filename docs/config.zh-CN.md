@@ -65,6 +65,18 @@ url = "${PROXY_URL}"
 
 不要把 `.env` 提交到版本库。
 
+## GitHub Token 解析
+
+`api.github.com` 请求按以下顺序取认证 token：
+
+1. `--github-token` / `[global] github_token`（支持 `@<文件路径>` 引用）
+2. 环境变量 `EGET_GITHUB_TOKEN`、其次 `GITHUB_TOKEN`（同样支持 `@<文件路径>`）
+3. `gh auth token` —— 复用 GitHub CLI 已保存的登录 token（即使它存在 OS keyring 里）
+4. `git credential fill`（`github.com`）—— 复用当前 git credential helper（如 Git Credential Manager）保存的登录凭据
+
+工具类 fallback 每个进程至多执行一次，helper 的交互提示已禁用并带短超时，不会卡住请求。全部取不到
+时保持匿名请求（未认证 API 限额 60 次/小时），这就是出现 "403 API rate limit exceeded" 的原因。
+
 ## 配置导入导出
 
 在旧机器导出可迁移配置：

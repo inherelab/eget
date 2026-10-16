@@ -32,6 +32,7 @@ func ClientOptions(opts Options) client.Options {
 		GhproxyEnabled:   opts.GhproxyEnabled,
 		GhproxyHostURL:   opts.GhproxyHostURL,
 		GhproxyFallbacks: append([]string(nil), opts.GhproxyFallbacks...),
+		GithubToken:      opts.GithubToken,
 		DisableSSL:       opts.DisableSSL,
 		Retries:          opts.Retries,
 		ChunkConcurrency: opts.ChunkConcurrency,

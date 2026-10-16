@@ -23,6 +23,9 @@ type Options struct {
 	GhproxyEnabled   bool
 	GhproxyHostURL   string
 	GhproxyFallbacks []string
+	// GithubToken authenticates api.github.com requests; when empty the
+	// env vars and the gh/git credential fallbacks are consulted (auth.go).
+	GithubToken      string
 	DisableSSL       bool
 	Retries          int
 	ChunkConcurrency int
@@ -104,7 +107,7 @@ func GetWithOptions(rawURL string, opts Options) (*http.Response, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := setAuthHeader(req, opts.DisableSSL); err != nil {
+			if err := setAuthHeader(req, opts); err != nil {
 				return nil, err
 			}
 			setDefaultHeaders(req, opts)

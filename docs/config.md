@@ -68,6 +68,19 @@ none is present.
 
 Keep `.env` out of version control.
 
+## GitHub Token Resolution
+
+`api.github.com` requests authenticate in this order:
+
+1. `--github-token` / `[global] github_token` (supports `@<file>` references)
+2. `EGET_GITHUB_TOKEN`, then `GITHUB_TOKEN` from the environment (also `@<file>`)
+3. `gh auth token` — reuses the token saved by the GitHub CLI, including when it lives in the OS keyring
+4. `git credential fill` for `github.com` — reuses the credential saved by the configured git credential helper (e.g. Git Credential Manager)
+
+The tool fallbacks run once per process, with helper prompts disabled and a short timeout, so they
+never hang the request. When none yields a token, requests stay anonymous at the unauthenticated
+API rate limit (60 requests/hour), which is what raises "403 API rate limit exceeded".
+
 ## Import and Export
 
 Export a portable configuration from the old machine:
