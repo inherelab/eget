@@ -467,6 +467,60 @@ type zipTestFile struct {
 	mode os.FileMode
 }
 
+func TestRunAutoExtractsKeepsNestedSubDirStructure(t *testing.T) {
+	assetURL := "https://example.com/herdr.zip"
+	archive := zipBytes(t, map[string]string{
+		"herdr.exe":                  "herdr",
+		"conpty/x64/OpenConsole.exe": "openconsole",
+		"LICENSE":                    "license",
+	})
+	outputDir := t.TempDir()
+
+	svc := NewDefaultService(nil, nil)
+	svc.SystemDetectorFactory = func(goos, goarch string) (Detector, error) {
+		assert.Eq(t, "windows", goos)
+		assert.Eq(t, "amd64", goarch)
+		return &fakeDetector{name: assetURL}, nil
+	}
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(archive)),
+		}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	result, err := runner.Run(assetURL, Options{
+		Name:   "herdr",
+		Output: outputDir,
+		System: "windows/amd64",
+	})
+	if err != nil {
+		t.Fatalf("run install: %v", err)
+	}
+
+	gotFiles := append([]string(nil), result.ExtractedFiles...)
+	wantFiles := []string{
+		filepath.Join(outputDir, "conpty", "x64", "OpenConsole.exe"),
+		filepath.Join(outputDir, "herdr.exe"),
+	}
+	sort.Strings(gotFiles)
+	sort.Strings(wantFiles)
+	assert.Eq(t, wantFiles, gotFiles)
+	for _, file := range result.ExtractedFiles {
+		if _, err := os.Stat(file); err != nil {
+			t.Fatalf("expected extracted file %s: %v", file, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(outputDir, "OpenConsole.exe")); !os.IsNotExist(err) {
+		t.Fatalf("expected OpenConsole.exe to stay under conpty/x64, stat err=%v", err)
+	}
+}
+
 func zipBytesWithModes(t *testing.T, files map[string]zipTestFile) []byte {
 	t.Helper()
 	var buf bytes.Buffer

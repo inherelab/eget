@@ -97,27 +97,38 @@ func autoExtractCurrentPlatformExecutables(candidates []ExtractedFile, opts Opti
 		}
 		selected = append(selected, candidate)
 	}
-	return flattenAutoExtractedExecutableNames(selected), len(selected) > 0
+	return stripSharedPackageDir(selected), len(selected) > 0
 }
 
-func flattenAutoExtractedExecutableNames(files []ExtractedFile) []ExtractedFile {
+// stripSharedPackageDir removes the shared top-level directory (typically a
+// `<name>-<version>-<platform>` package dir) from auto-extracted executables so
+// they land at the output root, while keeping deeper sub-directories
+// (e.g. `conpty/x64`) that carry real directory structure.
+func stripSharedPackageDir(files []ExtractedFile) []ExtractedFile {
 	if len(files) == 0 {
 		return files
 	}
-	seen := make(map[string]bool, len(files))
+	var top string
 	for _, file := range files {
-		base := filepath.Base(firstNonEmpty(file.Name, file.ArchiveName))
-		if base == "." || base == string(filepath.Separator) || base == "" || seen[base] {
+		parts := archivePathParts(firstNonEmpty(file.Name, file.ArchiveName))
+		if len(parts) < 2 {
+			// Root-level file: there is no package dir to strip.
 			return files
 		}
-		seen[base] = true
+		if top == "" {
+			top = parts[0]
+		} else if top != parts[0] {
+			// Files span multiple top-level dirs: the structure is real, keep it.
+			return files
+		}
 	}
-	flattened := make([]ExtractedFile, len(files))
+	stripped := make([]ExtractedFile, len(files))
 	for i, file := range files {
-		file.Name = filepath.Base(firstNonEmpty(file.Name, file.ArchiveName))
-		flattened[i] = file
+		name := archivePathForCompare(firstNonEmpty(file.Name, file.ArchiveName))
+		file.Name = name[len(top)+1:]
+		stripped[i] = file
 	}
-	return flattened
+	return stripped
 }
 
 func isExecutableForGOOS(file ExtractedFile, goos string) bool {

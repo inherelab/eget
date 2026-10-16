@@ -95,3 +95,33 @@ func TestAutoExtractCurrentPlatformExecutablesFiltersOtherPlatformExecutables(t 
 	assert.Eq(t, 1, len(selected))
 	assert.Eq(t, `x86_64\uv.exe`, selected[0].ArchiveName)
 }
+
+func TestStripSharedPackageDir(t *testing.T) {
+	t.Run("strip shared package dir", func(t *testing.T) {
+		files := []ExtractedFile{
+			{ArchiveName: `uv-x86_64-unknown-linux-gnu/uv`, Name: `uv-x86_64-unknown-linux-gnu/uv`, mode: 0o755},
+			{ArchiveName: `uv-x86_64-unknown-linux-gnu/uvx`, Name: `uv-x86_64-unknown-linux-gnu/uvx`, mode: 0o755},
+		}
+		got := stripSharedPackageDir(files)
+		assert.Eq(t, []string{"uv", "uvx"}, []string{got[0].Name, got[1].Name})
+		assert.Eq(t, "uv-x86_64-unknown-linux-gnu/uv", got[0].ArchiveName)
+	})
+
+	t.Run("keep real sub-dir structure", func(t *testing.T) {
+		files := []ExtractedFile{
+			{ArchiveName: `herdr.exe`, Name: `herdr.exe`, mode: 0o666},
+			{ArchiveName: `conpty/x64/OpenConsole.exe`, Name: `conpty/x64/OpenConsole.exe`, mode: 0o666},
+		}
+		got := stripSharedPackageDir(files)
+		assert.Eq(t, []string{"herdr.exe", "conpty/x64/OpenConsole.exe"}, []string{got[0].Name, got[1].Name})
+	})
+
+	t.Run("keep structure on multi top dirs", func(t *testing.T) {
+		files := []ExtractedFile{
+			{ArchiveName: `bin/a.exe`, Name: `bin/a.exe`, mode: 0o666},
+			{ArchiveName: `tools/b.exe`, Name: `tools/b.exe`, mode: 0o666},
+		}
+		got := stripSharedPackageDir(files)
+		assert.Eq(t, []string{"bin/a.exe", "tools/b.exe"}, []string{got[0].Name, got[1].Name})
+	})
+}
