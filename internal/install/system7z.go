@@ -409,7 +409,9 @@ func copyFile(src, dst string, mode fs.FileMode, modTime time.Time) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
-	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	// The dst may be an in-use executable on Windows; rename the locked
+	// copy to <dst>.old and rewrite the original path on failure.
+	out, err := openReplaceFile(dst, mode)
 	if err != nil {
 		return err
 	}

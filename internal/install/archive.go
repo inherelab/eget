@@ -379,7 +379,9 @@ func writeArchiveEntry(ar Archive, writer archiveEntryWriter, target string, mod
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return err
 	}
-	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, modeFrom(target, mode))
+	// The target may be an in-use executable on Windows; rename the locked
+	// copy to <target>.old and rewrite the original path on failure.
+	out, err := openReplaceFile(target, modeFrom(target, mode))
 	if err != nil {
 		return err
 	}

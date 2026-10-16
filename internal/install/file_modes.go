@@ -18,7 +18,7 @@ func writeReaderWithModTime(r io.Reader, rename string, mode fs.FileMode, modTim
 	if err := os.MkdirAll(filepath.Dir(rename), 0o755); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(rename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	f, err := openReplaceFile(rename, mode)
 	if err != nil {
 		return err
 	}
