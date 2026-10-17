@@ -426,3 +426,63 @@ release asset 分类站点：
 - Q5：为规则知识补一份「新增平台/归档格式/过滤语法要改哪里」的 `docs/` 说明，实施完成后补一节。
 - R-06：「7 套版本实现」计数独立复核（属 F6 前置）。
 - 若后续要修复 D8 表述与 R-12 措辞，随下一次 design 修订（不单独开评审轮）。
+
+## 实施进度记录（progress，不改变已批准的 revision 0.6）
+
+### 任务状态与原子提交
+
+| 任务 | 状态 | commit |
+|---|---|---|
+| T01 filekind 包 | done | `e079da5` |
+| T02 filekind 自测 | done | `eebe7a0` |
+| T03 install characterization | done | `624d456` |
+| T04 install 可执行/安装器站点 | done | `624d456` |
+| T05 install 归档站点 | done | `1f36046` |
+| T06 install 波次收尾 | done（无代码改动，验证项） | — |
+| T07 client/app-cache/sdk 站点 | done | `b7f72d8` |
+| T08 detect release asset 分类 | done | `839e301` |
+| T09 platform 包 | done | `99b446a` |
+| T10 平台站点迁移 | done | `edf0836` |
+| T11 filter 包 | done | `3cbc36d` |
+| T12 过滤站点迁移 + 删除 tagfilter | done | `c4b9479` |
+| T13 收尾与全量验证 | done | 本文档进度记录所在 commit |
+
+### 验证结果（运行目录：Git root）
+
+| 命令 | 结果 |
+|---|---|
+| `go build ./...` | exit 0 |
+| `go vet ./internal/...` | exit 0 |
+| `go test ./... -count=1` | 全部 `ok`（含新增三包与各站点 characterization） |
+| `go list -deps ./internal/filekind` | 仅自身（stdlib） |
+| `go list -deps ./internal/platform` | stdlib + `internal/util` |
+| `go list -deps ./internal/filter` | 仅自身（stdlib） |
+| `rg -l --glob '!*_test.go' 'armv\?6' internal` | 仅 `internal/platform/patterns.go` |
+| `rg -l --glob '*.go' 'internal/tagfilter' .` | 空 |
+| `rg 'var (osTokens\|archTokens\|cacheOSTokens\|keepLatestOSTokens\|executableVariantTokens)' internal` | 空 |
+| `rg -c 'PRE:\|SUF:' internal/install/service.go internal/install/chooser.go internal/sdk/search_service.go` | 空（已归一到 `internal/filter`） |
+| 反向验证：把新增 characterization 用例在迁移前提交 `b7f72d8` 上跑 | 全部通过（证明用例描述的是旧行为） |
+
+### Operational Discovery / 偏差（同 owner 内，未改验收）
+
+1. `filekind` 额外导出 `ExecutableSuffixExact` 与常量 `ExtExe/ExtAppImage/ExtMsi`：`rename` 需要知道命中的是哪个后缀，且避免调用点重复字面量。
+2. `filekind.IsDownloadFold` 内部用 `filepath.Ext`（而非 `path.Ext`）：与 `runner_download.isInvalidCachedDownload` 原实现一致，避免 Windows 路径下语义漂移。
+3. `platform.SplitTokens` 保留原 `platformTokens` 的两趟切分语义（两趟结果拼接）；后缀裁剪留在调用点。
+4. T10 的 characterization 在迁移**之后**补写（偏离计划的“先测后迁”顺序）；已用反向验证补足证据：同一批用例在迁移前提交 `b7f72d8` 上全部通过。
+5. 新增 `filter.RegexErrorOf` 辅助函数，供调用点取 `RegexError.Expr` 以保留各自错误文案。
+
+### 发现但未处理（超出本计划范围）
+
+- `internal/app/list_outdated_test.go` 在 HEAD 处即不满足 `gofmt`（预存在，与本次改动无关）；本计划未修，保持该文件原样。
+- `go test ./...` 未包含容器/真机环境验证（无外部进程、网络或设备面改动，SR1402.1 不适用）。
+
+### lifecycle 状态
+
+- 仅本地原子提交（SR1211）；未 push、未 tag、未 release、未部署。
+- 三包均为 `internal/` 内部包，无对外 Interface / Schema / 配置变更。
+
+### Full 轨 retrospective 判定（一次性）
+
+- 判定键：`(git_root=inhere-tools/eget, plan_commit=032f1d2, subject_path=docs/plans/2026-10-17-rule-consolidation-plan.md, document_revision=0.6)`。
+- prior COMPLETE 检查：本文件无既有 `COMPLETE` 记录，gofer plan `plan-20261017-163350-277d1975` 无既有完成记录 → 不存在 prior COMPLETE。
+- 本次为该键的首次且唯一写入；提示用户一次后不再重复。
