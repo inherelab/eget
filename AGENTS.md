@@ -6,7 +6,7 @@
 - 多阶段任务，需要在每个子阶段完成后更新进度并按功能点进行 Git 提交
 - 完成涉及 MVP 主链路的改动后，至少运行 `go test ./...` 再宣称完成。
 - 如果有设计或开发方案，需要整理输出到 docs 目录下
-- 当前正在进行 v0 版本开发，因此，只要确认进行调整的无需保留兼容处理
+- 已发布 v1.x（见 `git tag`、`.github/workflows/release.yml`）：没有明确要求时不保留旧行为兼容处理，但不得据此假定「未投产」——匹配结果、缓存 layout 等行为变更仍按影响面评估
 - 当前项目的文件路径输出，不要包含绝对路径，只需相对路径
 - 没有明确指定时，如果当前功能改动涉及的逻辑文件超过3个或者超过100行代码，需要向用户确认后再实施
 
@@ -87,6 +87,8 @@
 
 - 使用 `github.com/gookit/goutil/x/assert` 断言结果
 - 同一个方法的多个用例使用 `t.Run()` 包裹
+- 站点级改动（后缀/平台/过滤等小函数）先用 `go test ./internal/<pkg> -run '<站点|TestName>'` 验证该站点，阶段末再跑一次 `go test ./...`（`internal/install` 全包约 1 分钟）
+- 依赖本机外部凭据或已安装工具的用例必须默认 `t.Skip`，用环境变量显式开启（如 `EGET_TEST_EXTERNAL=1`）；CI runner 上不得依赖本机凭据
 
 require 断言结果的写法：
 
@@ -100,43 +102,7 @@ assert.Eq(t, expected, actual)
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **eget** (8175 symbols, 19065 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+本仓库被 GitNexus 索引（**eget**，8175 symbols / 19065 relationships）。仅当 **gitnexus MCP 工具可用**时使用：改符号前跑 `gitnexus_impact`，提交前跑 `gitnexus_detect_changes`，探索调用链用 `gitnexus_query`/`gitnexus_context`。
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/eget/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/eget/clusters` | All functional areas |
-| `gitnexus://repo/eget/processes` | All execution flows |
-| `gitnexus://repo/eget/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
+工具不可用时（agent 未挂载 gitnexus MCP）跳过本节，改用 `file_grep`/`file_find`，不要为此阻塞任务。索引陈旧时：`npx gitnexus analyze`。技能文件：`.claude/skills/gitnexus/*/SKILL.md`（exploring / impact-analysis / debugging / refactoring / guide / cli）。
 <!-- gitnexus:end -->
