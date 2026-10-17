@@ -120,7 +120,7 @@ func TestListOutdatedPackagesIgnoresPackageIgnoreUpdate(t *testing.T) {
 		},
 		LoadInstalled: func() (*storepkg.Config, error) {
 			return &storepkg.Config{Installed: map[string]storepkg.Entry{
-				staticURL:           {Repo: staticURL, Target: "vault"},
+				staticURL:            {Repo: staticURL, Target: "vault"},
 				"BurntSushi/ripgrep": {Repo: "BurntSushi/ripgrep", Tag: "v13.0.0"},
 			}}, nil
 		},

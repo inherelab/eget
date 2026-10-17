@@ -54,6 +54,19 @@ jobs:
         # Exit with 1 when it finds at least one finding.
         fail_level: 'none'
 
+    # Formatting gate: the repository must stay gofmt-clean. Only the ubuntu leg
+    # needs to run it (the default shell on windows runners is PowerShell, and
+    # gofmt output is identical across platforms).
+    - name: Check gofmt
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.go_version == '1.25' }}
+      run: |
+        unformatted=$(gofmt -l .)
+        if [ -n "$unformatted" ]; then
+          echo "gofmt is required for:"
+          echo "$unformatted"
+          exit 1
+        fi
+
     - name: Mod tidy
       run: |
         go mod tidy

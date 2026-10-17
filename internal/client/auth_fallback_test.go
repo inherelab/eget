@@ -85,14 +85,20 @@ func TestGitCredentialPasswordParsing(t *testing.T) {
 	assert.Eq(t, "", gitCredentialPassword("protocol=https\nhost=github.com\n"))
 }
 
-// TestExternalGitHubTokenOnThisMachine exercises the real helpers when the
-// tools exist; it is skipped silently otherwise (CI without gh).
+// TestExternalGitHubTokenOnThisMachine exercises the real helpers when the tools
+// exist *and* an opt-in is given. Without the opt-in it skips: hosted runners
+// ship gh without credentials, so probing it there always fails.
 func TestExternalGitHubTokenOnThisMachine(t *testing.T) {
+	if os.Getenv("EGET_TEST_EXTERNAL") == "" {
+		t.Skip("set EGET_TEST_EXTERNAL=1 to probe the local gh credentials")
+	}
 	if _, err := exec.LookPath("gh"); err != nil {
 		t.Skip("gh not installed")
 	}
 	token := ghAuthTokenOutput()
-	assert.NotEmpty(t, token)
+	if token == "" {
+		t.Skip("gh has no stored token on this machine")
+	}
 	assert.True(t, len(token) >= 20)
 }
 
