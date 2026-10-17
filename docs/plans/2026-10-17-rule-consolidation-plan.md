@@ -1,7 +1,7 @@
 <!-- template_id: plan; template_version: 1.2.0 -->
 # eget 匹配与转换规则整合 实施计划
 
-> 状态：Draft 0.2 / 待人工计划批准
+> 状态：Draft 0.3 / 待人工计划批准
 
 ## 修订记录
 
@@ -9,6 +9,7 @@
 |---|---|---|---|
 | 0.1 | 2026-10-17 | inhere | 初稿：按已批准 design 0.2 拆出 filekind/platform/filter 三包的等价性迁移波次；闭合 X-01/X-02/X-03 站点清单与大小写轴；把 F3 漂移修复与「不改匹配结果」的冲突显式推迟 |
 | 0.2 | 2026-10-17 | inhere | 按第 1 轮两轴独立评审修订（Standards S-01~S-06 / Executability E-01~E-09）：S-E11 与 S-E12 的 `.exe` 判定**不再合并**（否则 `.7z/.rar/.msi/.cab/.iso` 行为改变）；补齐 `KindExact`/`IsNonExecutableExact`/`IsExecutableFold`/`ExecutableSuffixFold`/`PrefixRegex`/`SuffixRegex` 等 API 定义；S-A07 保留「提取 + 上游允许集合」两阶段；具名集合逐集合标注可用轴；characterization 用例按站点 id 落到具体 owner 文件；每条验证命令声明运行目录；补 T06/T13 追溯行；Semantic Amendment 失败路径含 design 修订；F3 归一路径明确为「design 修订 + 用户批准」 |
+| 0.3 | 2026-10-17 | inhere | 按第 2 轮（blocking closure）修订：S-A01 的 API 引用改为实际定义的 `KindExact`，删除未定义的 `IsArchiveExact/ExtExact`；`MultiExtFold`/`MultiExtExact` 固定返回格式（带点/原大小写 vs 集合字面量 + ok）以消除 S-A07 的转换歧义；`filter.Parse`/`IsPattern` 明确**不**做 TrimSpace，逐入口固定 trim 与错误文案（tag/asset/file/sdk）；补齐 `platform` 的导出类型（`OSSpec`/`ArchSpec` 与两个索引）与 `ClassifyAsset` 的归一化与判定顺序；T10 的 characterization owner 按消费者包拆分；回滚改为按**任务粒度**提交，删除不可靠的「单文件 checkout 做站点级回退」表述 |
 
 > 仅语义变化递增版本；纯 identity/provenance/元数据纠正沿用原版本，并在 Git/进度记录中留痕。
 
@@ -155,7 +156,7 @@ W6 filter 包（T11 → T12）  独立于 W1/W5；依赖 T12 完成后才可运�
 W7 收尾（T13）  依赖 W2、W3、W4、T10、T12 全部完成
 ```
 
-每个波次一个本地 commit（含 characterization 用例），可单独 revert。
+每个任务一个本地 commit（含 characterization 用例），可单独 revert；波次只表达依赖顺序，不再作为提交单位。
 
 ## 站点清单（权威清单，闭合 X-01/X-02/X-03）
 
@@ -163,7 +164,7 @@ W7 收尾（T13）  依赖 W2、W3、W4、T10、T12 全部完成
 
 | id | path:line | 函数 | 集合 | 轴 | 决策 |
 |---|---|---|---|---|---|
-| S-A01 | `internal/install/extractor.go:46-82` | `NewExtractor` | `ExtSetExtractor`（14 项） | 敏感 | 迁 `filekind.IsArchiveExact` / `ExtExact`；构造函数映射留 `install`（CAP-07） |
+| S-A01 | `internal/install/extractor.go:46-82` | `NewExtractor` | `ExtSetExtractor`（14 项） | 敏感 | 迁 `filekind.KindExact(name)` 取 `Kind`；「`Kind` → 构造函数 + 解压闭包」映射留 `install`（CAP-07） |
 | S-A02 | `internal/install/runner_output.go:30-42` | `isExtractAllArchiveAsset` | `ExtSetExtractAll`（10 项） | 折叠 | 迁 `filekind.IsArchiveFold` |
 | S-A03 | `internal/install/runner_download.go:163-169` | `isInvalidCachedDownload` | `ExtSetDownload`（8 项） | 折叠 | 迁 `filekind.IsDownloadFold` |
 | S-A04 | `internal/client/cache_path.go:75-83` | `archiveExt` | `ExtSetCacheMulti` | 折叠 | 迁 `filekind.MultiExtFold` |
@@ -234,16 +235,17 @@ release asset 分类站点：
   - 定义 `type Kind int` 与 `KindTarGz/KindTarBz2/KindTarXz/KindTarZst/KindTar/KindZip/KindSevenZip/KindGz/KindBz2/KindXz/KindZst/KindUnknown`，作为「后缀 → 类型」的中间结果；`install` 只做 `Kind` → 构造函数映射。
   - 导出 API（签名与语义固定，实施时不得改名或改轴）：
     - `KindExact(name string) Kind`：按 `ExtSetExtractor` 查表；表内**多段扩展名先于单段**（`.tar.gz` 先于 `.gz`），未命中返回 `KindUnknown`。
-    - `MultiExtExact(name string, set []string) string` / `MultiExtFold(name string, set []string) string`：按集合顺序命中则返回带点后缀（如 `.tar.gz`），否则返回 `path.Ext(name)`。
+    - `MultiExtFold(name string, set []string) string`：折叠比较（`strings.ToLower(name)`）；命中返回**原输入的带点后缀切片**（保持原大小写，等价于 `name[len(name)-len(ext):]`），未命中返回 `path.Ext(name)` —— 与 S-A04/S-A05 现状逐字一致。
+    - `MultiExtExact(name string, set []string) (string, bool)`：大小写敏感比较；命中返回集合中的**字面量后缀**（带点，如 `.tar.gz`）与 `true`，未命中返回 `path.Ext(name)` 与 `false`；调用点用 `strings.TrimPrefix(ext, ".")` 取无点值（与 `sdk/json_index.go:223-231` 现状一致）。
     - `IsArchiveFold(name string, set []string) bool`；`IsDownloadFold(name string) bool`。
     - `IsExecutableExact(name string) bool`（`.exe`/`.appimage`）、`IsNonExecutableExact(name string) bool`（`.deb`/`.1`/`.txt`）。
     - `IsExecutableFold(name string) bool`、`ExecutableSuffixFold(name string) string`（`.exe`/`.appimage`，否则空串）、`IsInstallerFold(name string) bool`（`.exe`/`.msi`）。
     - `RequiresSystemArchiverFold(name string) bool`：仅查 `ExtSetSystemArchiver` 的**无条件**集合（`.7z`/`.rar`/`.msi`/`.cab`/`.iso`）。
-    - `ClassifyAsset(name string) AssetClass`（`AssetInstallable`/`AssetChecksum`/`AssetSignature`/`AssetMetadata`）。
+    - `ClassifyAsset(name string) AssetClass`：先 `path.Base` 再 `strings.ToLower`，按**现状 switch 顺序**（metadata → checksum → signature → installable）判定；`releases`/`latest.yml`/`latest-mac.yml`/`latest-linux.yml`/`latest.json` 等精确名归 metadata。另导出 `type AssetClass int` 与 `AssetInstallable`/`AssetChecksum`/`AssetSignature`/`AssetMetadata`。
   - 包内只 import stdlib 与 `internal/util`；不构造解压器、不碰文件系统。
   - 数据来源：从站点清单各行原样复制后缀字面量（先读原实现再抄），不得顺手重排或去重；同组集合的项序不影响语义，但**不得**跨集合合并（`ExtSetExtractor` 与 `ExtSetExtractAll` 差在单文件压缩器，`ExtSetArchiveLegacy` 是窄集）。
 - 验证: `go build ./...`；`go list -deps ./internal/filekind` 仅含 stdlib + `internal/util`（运行目录：Git root）
-- 完成标准: 包可编译；六个集合常量、`Kind` 枚举与上述 12 个导出函数齐备且签名一致；`KindExact("x.tar.gz")` 返回 `KindTarGz` 而非 `KindGz`；包注释写明「只持数据，不持判定策略」。
+- 完成标准: 包可编译；六个集合常量、`Kind` 枚举与上述导出函数齐备且签名一致；`KindExact("x.tar.gz")` 返回 `KindTarGz` 而非 `KindGz`；`MultiExtFold("Tool.TAR.BR", ExtSetCacheMulti)` 返回 `".TAR.BR"`（原大小写），`MultiExtExact("x.tar.gz", ExtSetArchiveLegacy)` 返回 `(".tar.gz", true)`；包注释写明「只持数据，不持判定策略」。
 - 依赖: 无
 
 ### T02 filekind 自测（每集合 × 两轴 × 大小写变体）
@@ -289,7 +291,7 @@ release asset 分类站点：
 ### T07 迁移 client / app-cache / sdk 站点
 
 - 文件: `internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`、`internal/sdk/json_index.go`、`internal/client/cache_path_test.go`、`internal/app/cache/keep_latest_test.go`、`internal/sdk/json_index_test.go`
-- 动作: 先补 characterization（迁移前绿）：S-A04/S-A05 的 `.tar.br`/`.tar.lz4` 正例、`.TAR.BR` 折叠正例；S-A07 的 `-tar.xz`→拒、`.TAR.GZ`→拒、`.tar.gz`/`.zip`→接受；S-A08 的 `.tar.zst`→不当归档（负例）。随后：S-A04、S-A05 用 `filekind.MultiExtFold(name, ExtSetCacheMulti)`；S-A07、S-A08 用 `filekind.MultiExtExact(name, ExtSetArchiveLegacy)`，**保留** S-A07 的 `ext != "tar.gz" && ext != "zip"` 上游允许集合；S-A06 不动（仅加用例）；`client` 新增 `internal/filekind` import（Q2，方向 `client → filekind`）。
+- 动作: 先补 characterization（迁移前绿）：S-A04/S-A05 的 `.tar.br`/`.tar.lz4` 正例、`.TAR.BR` 折叠正例；S-A07 的 `-tar.xz`→拒、`.TAR.GZ`→拒、`.tar.gz`/`.zip`→接受；S-A08 的 `.tar.zst`→不当归档（负例）。随后：S-A04、S-A05 用 `filekind.MultiExtFold(name, ExtSetCacheMulti)`；S-A07、S-A08 用 `filekind.MultiExtExact(name, ExtSetArchiveLegacy)` + `strings.TrimPrefix(ext, ".")`（得到与现状 `archiveExt` 相同的无点值），**保留** S-A07 的 `ext != "tar.gz" && ext != "zip"` 上游允许集合；S-A06 不动（仅加用例）；`client` 新增 `internal/filekind` import（Q2，方向 `client → filekind`）。
 - 验证: `go test ./internal/client/... ./internal/app/cache/... ./internal/sdk/... -count=1`；`go list -deps ./internal/client | rg 'internal/(install|app)'` 为空（无反向边；运行目录：Git root）
 - 完成标准: 三包测试绿；上述 characterization 全绿且未改断言；`.tar.br`/`.tar.lz4` 在 cache 路径有正例；sdk 窄集行为未变。
 - 依赖: T01, T02
@@ -309,9 +311,11 @@ release asset 分类站点：
   - `OSTokens()/ArchTokens()/VariantTokens()`：从 `runner_platform.go:215-217` 原样复制（`osTokens`/`archTokens`/`executableVariantTokens`；三处逐字相同，取其一即可）。`:218` 的 `versionTokenPattern` **不迁**（它是判定用的正则，不是别名数据）。
   - `Aliases(goos, goarch string) (osAliases, archAliases []string)`：迁 `runner_platform.go:229-253`。
   - `SplitTokens(name string) []string`、`HasAnyToken(name string, tokens []string) bool`：迁 `runner_platform.go:157-177`。
-  - `DetectOSSpecs`/`DetectArchSpecs`（含 `Regex/anti/priority`）与 `GOOSSpecIndex`/`GOARCHSpecIndex`：整表迁 `detect/detectors.go:302-339`，正则内容逐字不变。
-  - `DirArchPatterns`：迁 `runner_platform.go:192-212`。
-  - `TrimPlatformSuffixRegexps()`：把 `runner_output.go:204-208` 三条正则**整表原样**返回，不重建。
+  - `type OSSpec struct { Name string; Regex *regexp.Regexp; Anti *regexp.Regexp; Priority *regexp.Regexp }`（`Anti`/`Priority` 为 nil 表示不存在）与 `type ArchSpec struct { Name string; Regex *regexp.Regexp }`；`var DetectOSSpecs []OSSpec` / `var DetectArchSpecs []ArchSpec`：整表迁 `detect/detectors.go:302-318`，字段值与正则字符串逐字不变。
+  - `var GOOSSpecIndex map[string]OSSpec` / `GOARCHSpecIndex map[string]ArchSpec`：迁 `detectors.go:320-339`（键集不变，`IsKnownGOOS` 判据等价）。
+  - `detect` 侧保留 `systemOS`/`systemArch` 类型与 `Match`/`Detect` 策略（Q3），仅把初始化改为从 `platform` 的 spec 复制字段（detect 内的薄适配，如 `systemOSFrom(platform.OSSpec)`），anti/priority 语义一字不改。
+  - `var DirArchPatterns []*regexp.Regexp`：迁 `runner_platform.go:192-212`（表达式逐字不变）。
+  - `func TrimPlatformSuffixRegexps() []*regexp.Regexp`：把 `runner_output.go:204-208` 三条正则**整表原样**返回，不重建。
   - **不**提供任何判定函数（Q3）。
 - 验证: `go build ./...`；`go list -deps ./internal/platform` 仅 stdlib；`go test ./internal/platform/... -count=1`（新增 tokens/aliases/正则字符串快照测试；运行目录：Git root）
 - 完成标准: 三条正则字符串与 HEAD 逐字一致（可用 `git show HEAD:internal/install/runner_output.go` 比对）；包内无 `install`/`client`/`app` import。
@@ -319,10 +323,10 @@ release asset 分类站点：
 
 ### T10 迁移平台站点
 
-- 文件: `internal/install/runner_platform.go`、`internal/install/runner_output.go`、`internal/install/detect/detectors.go`、`internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`、`internal/install/platform_equiv_test.go`（新增 characterization）
-- 动作: 先补 characterization（迁移前绿）：S-P10 的三条正则对大写/`armv6`/`armv7`/`-linux-amd64` 等输入的裁剪结果；S-P01/P02/P11 的 detector 对 `tool_Windows_x86_64.exe`、`tool_LINUX_AMD64.AppImage` 的 os/arch/priority 结果。随后按 S-P01~S-P11 逐行替换数据来源；删除 `osTokens/archTokens/cacheOSTokens/cacheArchTokens/keepLatest*Tokens` 等本地定义；保留 `nameHasPlatform`、`trimPlatformSuffix`、`archiveNameMatchesPlatform`、`autoSelectWindowsMSVCAsset`、`systemDetector.Detect` 的判定流程（Q3）。
+- 文件: `internal/install/runner_platform.go`、`internal/install/runner_output.go`、`internal/install/detect/detectors.go`、`internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`、`internal/install/platform_equiv_test.go`（新增）、`internal/install/detect/platform_equiv_test.go`（新增）、`internal/client/cache_path_test.go`、`internal/app/cache/keep_latest_test.go`
+- 动作: 先补 characterization（迁移前绿）：S-P10 的三条正则对大写/`armv6`/`armv7`/`-linux-amd64` 等输入的裁剪结果；S-P01/P02/P11 的 detector 对 `tool_Windows_x86_64.exe`、`tool_LINUX_AMD64.AppImage` 的 os/arch/priority 结果。**测试归属**：`nameHasPlatform`/`trimPlatformSuffix`/`cachePlatform` 是各自包私有，其 characterization 写在本包测试文件（`internal/client/cache_path_test.go`、`internal/app/cache/keep_latest_test.go`）内直接调用；runner 侧写在 `internal/install/platform_equiv_test.go`；detect 侧写在 `internal/install/detect/platform_equiv_test.go`。随后按 S-P01~S-P11 逐行替换数据来源；删除 `osTokens/archTokens/cacheOSTokens/cacheArchTokens/keepLatest*Tokens` 等本地定义；保留 `nameHasPlatform`、`trimPlatformSuffix`、`archiveNameMatchesPlatform`、`autoSelectWindowsMSVCAsset`、`systemDetector.Detect` 的判定流程（Q3）。
 - 验证: `go test ./internal/install/... ./internal/install/detect/... ./internal/client/... ./internal/app/cache/... -count=1`；`rg -n --glob '!*_test.go' 'armv\?6' internal/` 只应命中 `internal/platform`（运行目录：Git root）
-- 完成标准: 上述测试绿且既有断言未改；`runner_output`、`detect`、`cache_path`、`keep_latest` 四个消费者均有 characterization 用例且全绿。
+- 完成标准: 上述测试绿且既有断言未改；`runner_output`、`detect`、`cache_path`、`keep_latest` 四个消费者各自在本包测试文件里有 characterization 且全绿。
 - 依赖: T09
 
 ### T11 建立 internal/filter 包
@@ -331,9 +335,9 @@ release asset 分类站点：
 - 动作: 固定以下 API（签名与语义不得改名）：
   - `type Kind int`；`KindPlain`/`KindPrefix`/`KindSuffix`/`KindRegex`。
   - `type Spec struct { Raw string; Anti bool; Kind Kind; Expr string; Regex *regexp.Regexp }`。
-  - `func Parse(raw string) (Spec, error)`：先剥离前导 `^`（`Anti=true`），再识别 `REG:`/`PRE:`/`SUF:`/普通值；`REG:` 用 `regexp.Compile(expr)`，失败返回 `*RegexError{Expr, Err}`（`Error()` 返回底层错误、`Unwrap()` 暴露原因），**不**内联「invalid tag/asset regex」文案。
+  - `func Parse(raw string) (Spec, error)`：**不**自行 `TrimSpace`（是否 trim 由调用点按现状决定，见 T12）；先剥离前导 `^`（`Anti=true`），再识别 `REG:`/`PRE:`/`SUF:`/普通值；`REG:` 用 `regexp.Compile(expr)`，失败返回 `*RegexError{Expr, Err}`（`Error()` 返回底层 `regexp` 文案、`Unwrap()` 暴露原因），**不**内联「invalid tag/asset/file regex」文案。
   - `func (s Spec) PrefixRegex() *regexp.Regexp` = `(?i)^` + `QuoteMeta(Expr)`；`func (s Spec) SuffixRegex() *regexp.Regexp` = `(?i)` + `QuoteMeta(Expr)` + `$`。
-  - `func IsPattern(raw string) bool`：`PRE:`/`SUF:`/`REG:` 任一前缀（与 `tagfilter.go:25-30` 等价）。
+  - `func IsPattern(raw string) bool`：`PRE:`/`SUF:`/`REG:` 任一前缀（与 `tagfilter.go:25-30` 等价）；同样**不**自行 `TrimSpace`（`tagfilter.IsPattern` 的 `TrimSpace` 由调用点保留）。
   - **不**返回 matcher、不决定匹配对象、不接管 glob 与子串默认语义。
 - 验证: `go build ./...`；`go test ./internal/filter/... -count=1`（四种前缀 × 正/反例、`^` 组合、非法 `REG:` 返回 `*RegexError`；运行目录：Git root）
 - 完成标准: `PrefixRegex()`/`SuffixRegex()` 生成的字符串与 `tagfilter.go:46,49`、`service.go:338,344` 逐字一致；包内无 tag/asset/文件名语义，不引用 `gobwas/glob`。
@@ -343,10 +347,10 @@ release asset 分类站点：
 
 - 文件: `internal/install/service.go`、`internal/install/chooser.go`、`internal/sdk/search_service.go`、`internal/app/tag_semantics.go`、`internal/source/github/finder.go`、`internal/filter/parse_test.go`，删除 `internal/tagfilter/`
 - 动作: S-F02~S-F05 按清单替换；`tagfilter` 的 4 个调用点改指向 `internal/filter`；glob 默认（`chooser.go`）与子串默认（`service.go`、`search_service.go`）留在原地不动；把 `internal/tagfilter/tagfilter_test.go` 的语法用例迁到 `internal/filter/parse_test.go`。调用方匹配规则（逐入口固定）：
-  - `source/github/finder.go:204`：`filter.Parse` → `*filter.RegexError` 时包装为 `invalid tag regex %q: %w`；匹配时 `KindRegex` 用 `Spec.Regex.MatchString`，`KindPlain`/`KindPrefix` 用 `PrefixRegex().MatchString`、`KindSuffix` 用 `SuffixRegex().MatchString`（保持 `(?i)` 与锚定）。
-  - `install/service.go`：plain 值仍**不**生成 Regex（继续走 `assetDetector.matches` 的子串匹配），`^` 仍为 `Anti`，错误文案仍为 `invalid asset regex %q: %w`。
-  - `install/chooser.go` 与 `sdk/search_service.go`：只改用 `filter` 的 `REG:`/`^` 于解析；`chooser` 的 glob 默认与 sdk 的子串默认不动。
-  - `app/tag_semantics.go:42,51`：用 `filter.IsPattern` 替换 `tagfilter.IsPattern`。
+  - `source/github/finder.go:204` 与 `app/tag_semantics.go:42,51`：调用前先 `strings.TrimSpace(raw)`（保持 `tagfilter.go:25-35` 现状）；错误包装为 `invalid tag regex %q: %w`；匹配时 `KindRegex` 用 `Spec.Regex.MatchString`，`KindPlain`/`KindPrefix` 用 `PrefixRegex().MatchString`、`KindSuffix` 用 `SuffixRegex().MatchString`（保持 `(?i)` 与锚定）。
+  - `install/service.go`：**不** TrimSpace（现状 `service.go:321` 直接判前缀）；plain 值仍**不**生成 Regex（继续走 `assetDetector.matches` 的子串匹配），`^` 仍为 `Anti`，错误文案仍为 `invalid asset regex %q: %w`。
+  - `install/chooser.go`：保留自身的 `strings.TrimSpace`（`chooser.go:62`）、空表达式判定与 `empty file regex expression`/`invalid file regex %q` 文案；`chooser` 的 glob 默认不动。
+  - `sdk/search_service.go`：**不** TrimSpace；非法 `REG:` 直接返回 `*filter.RegexError`（其 `Error()` 即 `regexp` 原始文案，与 `search_service.go:106-108` 一致）；sdk 的子串默认不动。
 - 验证: `go test ./internal/install/... ./internal/sdk/... ./internal/app/... ./internal/source/github/... ./internal/filter/... -count=1`；`rg -n 'internal/tagfilter' .` 为空；`go build ./...`（运行目录：Git root）
 - 完成标准: 包已删除且无残留 import；`--tag`、`--asset`、`--extract-file`、sdk search 的既有测试全绿且断言未改，含非法 `REG:` 的错误文案断言。
 - 依赖: T11
@@ -361,9 +365,9 @@ release asset 分类站点：
 
 ## 回滚与恢复
 
-- 每波次一个本地 commit（W1=T01/T02，W2=T03~T06，W3=T07，W4=T08，W5=T09/T10，W6=T11/T12，W7=T13 合并入最后一波）。
-- 回滚策略：`git revert <wave commit>`。三包互相独立，W5/W6 的 revert 不影响 W1~W4。
-- 恢复点：任一站点等价性用例红 → 只回退该站点所在任务的改动，保留已完成的其余站点（同波次内可 `git checkout -- <file>` 单文件回退）。
+- 按**任务粒度**提交（T01、T02、T03、T04、T05、T06、T07、T08、T09、T10、T11、T12、T13 各一个 commit），不再用「一个波次一个 commit」覆盖多任务；每个 commit 只含该任务的 owner 路径。
+- 回滚策略：`git revert <task commit>`。三个新包互相独立，T09/T10（platform）与 T11/T12（filter）的 revert 不影响 T01~T08。
+- 恢复点：某站点 characterization 变红 → 回退**该站点所在任务**的 commit（不用 `git checkout -- <file>`：同一文件常被多个任务共享，单文件 checkout 会误伤已完成的其它站点）。
 - 无常驻状态、无迁移、无数据写入；缓存 layout 与 installed store 不受影响。
 
 ## 人工 Gate
