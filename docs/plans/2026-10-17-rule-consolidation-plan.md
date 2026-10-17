@@ -1,13 +1,14 @@
 <!-- template_id: plan; template_version: 1.2.0 -->
 # eget 匹配与转换规则整合 实施计划
 
-> 状态：Draft 0.1 / 待人工计划批准
+> 状态：Draft 0.2 / 待人工计划批准
 
 ## 修订记录
 
 | 版本 | 日期 | 作者 | 摘要 |
 |---|---|---|---|
 | 0.1 | 2026-10-17 | inhere | 初稿：按已批准 design 0.2 拆出 filekind/platform/filter 三包的等价性迁移波次；闭合 X-01/X-02/X-03 站点清单与大小写轴；把 F3 漂移修复与「不改匹配结果」的冲突显式推迟 |
+| 0.2 | 2026-10-17 | inhere | 按第 1 轮两轴独立评审修订（Standards S-01~S-06 / Executability E-01~E-09）：S-E11 与 S-E12 的 `.exe` 判定**不再合并**（否则 `.7z/.rar/.msi/.cab/.iso` 行为改变）；补齐 `KindExact`/`IsNonExecutableExact`/`IsExecutableFold`/`ExecutableSuffixFold`/`PrefixRegex`/`SuffixRegex` 等 API 定义；S-A07 保留「提取 + 上游允许集合」两阶段；具名集合逐集合标注可用轴；characterization 用例按站点 id 落到具体 owner 文件；每条验证命令声明运行目录；补 T06/T13 追溯行；Semantic Amendment 失败路径含 design 修订；F3 归一路径明确为「design 修订 + 用户批准」 |
 
 > 仅语义变化递增版本；纯 identity/provenance/元数据纠正沿用原版本，并在 Git/进度记录中留痕。
 
@@ -44,7 +45,7 @@
 | F6 版本解析与比较（7 套） | design D5 deferred，需先定单一模型 |
 | F7 `{name}{version}{os}{arch}{ext}` 模板语法（3 套） | design D7 deferred，属渲染层 |
 | glob 默认语义（`chooser.go:57-60`）与子串默认语义（`search_service.go:117`） | design 非目标；仅 `REG:`/`PRE:`/`SUF:`/`^` 显式前缀走 `filter` |
-| 修复 F3 的「漂移集合」（`sdk/json_index.go:223-231` 缺 `.tar.zst/.tar.br/.tar.lz4`、`json_index.go:121-144` 未折叠大小写） | **本计划保留现状**（见「等价性判定规则」）。补齐即改变匹配结果，与 design 非目标冲突，需一次单独的语义变更批准 |
+| 修复 F3 的「漂移集合」（`sdk/json_index.go:223-231` 缺 `.tar.zst/.tar.br/.tar.lz4`、`json_index.go:121-144` 未折叠大小写） | 本计划只把该漂移**集中**为具名 legacy 集合（知识入表、行为不变），**不**补齐、**不**折叠：补齐或折叠都会改变匹配结果，与 design 非目标「不改变任何匹配结果」冲突。属语义变更，路径为 design 修订（0.3）+ 用户批准后另立波次；本计划不得自行决定 |
 | `sdk/builtin_config.go:109,157-158` 的 `OSMap`/`ArchMap` | 属 URL 模板取值约定，非识别知识（design 名词表） |
 | `install/archive_formats.go:107-123` 的内容嗅探、`install/archive_paths.go` 路径安全 | 不是文件名知识 |
 | `app/cache/service.go:343-358` 缓存条目分类、`source/urltemplate/finder.go:117-132` 元数据格式 | 属缓存/元数据域，非本计划三类知识 |
@@ -65,6 +66,7 @@
 | 设计候选 | commit `5146d5c32cfe070e27ea6c39b4f812dc4e8d5156`，revision `0.2` |
 | 设计批准证据 | 用户于本会话明确批准：「Q1–Q3 按建议收敛，批准设计 0.2」 |
 | Q1–Q3 收敛留痕 | Q1=删除 `internal/tagfilter`（不留 facade）→ T11/T12；Q2=允许 `client` import 新包（方向 `client → platform/filekind`，无环）→ T07；Q3=保留三个独立「含平台」判定函数（`nameHasPlatform`、`trimPlatformSuffix`、`systemDetector.Detect` 的 anti/priority）→ T10。收敛结果与 design 内联「建议」一致，故 design 仍为 0.2，scope 自此视为冻结 |
+| 设计评审 ledger 状态说明 | `review-ledger.json` 的 `human_gate.pending=设计批准` 记录的是**设计评审时点**的状态；其后用户已在本会话明确批准（上一行原文）。ledger 作为历史评审产物不改写，其 pending 状态由该批准证据取代 |
 
 ## 等价性判定规则
 
@@ -75,9 +77,9 @@
    - `filekind.ExtSetExtractAll`（`runner_output.go:30-42` 的 10 项，不含单文件压缩器）
    - `filekind.ExtSetCacheMulti`（`.tar.gz`/`.tar.xz`/`.tar.bz2`/`.tar.zst`/`.tar.br`/`.tar.lz4`，供 `cache_path`/`keep_latest`）
    - `filekind.ExtSetDownload`（`.zip`/`.gz`/`.tgz`/`.xz`/`.bz2`/`.zst`/`.7z`/`.rar`，供 `runner_download`）
-   - `filekind.ExtSetArchiveLegacy`（`.tar.gz`/`.tar.xz`/`.tar.bz2`/`.zip`/`.7z`，**仅** `sdk/json_index.go` 使用，注释标注「等价性保留，漂移待另一次语义变更」）
-   - `filekind.ExtSetSystemArchiver`（`.7z`/`.rar`/`.msi`/`.cab`/`.iso`/`.exe`，供 `system7z` 与 `service.requiresSystem7z`）
-2. **大小写轴显式**：`Xxx(name)`=大小写敏感（原样 `HasSuffix`），`XxxFold(name)`=先 `ToLower` 再判定。站点原有轴不得互换。
+   - `filekind.ExtSetArchiveLegacy`（`.tar.gz`/`.tar.xz`/`.tar.bz2`/`.zip`/`.7z`，**仅** `sdk/json_index.go` 使用：S-A08 `archiveExt` 提取与 S-A07 `parseZuluFilename` 共用；注释标注「等价性保留：漂移归一并属语义变更，需 design 修订 + 用户批准」）
+   - `filekind.ExtSetSystemArchiver`（`.7z`/`.rar`/`.msi`/`.cab`/`.iso` 为**无条件**集合；`.exe` 是条件分支，由调用点用 `IsExecutableFold(name) && extractArchive` 表达，**不进集合**）
+2. **大小写轴显式**：`Xxx(name)`=大小写敏感（原样 `HasSuffix`），`XxxFold(name)`=先 `ToLower` 再判定。站点原有轴不得互换。逐集合的可用轴（不得为无该轴消费者的集合新增轴 API）：`ExtSetExtractor`=Exact、`ExtSetExtractAll`=Fold、`ExtSetCacheMulti`=Fold、`ExtSetDownload`=Fold、`ExtSetArchiveLegacy`=Exact、`ExtSetSystemArchiver`=Fold；可执行/安装器知识两轴都需：Exact（`IsExecutableExact`/`IsNonExecutableExact`，S-E01/E02/E03）与 Fold（`IsExecutableFold`/`ExecutableSuffixFold`/`IsInstallerFold`，S-E04~S-E12）。
 3. **每站点用例**：至少 1 个正例、1 个反例、1 个全大写变体。迁移前先在原包写成红/绿可重复的 characterization 用例，迁移后**同一断言**必须保持绿；不得为了迁就实现而修改断言。
 
 ## Capability Discovery
@@ -134,9 +136,9 @@
 
 ### fail-closed 条件
 
-- characterization 用例变红，或必须修改断言才能通过 → 停止该站点，`git revert` 该站点的改动，重新判定（若需改行为 = `Semantic Amendment`，返回 plan 评审与人工 Gate）。
+- characterization 用例变红，或必须修改断言才能通过 → 停止该站点，`git revert` 该站点的改动，重新判定（若需改行为 = `Semantic Amendment`，返回 design/plan review 与人工 Gate）。
 - 迁移某站点需要改变后缀集合或大小写轴 → 同上。
-- 发现设计矛盾（例如要求统一集合与非目标冲突）→ 记入剩余工作，不在计划内自行解决。
+- 发现设计矛盾（例如要求统一集合与非目标冲突）→ 按 `plan-contract` 返回 design/plan review 与人工 Gate（先 design 修订 + 用户批准），不在计划内自行解决。
 - 新发现的站点在 `internal/` 之外或属新包职责之外 → `Operational Discovery` 记录并继续，不扩围。
 
 ## 波次与依赖
@@ -167,8 +169,8 @@ W7 收尾（T13）  依赖 W2、W3、W4、T10、T12 全部完成
 | S-A04 | `internal/client/cache_path.go:75-83` | `archiveExt` | `ExtSetCacheMulti` | 折叠 | 迁 `filekind.MultiExtFold` |
 | S-A05 | `internal/app/cache/keep_latest.go:435-443` | `cacheAssetExt` | `ExtSetCacheMulti` | 折叠 | 迁 `filekind.MultiExtFold`（与 S-A04 同一 API） |
 | S-A06 | `internal/sdk/json_index.go:121-144` | `parseNodeFileDescriptor`（X-03） | `-tar.xz/-tar.gz/-zip`（`-` 分隔） | 敏感 | **刻意保留**：单一上游索引命名约定，非通用归档知识；补 characterization 用例防漂移 |
-| S-A07 | `internal/sdk/json_index.go:209-220` | `parseZuluFilename` | 经 `archiveExt` 的 `tar.gz/zip` | 敏感 | 随 S-A08 |
-| S-A08 | `internal/sdk/json_index.go:223-231` | `archiveExt`（F3 漂移变体） | `ExtSetArchiveLegacy`（缺 `.tar.zst/.tar.br/.tar.lz4`） | 敏感 | 迁 `filekind.MultiExtExact(name, ExtSetArchiveLegacy)`；**集合不补齐**（等价性） |
+| S-A07 | `internal/sdk/json_index.go:209-220` | `parseZuluFilename` | 经 S-A08 提取后仅接受 `tar.gz`/`zip` | 敏感 | 保留**两阶段**：提取用 S-A08 的 `filekind.MultiExtExact`；`ext != "tar.gz" && ext != "zip"` 的上游允许集合**刻意留在 sdk**（属上游 Zulu 格式约定，非通用归档知识），并补 characterization 用例 |
+| S-A08 | `internal/sdk/json_index.go:223-231` | `archiveExt`（F3 漂移变体） | `ExtSetArchiveLegacy`（缺 `.tar.zst/.tar.br/.tar.lz4`） | 敏感 | 迁 `filekind.MultiExtExact(name, ExtSetArchiveLegacy)`；**不补齐、不折叠**（等价性）；该集合的消费者是 S-A07 与 S-A08 两处 |
 | S-A09 | `internal/install/archive_formats.go:107-123` | `NewZipArchive` | 内容嗅探 | 不适用 | 刻意保留（非文件名知识） |
 
 可执行/安装器站点（X-01 已全部纳入）：
@@ -176,7 +178,7 @@ W7 收尾（T13）  依赖 W2、W3、W4、T10、T12 全部完成
 | id | path:line | 函数 | 集合 | 轴 | 决策 |
 |---|---|---|---|---|---|
 | S-E01 | `internal/install/file_modes.go:49-61` | `rename` | `.appimage,.exe` | 敏感 | 迁 `filekind.IsExecutableExact` |
-| S-E02 | `internal/install/file_modes.go:63-77` | `isDefinitelyNotExec`,`isExec` | `.deb,.1,.txt,.exe,.appimage` | 基础名折叠 / 后缀敏感 | 迁 `filekind.KindExact` + 本地折叠基础名；**保持混合轴** |
+| S-E02 | `internal/install/file_modes.go:63-77` | `isDefinitelyNotExec`,`isExec` | `.deb`/`.1`/`.txt`（非可执行）、`.exe`/`.appimage`（可执行） | 后缀敏感（基础名白名单另行折叠） | 迁 `filekind.IsNonExecutableExact` + `filekind.IsExecutableExact`；`license`/`readme` 等基础名白名单与 `mode&0o111` 判定留原地（**保持混合轴**） |
 | S-E03 | `internal/install/chooser.go:162-169` | `BinaryChooser.Choose` | `.exe,.appimage` | 敏感 | 迁 `filekind.IsExecutableExact` |
 | S-E04 | `internal/install/runner_platform.go:134-144` | `isExecutableForGOOS`（X-01） | `.exe` | 折叠 | 迁 `filekind.IsExecutableFold` |
 | S-E05 | `internal/install/runner_platform.go:180-190` | `autoSelectOnlyWindowsExecutable`（X-01） | `.exe` | 折叠 | 迁 `filekind.IsExecutableFold` |
@@ -185,8 +187,8 @@ W7 收尾（T13）  依赖 W2、W3、W4、T10、T12 全部完成
 | S-E08 | `internal/install/runner_select.go:225-233` | `normalizedAssetNameHint` | `.exe,.appimage` | 折叠 | 迁 `filekind.ExecutableSuffixFold` |
 | S-E09 | `internal/install/gui.go:28-41` | `DetectGUIInstallMode`（X-01；设计原引用区间不含此函数） | `.exe,.msi` | 折叠 | 迁 `filekind.IsInstallerFold` |
 | S-E10 | `internal/install/gui.go:43-53` | `DetectInstallerKind` | `.msi,.exe` + `setup`/`installer` 关键词 | 折叠 | 后缀部分迁 `filekind.IsInstallerFold`；关键词判定留原地 |
-| S-E11 | `internal/install/service.go:502-505` | `requiresSystem7z`（X-01） | `.exe` | 折叠 | 迁 `filekind.IsExecutableFold`，并与 S-E12 的 `.exe` 分支合并为一处判定 |
-| S-E12 | `internal/install/system7z.go:32-45` | `shouldUseSystem7z` | `.7z,.rar,.msi,.cab,.iso,.exe` | 折叠 | 迁 `filekind.RequiresSystemArchiver`（新表，含 `.exe` 分支供 S-E11 复用） |
+| S-E11 | `internal/install/service.go:502-505` | `requiresSystem7z`（X-01） | `.exe` + `extractArchive` | 折叠 | 改写为 `filekind.IsExecutableFold(name) && extractArchive`；**不得**改用 S-E12 的完整集合（否则 `.7z/.rar/.msi/.cab/.iso` 的行为从普通 fallback 变成错误） |
+| S-E12 | `internal/install/system7z.go:32-45` | `shouldUseSystem7z` | `.7z`/`.rar`/`.msi`/`.cab`/`.iso`（无条件）+ `.exe && extractArchive`（条件） | 折叠 | 无条件集合迁 `filekind.RequiresSystemArchiverFold`；`.exe` 分支保持 `filekind.IsExecutableFold(name) && extractArchive` 的独立写法，**不与 S-E11 合并** |
 
 release asset 分类站点：
 
@@ -218,122 +220,142 @@ release asset 分类站点：
 | S-F02 | `internal/install/service.go:319-349` | `parseAssetFilter` | `^` + `PRE:`/`SUF:`/`REG:`，普通值=子串 | 解析迁 `filter.Parse`；子串默认与 `assetDetector.matches` 留原地 |
 | S-F03 | `internal/install/chooser.go:57-81,121-159` | `newFilePatternChooser`,`NewFileChooser`,`newFilterChooser` | `REG:` + `^` 排除，普通值=glob | 仅 `REG:`/`^` 前缀解析迁 `filter`；glob 默认留原地 |
 | S-F04 | `internal/sdk/search_service.go:85-117` | `searchKeywordMatches`,`searchKeywordContains` | `^` + `REG:`，普通值=子串 | 前缀解析迁 `filter`；子串默认留原地 |
-| S-F05 | `internal/app/tag_semantics.go:42,51`；`internal/source/github/finder.go:109,204` | 4 个 `tagfilter.*` 调用点 | 同上 | 改指向 `filter.IsPattern`/`filter.Parse` |
+| S-F05 | `internal/app/tag_semantics.go:42,51`；`internal/source/github/finder.go:109,204` | 4 个 `tagfilter.*` 调用点 | 同上 | 改指向 `filter.IsPattern`/`filter.Parse`；`finder.go:204` 用返回的正则匹配（plain/PRE→`PrefixRegex()`、SUF→`SuffixRegex()`、REG→`Spec.Regex`），保持现有大小写语义 |
 
 ## 任务
+
+> 所有验证命令的运行目录为 **Git root**（`D:\work\inhere\my-tools-dev\inhere-tools\eget`）；下文相对路径均以该目录为准。
 
 ### T01 建立 internal/filekind 包与具名集合
 
 - 文件: `internal/filekind/filekind.go`、`internal/filekind/archive.go`、`internal/filekind/executable.go`、`internal/filekind/releaseasset.go`
 - 动作:
-  - 定义具名集合常量 `ExtSetExtractor`、`ExtSetExtractAll`、`ExtSetCacheMulti`、`ExtSetDownload`、`ExtSetArchiveLegacy`、`ExtSetSystemArchiver`，每项含注释说明消费者，`ExtSetArchiveLegacy` 标注「等价性保留，漂移待另一次语义变更」。
-  - 导出双轴 API：`MultiExtExact/MultiExtFold`、`IsArchiveExact/IsArchiveFold`、`IsDownloadFold`、`IsExecutableExact/IsExecutableFold`、`ExecutableSuffixFold`、`IsInstallerFold`、`RequiresSystemArchiver`、`ClassifyAsset`（返回 `AssetInstallable`/`AssetChecksum`/`AssetSignature`/`AssetMetadata`）。
+  - 定义具名集合常量 `ExtSetExtractor`、`ExtSetExtractAll`、`ExtSetCacheMulti`、`ExtSetDownload`、`ExtSetArchiveLegacy`、`ExtSetSystemArchiver`（各为 `[]string`），每项含注释说明消费者；`ExtSetArchiveLegacy` 注释写明「等价性保留：漂移归并需 design 修订 + 用户批准」。
+  - 定义 `type Kind int` 与 `KindTarGz/KindTarBz2/KindTarXz/KindTarZst/KindTar/KindZip/KindSevenZip/KindGz/KindBz2/KindXz/KindZst/KindUnknown`，作为「后缀 → 类型」的中间结果；`install` 只做 `Kind` → 构造函数映射。
+  - 导出 API（签名与语义固定，实施时不得改名或改轴）：
+    - `KindExact(name string) Kind`：按 `ExtSetExtractor` 查表；表内**多段扩展名先于单段**（`.tar.gz` 先于 `.gz`），未命中返回 `KindUnknown`。
+    - `MultiExtExact(name string, set []string) string` / `MultiExtFold(name string, set []string) string`：按集合顺序命中则返回带点后缀（如 `.tar.gz`），否则返回 `path.Ext(name)`。
+    - `IsArchiveFold(name string, set []string) bool`；`IsDownloadFold(name string) bool`。
+    - `IsExecutableExact(name string) bool`（`.exe`/`.appimage`）、`IsNonExecutableExact(name string) bool`（`.deb`/`.1`/`.txt`）。
+    - `IsExecutableFold(name string) bool`、`ExecutableSuffixFold(name string) string`（`.exe`/`.appimage`，否则空串）、`IsInstallerFold(name string) bool`（`.exe`/`.msi`）。
+    - `RequiresSystemArchiverFold(name string) bool`：仅查 `ExtSetSystemArchiver` 的**无条件**集合（`.7z`/`.rar`/`.msi`/`.cab`/`.iso`）。
+    - `ClassifyAsset(name string) AssetClass`（`AssetInstallable`/`AssetChecksum`/`AssetSignature`/`AssetMetadata`）。
   - 包内只 import stdlib 与 `internal/util`；不构造解压器、不碰文件系统。
   - 数据来源：从站点清单各行原样复制后缀字面量（先读原实现再抄），不得顺手重排或去重；同组集合的项序不影响语义，但**不得**跨集合合并（`ExtSetExtractor` 与 `ExtSetExtractAll` 差在单文件压缩器，`ExtSetArchiveLegacy` 是窄集）。
-- 验证: `go build ./...`；`go list -deps ./internal/filekind` 仅含 stdlib + `internal/util`
-- 完成标准: 包可编译；六组集合与两轴 API 齐备；包注释写明「只持数据，不持判定策略」。
+- 验证: `go build ./...`；`go list -deps ./internal/filekind` 仅含 stdlib + `internal/util`（运行目录：Git root）
+- 完成标准: 包可编译；六个集合常量、`Kind` 枚举与上述 12 个导出函数齐备且签名一致；`KindExact("x.tar.gz")` 返回 `KindTarGz` 而非 `KindGz`；包注释写明「只持数据，不持判定策略」。
 - 依赖: 无
 
 ### T02 filekind 自测（每集合 × 两轴 × 大小写变体）
 
 - 文件: `internal/filekind/archive_test.go`、`internal/filekind/executable_test.go`、`internal/filekind/releaseasset_test.go`
 - 动作: 对 S-A01~S-A05、S-A08、S-E01~S-E12、S-R01 涉及的每个后缀写「正例 / 反例 / 全大写变体」表驱动用例；用 `goutil/x/assert`（GR106）；`t.Run()` 分组。
-- 验证: `go test ./internal/filekind/... -count=1`
-- 完成标准: 每个具名集合至少一条正例与一条反例；`ExtSetArchiveLegacy` 的「缺 `.tar.zst`」以负例固定下来；大写变体在 `Xxx` 下为负例、在 `XxxFold` 下为正例。
+- 验证: `go test ./internal/filekind/... -count=1`（运行目录：Git root）
+- 完成标准: 按站点实际轴测完（敏感：S-A01/S-A06/S-A08、S-E01/S-E02/S-E03；折叠：其余），**不得**为无该轴消费者的集合新增轴 API；`ExtSetArchiveLegacy` 的「缺 `.tar.zst`」以负例固定下来；大写变体在 Exact 下为负例、在 Fold 下为正例。
 - 依赖: T01
 
 ### T03 install 包 characterization 用例先行
 
-- 文件: `internal/install/filekind_equiv_test.go`（新增），不改动既有 `*_test.go` 的断言
-- 动作: 对 S-A01~S-A03、S-E01~S-E12 的每一行，直接调用**当前**实现函数（同包内可访问），断言其后缀判定结果；输入表含常规名、全大写名、无后缀名、多段扩展名。
-- 验证: `go test ./internal/install/... -run 'Equiv' -count=1`（迁移前必须绿）
-- 完成标准: 18 个 install 站点各至少 3 条断言；测试名以站点 id 前缀（如 `TestEquivS_E04`）便于逐站点跟踪。
+- 文件: `internal/install/filekind_equiv_test.go`（新增；若超 GR104 的 1000 行，拆为 `filekind_equiv_exec_test.go` 与 `filekind_equiv_archive_test.go`），不改动既有 `*_test.go` 的断言
+- 动作: 对 S-A01~S-A03、S-E01~S-E12 共 **15 个站点**逐行直接调用**当前**实现函数（同包内可访问），断言其后缀判定结果；输入表含常规名、全大写名、无后缀名、多段扩展名；S-E11/S-E12 分别断言 `.exe`（`extractArchive` 真假两例）与 `.7z/.rar/.msi/.cab/.iso`。
+- 验证: `go test ./internal/install/... -run 'Equiv' -count=1`（迁移前必须绿；运行目录：Git root）
+- 完成标准: 15 个站点各至少 3 条断言；测试名以站点 id 为前缀（如 `TestEquivS_E04`），逐站点可跟踪。
 - 依赖: 无（可与 T01/T02 并行）
 
-### T04 迁移 install 可执行/安装器站点并合并 `.exe` 分支
+### T04 迁移 install 可执行/安装器站点（不合并 `.exe` 分支）
 
 - 文件: `internal/install/file_modes.go`、`internal/install/chooser.go`、`internal/install/gui.go`、`internal/install/runner_platform.go`、`internal/install/runner_output.go`、`internal/install/runner_select.go`、`internal/install/service.go`、`internal/install/system7z.go`
-- 动作: 按站点清单逐行替换为 filekind API，保持各站点原轴（S-E01/S-E02/S-E03 敏感，其余折叠）；S-E11 与 S-E12 的 `.exe` 判定合并为 `filekind.RequiresSystemArchiver` 的一处调用；删除被替代的本地集合。
-- 验证: `go test ./internal/install/... -count=1`；`rg -n --glob '!*_test.go' '\.appimage|\.msi' internal/install` 只应剩 filekind 调用与刻意保留的关键词判定
-- 完成标准: T03 断言全绿且未修改；上述 grep 的剩余行可逐行解释。
+- 动作: 按站点清单逐行替换为 filekind API，保持各站点原轴（S-E01/S-E02/S-E03 敏感，其余折叠）；S-E11 改写为 `filekind.IsExecutableFold(name) && extractArchive`；S-E12 的 `.exe` 分支同样写为 `filekind.IsExecutableFold(name) && extractArchive`，其余后缀用 `filekind.RequiresSystemArchiverFold(name)`；**两处不得合并为一个函数**（集合与 fallback 行为不同，见评审 E-02）；S-E10 的 `setup`/`installer` 关键词判定留原地；删除被替代的本地集合。
+- 验证: `go test ./internal/install/... -count=1`；`rg -n --glob '!*_test.go' '\.appimage|\.msi|\.cab|\.iso' internal/install` 只应剩 filekind 调用与刻意保留的关键词判定（运行目录：Git root）
+- 完成标准: T03 断言全绿且未修改；上述 grep 的剩余行可逐行解释；`shouldUseSystem7z` 与 `requiresSystem7z` 仍是两个独立函数，`TestSelectExtractorFallsBackToGoExtractorWithoutSystem7z`、`TestSelectExtractorRequiresSystem7zForExeExtractAll` 未改断言且全绿。
 - 依赖: T01, T02, T03
 
 ### T05 迁移 install 归档站点
 
 - 文件: `internal/install/extractor.go`、`internal/install/runner_output.go`、`internal/install/runner_download.go`
-- 动作: S-A01 用 `IsArchiveExact`/`ExtExact` 选类型，`install` 内保留「类型 → 构造函数」映射与 gunzip/bzip2/xz/zstd 闭包；S-A02、S-A03 用折叠 API 与各自具名集合。
-- 验证: `go test ./internal/install/... -count=1`；`rg -n --glob '!*_test.go' '\.tar\.gz|\.tar\.xz|\.tar\.zst' internal/install` 只应剩 filekind 引用
-- 完成标准: T03 断言全绿；`extractor.go` 不再直接比较后缀字符串。
+- 动作: S-A01 用 `filekind.KindExact(name)` 得 `Kind`，`install` 内改为 `switch Kind` → 构造函数与解压闭包（`KindUnknown` → `SingleFileExtractor` + `nounzipper`，与现状 `default` 分支一致）；S-A02、S-A03 用 `filekind.IsArchiveFold(name, ExtSetExtractAll)` 与 `IsDownloadFold(name)`。
+- 验证: `go test ./internal/install/... -count=1`；`rg -n 'HasSuffix' internal/install/extractor.go` 应为空（运行目录：Git root）
+- 完成标准: T03 断言全绿；`extractor.go` 不再直接比较后缀字符串；十四项后缀（`.tar.gz`/`.tgz`/`.tar.bz2`/`.tbz`/`.tar.xz`/`.txz`/`.tar.zst`/`.tar`/`.zip`/`.7z`/`.gz`/`.bz2`/`.xz`/`.zst`）均映射到原构造函数。
 - 依赖: T01, T02, T03
 
 ### T06 install 波次收尾
 
 - 文件: 同 T04、T05
-- 动作: 删除 install 内已无引用的私有集合/常量；确认无未使用变量；跑全量测试。
-- 验证: `go build ./...`；`go vet ./internal/...`；`go test ./internal/install/... -count=1`
-- 完成标准: 三者全绿；`git diff --stat` 仅触及 install 与新包。
+- 动作: 删除 install 内已无引用的私有集合/常量；确认无未使用变量；跑全量测试；人工核对 install 包内剩余 `HasSuffix` 调用并逐个解释。
+- 验证: `go build ./...`；`go vet ./internal/...`；`go test ./internal/install/... -count=1`；`rg -n 'HasSuffix' internal/install --glob '!*_test.go'`（运行目录：Git root）
+- 完成标准: 前三项全绿；`git diff --stat` 仅触及 install 与新包；剩余 `HasSuffix` 调用均为非后缀知识（路径/前缀/版本）并在 progress 中逐条记录。
 - 依赖: T04, T05
 
 ### T07 迁移 client / app-cache / sdk 站点
 
-- 文件: `internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`、`internal/sdk/json_index.go`
-- 动作: S-A04、S-A05 用 `filekind.MultiExtFold(ExtSetCacheMulti)`；S-A07、S-A08 用 `MultiExtExact(ExtSetArchiveLegacy)`；S-A06 保持现状并补 characterization 用例（`internal/sdk/json_index_test.go` 追加 `-tar.xz`/`-TAR.XZ` 用例，断言大写为不识别）；`client` 新增对 `internal/filekind` 的 import（Q2 已允许，方向 `client → filekind`）。
-- 验证: `go test ./internal/client/... ./internal/app/cache/... ./internal/sdk/... -count=1`；`go list -deps ./internal/client | rg 'internal/(install|app)'` 应为空（无反向边）
-- 完成标准: 三包测试绿；`.tar.br`/`.tar.lz4` 在 cache 路径有正例；sdk 窄集行为未变（大写仍不识别）。
+- 文件: `internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`、`internal/sdk/json_index.go`、`internal/client/cache_path_test.go`、`internal/app/cache/keep_latest_test.go`、`internal/sdk/json_index_test.go`
+- 动作: 先补 characterization（迁移前绿）：S-A04/S-A05 的 `.tar.br`/`.tar.lz4` 正例、`.TAR.BR` 折叠正例；S-A07 的 `-tar.xz`→拒、`.TAR.GZ`→拒、`.tar.gz`/`.zip`→接受；S-A08 的 `.tar.zst`→不当归档（负例）。随后：S-A04、S-A05 用 `filekind.MultiExtFold(name, ExtSetCacheMulti)`；S-A07、S-A08 用 `filekind.MultiExtExact(name, ExtSetArchiveLegacy)`，**保留** S-A07 的 `ext != "tar.gz" && ext != "zip"` 上游允许集合；S-A06 不动（仅加用例）；`client` 新增 `internal/filekind` import（Q2，方向 `client → filekind`）。
+- 验证: `go test ./internal/client/... ./internal/app/cache/... ./internal/sdk/... -count=1`；`go list -deps ./internal/client | rg 'internal/(install|app)'` 为空（无反向边；运行目录：Git root）
+- 完成标准: 三包测试绿；上述 characterization 全绿且未改断言；`.tar.br`/`.tar.lz4` 在 cache 路径有正例；sdk 窄集行为未变。
 - 依赖: T01, T02
 
 ### T08 迁移 detect 的 release asset 分类
 
-- 文件: `internal/install/detect/detectors.go`
-- 动作: S-R01 的 `isReleaseMetadataAsset`/`classifyReleaseAsset` 改为调用 `filekind.ClassifyAsset`；`SelectableReleaseAssets`、`assetDetector.Detect`、`systemDetector.Detect` 流程留原地。
-- 验证: `go test ./internal/install/detect/... -count=1`（现有 `TestReleaseAssetMetadataClassification` 等必须绿且未改断言）
-- 完成标准: detect 包内不再出现 checksum/signature/metadata 后缀字面量；现有分类测试全绿。
+- 文件: `internal/install/detect/detectors.go`、`internal/install/detect/filekind_equiv_test.go`（新增 characterization）
+- 动作: 先补 characterization（metadata/checksum/signature 三组各 1 正例 1 反例 + 全大写变体），再将 S-R01 的 `isReleaseMetadataAsset`/`classifyReleaseAsset` 改为调用 `filekind.ClassifyAsset`；`SelectableReleaseAssets`、`assetDetector.Detect`、`systemDetector.Detect` 流程留原地。
+- 验证: `go test ./internal/install/detect/... -count=1`（现有 `TestReleaseAssetMetadataClassification` 等必须绿且未改断言；运行目录：Git root）
+- 完成标准: detect 包内不再出现 checksum/signature/metadata 后缀字面量；现有分类测试 + 新 characterization 全绿。
 - 依赖: T01, T02
 
 ### T09 建立 internal/platform 包
 
-- 文件: `internal/platform/platform.go`、`internal/platform/tokens.go`、`internal/platform/detect.go`、`internal/platform/patterns.go`
+- 文件: `internal/platform/platform.go`、`internal/platform/tokens.go`、`internal/platform/detect.go`、`internal/platform/patterns.go`、`internal/platform/tokens_test.go`、`internal/platform/patterns_test.go`
 - 动作:
-  - `OSTokens()/ArchTokens()/VariantTokens()`：从 `runner_platform.go:215-218` 原样复制（三处逐字相同，取其一即可）。
+  - `OSTokens()/ArchTokens()/VariantTokens()`：从 `runner_platform.go:215-217` 原样复制（`osTokens`/`archTokens`/`executableVariantTokens`；三处逐字相同，取其一即可）。`:218` 的 `versionTokenPattern` **不迁**（它是判定用的正则，不是别名数据）。
   - `Aliases(goos, goarch string) (osAliases, archAliases []string)`：迁 `runner_platform.go:229-253`。
   - `SplitTokens(name string) []string`、`HasAnyToken(name string, tokens []string) bool`：迁 `runner_platform.go:157-177`。
   - `DetectOSSpecs`/`DetectArchSpecs`（含 `Regex/anti/priority`）与 `GOOSSpecIndex`/`GOARCHSpecIndex`：整表迁 `detect/detectors.go:302-339`，正则内容逐字不变。
   - `DirArchPatterns`：迁 `runner_platform.go:192-212`。
   - `TrimPlatformSuffixRegexps()`：把 `runner_output.go:204-208` 三条正则**整表原样**返回，不重建。
   - **不**提供任何判定函数（Q3）。
-- 验证: `go build ./...`；`go list -deps ./internal/platform` 仅 stdlib；`go test ./internal/platform/... -count=1`（新增 tokens/aliases 表测试）
+- 验证: `go build ./...`；`go list -deps ./internal/platform` 仅 stdlib；`go test ./internal/platform/... -count=1`（新增 tokens/aliases/正则字符串快照测试；运行目录：Git root）
 - 完成标准: 三条正则字符串与 HEAD 逐字一致（可用 `git show HEAD:internal/install/runner_output.go` 比对）；包内无 `install`/`client`/`app` import。
 - 依赖: 无（可与 W1 并行）
 
 ### T10 迁移平台站点
 
-- 文件: `internal/install/runner_platform.go`、`internal/install/runner_output.go`、`internal/install/detect/detectors.go`、`internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`
-- 动作: 按 S-P01~S-P11 逐行替换数据来源；删除 `osTokens/archTokens/cacheOSTokens/cacheArchTokens/keepLatest*Tokens` 等本地定义；保留 `nameHasPlatform`、`trimPlatformSuffix`、`archiveNameMatchesPlatform`、`autoSelectWindowsMSVCAsset`、`systemDetector.Detect` 的判定流程（Q3）。
-- 验证: `go test ./internal/install/... ./internal/client/... ./internal/app/cache/... -count=1`；`rg -n --glob '!*_test.go' 'armv\?6' internal/` 只应命中 `internal/platform`
-- 完成标准: 上述测试绿且既有断言未改；`runner_output` 的裁剪行为对大写平台名与 `armv6/armv7` 有 characterization 用例。
+- 文件: `internal/install/runner_platform.go`、`internal/install/runner_output.go`、`internal/install/detect/detectors.go`、`internal/client/cache_path.go`、`internal/app/cache/keep_latest.go`、`internal/install/platform_equiv_test.go`（新增 characterization）
+- 动作: 先补 characterization（迁移前绿）：S-P10 的三条正则对大写/`armv6`/`armv7`/`-linux-amd64` 等输入的裁剪结果；S-P01/P02/P11 的 detector 对 `tool_Windows_x86_64.exe`、`tool_LINUX_AMD64.AppImage` 的 os/arch/priority 结果。随后按 S-P01~S-P11 逐行替换数据来源；删除 `osTokens/archTokens/cacheOSTokens/cacheArchTokens/keepLatest*Tokens` 等本地定义；保留 `nameHasPlatform`、`trimPlatformSuffix`、`archiveNameMatchesPlatform`、`autoSelectWindowsMSVCAsset`、`systemDetector.Detect` 的判定流程（Q3）。
+- 验证: `go test ./internal/install/... ./internal/install/detect/... ./internal/client/... ./internal/app/cache/... -count=1`；`rg -n --glob '!*_test.go' 'armv\?6' internal/` 只应命中 `internal/platform`（运行目录：Git root）
+- 完成标准: 上述测试绿且既有断言未改；`runner_output`、`detect`、`cache_path`、`keep_latest` 四个消费者均有 characterization 用例且全绿。
 - 依赖: T09
 
 ### T11 建立 internal/filter 包
 
-- 文件: `internal/filter/filter.go`、`internal/filter/parse.go`
-- 动作: 定义 `Spec{Raw, Anti, Kind, Expr, Regex}`、`KindPlain/KindPrefix/KindSuffix/KindRegex`、`Parse(raw string) (Spec, error)`、`IsPattern(raw string) bool`；`REG:` 用 `regexp.Compile` 返回错误，`PRE:`/`SUF:` 用 `regexp.QuoteMeta` + `MustCompile`；**不**返回 matcher、不决定匹配对象、不内联错误文案（由调用方包装以保留「invalid tag regex %q」/「invalid asset regex %q」）。`^` 前缀剥离为 `Anti=true`。
-- 验证: `go build ./...`；`go test ./internal/filter/... -count=1`（新增解析用例：四种前缀 × 正/反例 × 错误输入）
-- 完成标准: 包内无 tag/asset/文件名语义；错误类型可被调用方区分正则编译失败。
+- 文件: `internal/filter/filter.go`、`internal/filter/parse.go`、`internal/filter/parse_test.go`
+- 动作: 固定以下 API（签名与语义不得改名）：
+  - `type Kind int`；`KindPlain`/`KindPrefix`/`KindSuffix`/`KindRegex`。
+  - `type Spec struct { Raw string; Anti bool; Kind Kind; Expr string; Regex *regexp.Regexp }`。
+  - `func Parse(raw string) (Spec, error)`：先剥离前导 `^`（`Anti=true`），再识别 `REG:`/`PRE:`/`SUF:`/普通值；`REG:` 用 `regexp.Compile(expr)`，失败返回 `*RegexError{Expr, Err}`（`Error()` 返回底层错误、`Unwrap()` 暴露原因），**不**内联「invalid tag/asset regex」文案。
+  - `func (s Spec) PrefixRegex() *regexp.Regexp` = `(?i)^` + `QuoteMeta(Expr)`；`func (s Spec) SuffixRegex() *regexp.Regexp` = `(?i)` + `QuoteMeta(Expr)` + `$`。
+  - `func IsPattern(raw string) bool`：`PRE:`/`SUF:`/`REG:` 任一前缀（与 `tagfilter.go:25-30` 等价）。
+  - **不**返回 matcher、不决定匹配对象、不接管 glob 与子串默认语义。
+- 验证: `go build ./...`；`go test ./internal/filter/... -count=1`（四种前缀 × 正/反例、`^` 组合、非法 `REG:` 返回 `*RegexError`；运行目录：Git root）
+- 完成标准: `PrefixRegex()`/`SuffixRegex()` 生成的字符串与 `tagfilter.go:46,49`、`service.go:338,344` 逐字一致；包内无 tag/asset/文件名语义，不引用 `gobwas/glob`。
 - 依赖: 无
 
 ### T12 迁移过滤站点并删除 internal/tagfilter
 
-- 文件: `internal/install/service.go`、`internal/install/chooser.go`、`internal/sdk/search_service.go`、`internal/app/tag_semantics.go`、`internal/source/github/finder.go`，删除 `internal/tagfilter/`
-- 动作: S-F02~S-F05 按清单替换；`tagfilter` 的 4 个调用点改指向 `internal/filter`；glob 默认（`chooser.go`）与子串默认（`service.go`、`search_service.go`）留在原地不动；把 `internal/tagfilter/tagfilter_test.go` 的语法用例迁到 `internal/filter`。
-- 验证: `go test ./internal/install/... ./internal/sdk/... ./internal/app/... ./internal/source/github/... ./internal/filter/... -count=1`；`rg -n 'internal/tagfilter' --glob '!*_test.go' .` 为空；`go build ./...`
-- 完成标准: 包已删除且无残留 import；`--tag`、`--asset`、`--extract-file`、sdk search 的既有测试全绿且断言未改。
+- 文件: `internal/install/service.go`、`internal/install/chooser.go`、`internal/sdk/search_service.go`、`internal/app/tag_semantics.go`、`internal/source/github/finder.go`、`internal/filter/parse_test.go`，删除 `internal/tagfilter/`
+- 动作: S-F02~S-F05 按清单替换；`tagfilter` 的 4 个调用点改指向 `internal/filter`；glob 默认（`chooser.go`）与子串默认（`service.go`、`search_service.go`）留在原地不动；把 `internal/tagfilter/tagfilter_test.go` 的语法用例迁到 `internal/filter/parse_test.go`。调用方匹配规则（逐入口固定）：
+  - `source/github/finder.go:204`：`filter.Parse` → `*filter.RegexError` 时包装为 `invalid tag regex %q: %w`；匹配时 `KindRegex` 用 `Spec.Regex.MatchString`，`KindPlain`/`KindPrefix` 用 `PrefixRegex().MatchString`、`KindSuffix` 用 `SuffixRegex().MatchString`（保持 `(?i)` 与锚定）。
+  - `install/service.go`：plain 值仍**不**生成 Regex（继续走 `assetDetector.matches` 的子串匹配），`^` 仍为 `Anti`，错误文案仍为 `invalid asset regex %q: %w`。
+  - `install/chooser.go` 与 `sdk/search_service.go`：只改用 `filter` 的 `REG:`/`^` 于解析；`chooser` 的 glob 默认与 sdk 的子串默认不动。
+  - `app/tag_semantics.go:42,51`：用 `filter.IsPattern` 替换 `tagfilter.IsPattern`。
+- 验证: `go test ./internal/install/... ./internal/sdk/... ./internal/app/... ./internal/source/github/... ./internal/filter/... -count=1`；`rg -n 'internal/tagfilter' .` 为空；`go build ./...`（运行目录：Git root）
+- 完成标准: 包已删除且无残留 import；`--tag`、`--asset`、`--extract-file`、sdk search 的既有测试全绿且断言未改，含非法 `REG:` 的错误文案断言。
 - 依赖: T11
 
 ### T13 收尾与全量验证
 
-- 文件: 全波次触及路径（只读检查为主）
+- 文件: `internal/filekind/`、`internal/platform/`、`internal/filter/`、`internal/install/`、`internal/install/detect/`、`internal/client/`、`internal/app/`、`internal/app/cache/`、`internal/sdk/`、`internal/source/github/`（只读检查为主，不新增代码）
 - 动作: 逐站点执行 grep 断言；确认三包的 `go list -deps` 白名单；检查 `gofmt -l internal`；对 `internal/` 全量跑测试；核对设计 F1~F10 与站点清单的覆盖关系。
-- 验证: `go build ./...`；`go vet ./internal/...`；`go test ./... -count=1`；`gofmt -l internal`（空输出）；`rg -n --glob '!*_test.go' '\.tar\.gz' internal --stats` 的人工核对
+- 验证: `go build ./...`；`go vet ./internal/...`；`go test ./... -count=1`；`gofmt -l internal`（空输出）；`rg -n --glob '!*_test.go' 'HasSuffix|\.appimage|\.tar\.gz|\.exe' internal` 的人工核对（运行目录：Git root）
 - 完成标准: 完成定义的 5 条全部满足；剩余工作清单已更新。
 - 依赖: T06, T07, T08, T10, T12
 
@@ -346,10 +368,10 @@ release asset 分类站点：
 
 ## 人工 Gate
 
-1. **人工计划批准（当前 Gate，待用户明确批准）**：本计划为 Draft 0.1，批准后才可进入执行。批准对象 = 文档 revision + 本文件的 Git candidate commit + subject path。
+1. **人工计划批准（当前 Gate，待用户明确批准）**：本计划为 Draft 0.2，批准后才可进入执行。批准对象 = 文档 revision + 本文件的 Git candidate commit + subject path。
 2. **执行请求**：计划批准不等于执行授权，需单独一句当前执行请求。
 3. **外部动作**：本计划 `NOT_APPLICABLE`——不含 push、release、deploy、迁移、设备或外部消息动作。若后续需要 push，另列具名目标取得授权。
-4. **Semantic Amendment**：若实施中发现需要改变后缀集合、大小写轴或匹配结果（例如修复 F3 漂移），停止并返回 plan 评审与人工 Gate。
+4. **Semantic Amendment**：若实施中发现需要改变后缀集合、大小写轴或匹配结果（例如修复 F3 漂移），立即停止，按 `plan-contract` 返回 **design/plan review 与 Human Approval Gate**：先产出 design 修订（新 revision + candidate）并取得用户明确批准，再由本计划升 revision 后继续。不得仅经 plan review 就推进。
 
 ## 可追溯性
 
@@ -358,6 +380,7 @@ release asset 分类站点：
 | F1、F9、D1（OS/Arch 数据单一真源） | T09, T10 | `rg 'armv\?6' internal/` 只命中 platform；runner/cache/keep-latest 测试绿 |
 | F3（多段扩展名重复 + 漂移变体） | T01（`ExtSetArchiveLegacy`）, T02, T07 | filekind 用例含 legacy 窄集负例；sdk 测试断言大写不识别 |
 | F2、X-01（后缀站点 ≥16 / 补 4 处 `.exe`） | T03, T04, T08 | 站点清单 S-E01~S-E12 全覆盖；grep 断言 |
+| F8、D4（无共享低层包 / 只抽数据不下移策略） | T01, T09, T11（新建三包） + T04/T05/T07/T08/T10/T12（调用点） | 三包 `go list -deps` 白名单；原位置的判定策略未变（既有测试断言未改） |
 | X-02（逐站点大小写轴） | T02, T03, T04 | 敏感站点（S-E01/E02/E03、S-A01/A06/A08）有「全大写为负例」断言 |
 | X-03（`sdk/json_index.go:121-144`） | T07（S-A06 保留 + 用例） | `-tar.xz` 正例、`-TAR.XZ` 负例 |
 | X-04（D8 表述） | 无代码任务 | 已在设计评审记录；本计划 T07 验证 `client` 无反向边 |
@@ -366,6 +389,8 @@ release asset 分类站点：
 | 非目标：glob/子串默认语义不变 | T12（S-F03/S-F04 只迁前缀解析） | chooser glob 测试、sdk 子串测试断言未改 |
 | 非目标：不改匹配结果 | T03/T05/T07/T10 的 characterization 用例 | 每站点同输入同输出 |
 | SR1403/GR104 | T01/T09/T11（单文件职责） | `gofmt -l`、`go vet`、文件行数人工核对 |
+| F2/F3 的 install 波次完整性 | T06（删除残留私有集合 + 逐条解释剩余 `HasSuffix`） | `rg 'HasSuffix' internal/install` 逐行解释；`go build`/`go vet`/全量 install 测试 |
+| 全计划验收（完成定义 5 条） | T13（收尾） | `go build ./...`、`go vet ./internal/...`、`go test ./... -count=1`、`gofmt -l internal` 至空输出 |
 
 ## 完成 Gate 与剩余工作
 
@@ -378,7 +403,7 @@ release asset 分类站点：
 
 剩余工作（不在本计划范围）：
 
-- F3 漂移修复（`sdk/json_index.go:223-231` 补齐 `.tar.zst/.tar.br/.tar.lz4` 并折叠大小写、`json_index.go:121-144` 折叠）：需一次单独的语义变更批准（会改变匹配结果）。
+- F3 漂移**归并**（`sdk/json_index.go:223-231` 补齐 `.tar.zst/.tar.br/.tar.lz4` 并折叠大小写、`json_index.go:121-144` 折叠）：会改变匹配结果，必须先走 design 修订（0.3）+ 用户明确批准，再由新一份 plan 升 revision 实施；本计划不实施、也不自行决定。
 - F6 版本解析/比较（7 套）与 F7 模板语法（3 套）：design D5/D7 deferred。
 - Q5：为规则知识补一份「新增平台/归档格式/过滤语法要改哪里」的 `docs/` 说明，实施完成后补一节。
 - R-06：「7 套版本实现」计数独立复核（属 F6 前置）。
