@@ -1,0 +1,97 @@
+{
+  "schema": "inhere-doc-workflow/review-ledger@1",
+  "subject": "eget 匹配与转换规则整合 实施计划",
+  "git_root": "inhere-tools/eget",
+  "subject_path": "docs/plans/2026-10-17-rule-consolidation-plan.md",
+  "delivery_track": "Full",
+  "exposure": "high",
+  "exposure_basis": "继承设计 0.2 的高暴露定档（用户 2026-10-17 定档；`docs/review/rule-consolidation-design/review-ledger.json`）。本计划为纯内部重构、无 Secret/部署/出机器动作，但暴露度按设计定档沿用，故走两轴独立复核。",
+  "required_axes": ["Standards/Governance", "Spec/Executability"],
+  "reviewer_isolation": "每轮由互不可见的独立子代理出具；均非计划作者；主会话仅汇编与修订，未改动发现内容。多轴同轮时为每轮两个独立会话。",
+  "rounds": [
+    {
+      "round": 1,
+      "kind": "discovery",
+      "candidate": {"commit": "3ec68c925841892a7f0cc8059ab6c0cee1f19583", "revision": "0.1"},
+      "axes": ["Standards/Governance", "Spec/Executability"],
+      "verdicts": {"Standards/Governance": "BLOCKED", "Spec/Executability": "BLOCKED"},
+      "open_core_blocking": ["S-01", "E-01", "E-02", "E-03"],
+      "findings": ["S-01", "S-02", "S-03", "S-04", "S-05", "S-06", "E-01", "E-02", "E-03", "E-04", "E-05", "E-06", "E-07", "E-08", "E-09"]
+    },
+    {
+      "round": 2,
+      "kind": "blocking-closure",
+      "candidate": {"commit": "f23938955f5817b7550630a119561fa52713d487", "revision": "0.2"},
+      "axes": ["Standards/Governance", "Spec/Executability"],
+      "verdicts": {"Standards/Governance": "PASS", "Spec/Executability": "BLOCKED"},
+      "closure_confirmation": {
+        "S-01": "CLOSED(Standards)", "S-02": "CLOSED(Standards)", "S-03": "CLOSED(Standards)",
+        "S-04": "NOT_CLOSED(Standards+Executability)", "S-05": "CLOSED(Standards)", "S-06": "CLOSED(Standards)",
+        "E-01": "CLOSED", "E-02": "CLOSED", "E-03": "NOT_CLOSED", "E-04": "CLOSED",
+        "E-05": "CLOSED", "E-06": "PARTIAL", "E-07": "PARTIAL", "E-08": "CLOSED", "E-09": "CLOSED"
+      },
+      "open_core_blocking": ["E2-01", "E2-02", "E2-03", "E2-04", "E2-05"],
+      "findings": ["S2-01", "E2-01", "E2-02", "E2-03", "E2-04", "E2-05"]
+    },
+    {
+      "round": 3,
+      "kind": "blocking-closure",
+      "candidate": {"commit": "8f95fabddfeb30aaf95d145c8d15e92334166719", "revision": "0.3"},
+      "axes": ["Standards/Governance+Spec/Executability (merged)"],
+      "verdicts": {"merged": "BLOCKED"},
+      "closure_confirmation": {
+        "S-04/E2-01": "CLOSED", "E2-02": "CLOSED", "E2-03": "PARTIAL", "E2-04": "CLOSED", "E2-05": "CLOSED", "S2-01": "CLOSED"
+      },
+      "open_core_blocking": ["R3-01", "R3-02"],
+      "findings": ["R3-01", "R3-02"]
+    },
+    {
+      "round": 4,
+      "kind": "blocking-closure",
+      "candidate": {"commit": "1c169176254abd6648cf3886c853605bfa0efcaa", "revision": "0.4"},
+      "axes": ["Standards/Governance+Spec/Executability (merged)"],
+      "verdicts": {"merged": "BLOCKED"},
+      "closure_confirmation": {"R3-01": "CLOSED", "R3-02": "CLOSED"},
+      "open_core_blocking": ["R4-01"],
+      "findings": ["R4-01"]
+    },
+    {
+      "round": 5,
+      "kind": "blocking-closure",
+      "candidate": {"commit": "c29ac3e35df2967c3904d0d694623b0ca90c4d7c", "revision": "0.5"},
+      "axes": ["Standards/Governance+Spec/Executability (merged)"],
+      "verdicts": {"merged": "BLOCKED"},
+      "closure_confirmation": {"R4-01": "CLOSED"},
+      "open_core_blocking": ["R5-01", "R5-02", "R5-03"],
+      "findings": ["R5-01", "R5-02", "R5-03"]
+    }
+  ],
+  "final_revision": {
+    "candidate": {"commit": "47876e48c5b8b008bcbe35dbb129a0f17e00bb05", "revision": "0.6"},
+    "status": "FIXED_NOT_REREVIEWED",
+    "fixes": {
+      "R5-01": "固定 `Spec` 字段语义与 `Regex` 填充映射（PRE→PrefixRegex、SUF→SuffixRegex、REG→ParseRegex、plain→nil）与 service 的 assetFilter 映射",
+      "R5-02": "sdk 仅 `REG:` 走正则；`PRE:`/`SUF:` 与普通值仍作子串；修正上版错误的 characterization 表述",
+      "R5-03": "错误文案统一从 `*filter.RegexError.Expr` 取值并逐入口断言完整错误字符串"
+    },
+    "review_budget": "已用尽：1 轮 discovery + 4 轮 blocking closure（上限 4）。0.6 的修复未经第 6 轮复核。",
+    "limit_state": "REVIEW_LIMIT_REACHED"
+  },
+  "global_invariants": [
+    "等价性：迁移前后同一输入产生同一输出（含大小写轴、正则整表迁移、`^` 与 TrimSpace 语义、错误文案）",
+    "不改 CLI 参数、配置文件字段、命令输出与任何匹配结果",
+    "不改缓存 layout、installed store、sdk.installed.json 与 key 计算",
+    "无 Secret、无部署、无出机器动作；回滚为按任务粒度 revert",
+    "plan 不授权实施（SR1107 Gate 顺序）"
+  ],
+  "limitations": [
+    "各轮评审均为静态阅读，未运行 go build / go test / validator，等价性不构成行为证明。",
+    "逐轮评审报告以会话内子代理报告形式产出，未逐个落盘为独立 md；本 ledger 与 round-log.md 为其汇总。",
+    "第 5 轮后已达 review budget 上限：final_revision 0.6 的三项修复未再经独立复核。"
+  ],
+  "human_gate": {
+    "pending": "计划批准（进入实施）",
+    "requires": "用户明确批准 revision 0.6 + candidate commit + subject path 三元组；或授权超出预算的额外复核轮",
+    "does_not_authorize": ["实施", "push", "release", "部署"]
+  }
+}
