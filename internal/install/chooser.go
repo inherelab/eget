@@ -9,6 +9,7 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/filter"
 )
 
 type Chooser interface {
@@ -64,9 +65,12 @@ func newFilePatternChooser(expr string) (Chooser, error) {
 	if expr == "" {
 		return nil, fmt.Errorf("empty file regex expression")
 	}
-	re, err := regexp.Compile(expr)
+	re, err := filter.ParseRegex(expr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid file regex %q: %w", expr, err)
+		if reErr, ok := filter.RegexErrorOf(err); ok {
+			return nil, fmt.Errorf("invalid file regex %q: %w", reErr.Expr, reErr.Err)
+		}
+		return nil, err
 	}
 	return &RegexChooser{expr: expr, re: re}, nil
 }
@@ -75,7 +79,7 @@ func NewFileChooser(expr string) (Chooser, error) {
 	parts := strings.Split(expr, ",")
 	if len(parts) == 1 {
 		part := strings.TrimSpace(expr)
-		if strings.HasPrefix(part, "^") {
+		if anti, _ := filter.StripAnti(part); anti {
 			return newFilterChooser([]string{part})
 		}
 		return newFilePatternChooser(part)
@@ -89,7 +93,7 @@ func NewFileChooser(expr string) (Chooser, error) {
 			continue
 		}
 		rawParts = append(rawParts, part)
-		if strings.HasPrefix(part, "^") {
+		if anti, _ := filter.StripAnti(part); anti {
 			hasExclude = true
 		}
 	}
@@ -120,16 +124,16 @@ func NewFileChooser(expr string) (Chooser, error) {
 }
 
 func newFilterChooser(parts []string) (Chooser, error) {
-	filter := &FilterChooser{}
+	chooser := &FilterChooser{}
 	normalized := make([]string, 0, len(parts))
 	for _, part := range parts {
 		if part == "" {
 			continue
 		}
-		anti := strings.HasPrefix(part, "^")
+		anti, rest := filter.StripAnti(part)
 		expr := part
 		if anti {
-			expr = strings.TrimSpace(strings.TrimPrefix(part, "^"))
+			expr = strings.TrimSpace(rest)
 			if expr == "" {
 				return nil, fmt.Errorf("empty file exclude expression")
 			}
@@ -139,25 +143,25 @@ func newFilterChooser(parts []string) (Chooser, error) {
 			return nil, err
 		}
 		if anti {
-			filter.exclude = append(filter.exclude, ch)
+			chooser.exclude = append(chooser.exclude, ch)
 		} else {
-			filter.include = append(filter.include, ch)
+			chooser.include = append(chooser.include, ch)
 		}
 		normalized = append(normalized, part)
 	}
-	if len(filter.include) == 0 {
+	if len(chooser.include) == 0 {
 		all, err := NewGlobChooser("*")
 		if err != nil {
 			return nil, err
 		}
-		filter.include = append(filter.include, all)
-		filter.implicitAll = true
+		chooser.include = append(chooser.include, all)
+		chooser.implicitAll = true
 	}
-	if len(filter.include) == 0 && len(filter.exclude) == 0 {
+	if len(chooser.include) == 0 && len(chooser.exclude) == 0 {
 		return nil, fmt.Errorf("empty file chooser expression")
 	}
-	filter.expr = strings.Join(normalized, ",")
-	return filter, nil
+	chooser.expr = strings.Join(normalized, ",")
+	return chooser, nil
 }
 
 func (b *BinaryChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, bool) {

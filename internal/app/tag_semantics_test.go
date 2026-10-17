@@ -6,6 +6,26 @@ import (
 	"github.com/gookit/goutil/x/assert"
 )
 
+// TestEquivS_F05 pins the tag-policy side of the filter migration
+// (docs/plans/2026-10-17-rule-consolidation-plan.md): the caller trims before
+// asking, and "^" stays literal for tags.
+func TestEquivS_F05(t *testing.T) {
+	t.Run("explicit tag policy", func(t *testing.T) {
+		assert.Eq(t, tagPolicyPattern, tagPolicyForInstall("PRE:v1", tagPolicyTag))
+		assert.Eq(t, tagPolicyPattern, tagPolicyForInstall(" PRE:v1", tagPolicyTag))
+		assert.Eq(t, tagPolicyPattern, tagPolicyForInstall("PRE:v1 ", tagPolicyTag))
+		assert.Eq(t, tagPolicyTag, tagPolicyForInstall("^PRE:v1", tagPolicyTag))
+		assert.Eq(t, tagPolicyTag, tagPolicyForInstall("v1.2.3", tagPolicyTag))
+	})
+
+	t.Run("inferred tag policy", func(t *testing.T) {
+		assert.Eq(t, tagPolicyPattern, tagPolicyForInstall("REG:^v1", ""))
+		assert.Eq(t, tagPolicyPattern, tagPolicyForInstall("SUF:-linux", ""))
+		assert.Eq(t, tagPolicyLatest, tagPolicyForInstall("v1.2.3", ""))
+		assert.Eq(t, tagPolicyLatest, tagPolicyForInstall("", ""))
+	})
+}
+
 func TestTrackingTagIgnoresVersionTags(t *testing.T) {
 	tests := map[string]string{
 		"v3.2.5":                        "",

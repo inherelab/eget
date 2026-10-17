@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/inherelab/eget/internal/tagfilter"
+	"github.com/inherelab/eget/internal/filter"
 )
 
 var verboseWriter io.Writer = os.Stderr
@@ -106,7 +106,7 @@ func (f *AssetFinder) Find() ([]string, error) {
 	}
 	// A tag pattern never names a concrete release, so skip the exact-tag
 	// lookup and go straight to the release scan.
-	if tagfilter.IsPattern(strings.TrimPrefix(f.Tag, "tags/")) {
+	if filter.IsPattern(strings.TrimSpace(strings.TrimPrefix(f.Tag, "tags/"))) {
 		return f.FindMatch()
 	}
 	if f.Prerelease && f.Tag == "latest" {
@@ -188,6 +188,20 @@ func finderTag(tag string) string {
 	return "tags/" + tag
 }
 
+// tagMatcher turns a parsed filter into the tag predicate: REG: keeps the user
+// regex, plain and PRE: match as an anchored case-insensitive prefix and SUF: as
+// a case-insensitive suffix.
+func tagMatcher(spec filter.Spec) func(string) bool {
+	switch spec.Kind {
+	case filter.KindRegex:
+		return spec.Regex.MatchString
+	case filter.KindSuffix:
+		return spec.SuffixRegex().MatchString
+	default:
+		return spec.PrefixRegex().MatchString
+	}
+}
+
 // FindMatch scans releases newest-first and returns the first whose tag
 // satisfies the filter. Unlike a plain substring match, a bare filter anchors
 // at the tag prefix so it cannot select an unrelated product's release inside a
@@ -201,10 +215,14 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 		return nil, fmt.Errorf("github getter is required")
 	}
 	raw := strings.TrimPrefix(f.Tag, "tags/")
-	matcher, err := tagfilter.Parse(raw)
+	spec, err := filter.Parse(strings.TrimSpace(raw))
 	if err != nil {
+		if re, ok := filter.RegexErrorOf(err); ok {
+			return nil, fmt.Errorf("invalid tag regex %q: %w", re.Expr, re.Err)
+		}
 		return nil, err
 	}
+	matcher := tagMatcher(spec)
 
 	var newestAny, newestStable *Release
 	staleMatch := false
@@ -240,7 +258,7 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 
 		for i := range releases {
 			r := releases[i]
-			if !matcher.Match(r.Tag) {
+			if !matcher(r.Tag) {
 				continue
 			}
 			if !f.MinTime.IsZero() && r.CreatedAt.Before(f.MinTime) {

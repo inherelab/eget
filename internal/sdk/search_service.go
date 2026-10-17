@@ -2,9 +2,10 @@ package sdk
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/inherelab/eget/internal/filter"
 )
 
 func (s Service) SearchIndex(name string, opts SearchOptions) ([]SearchResult, error) {
@@ -103,7 +104,7 @@ func searchKeywordMatches(fields []string, haystack, keyword string) (bool, erro
 
 func searchKeywordContains(fields []string, haystack, keyword string) (bool, error) {
 	if strings.HasPrefix(keyword, "REG:") {
-		re, err := regexp.Compile(strings.TrimPrefix(keyword, "REG:"))
+		re, err := filter.ParseRegex(strings.TrimPrefix(keyword, "REG:"))
 		if err != nil {
 			return false, err
 		}

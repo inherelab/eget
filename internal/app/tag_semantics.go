@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/inherelab/eget/internal/filter"
 	storepkg "github.com/inherelab/eget/internal/installed"
-	"github.com/inherelab/eget/internal/tagfilter"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -39,7 +39,7 @@ func trackingTagWithPolicy(tag, policy string) string {
 
 func tagPolicyForInstall(tag, policy string) string {
 	if policy := cleanTagPolicy(policy); policy != "" {
-		if policy == tagPolicyTag && tagfilter.IsPattern(tag) {
+		if policy == tagPolicyTag && filter.IsPattern(strings.TrimSpace(tag)) {
 			return tagPolicyPattern
 		}
 		return policy
@@ -48,7 +48,7 @@ func tagPolicyForInstall(tag, policy string) string {
 	if tag == "" {
 		return tagPolicyLatest
 	}
-	if tagfilter.IsPattern(tag) {
+	if filter.IsPattern(tag) {
 		return tagPolicyPattern
 	}
 	if isVersionTag(tag) {

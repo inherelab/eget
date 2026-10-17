@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/filter"
 	"github.com/inherelab/eget/internal/install/detect"
 	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
@@ -318,35 +319,15 @@ type assetFilter struct {
 }
 
 func parseAssetFilter(raw string) (assetFilter, error) {
-	filter := assetFilter{}
-	if strings.HasPrefix(raw, "^") {
-		filter.Anti = true
-		raw = raw[1:]
-	}
-	if strings.HasPrefix(raw, "REG:") {
-		expr := strings.TrimPrefix(raw, "REG:")
-		re, err := regexp.Compile(expr)
-		if err != nil {
-			return assetFilter{}, fmt.Errorf("invalid asset regex %q: %w", expr, err)
+	anti, rest := filter.StripAnti(raw)
+	spec, err := filter.Parse(rest)
+	if err != nil {
+		if re, ok := filter.RegexErrorOf(err); ok {
+			return assetFilter{}, fmt.Errorf("invalid asset regex %q: %w", re.Expr, re.Err)
 		}
-		filter.Expr = expr
-		filter.Regex = re
-		return filter, nil
+		return assetFilter{}, err
 	}
-	if strings.HasPrefix(raw, "PRE:") {
-		expr := strings.TrimPrefix(raw, "PRE:")
-		filter.Expr = expr
-		filter.Regex = regexp.MustCompile(`(?i)^` + regexp.QuoteMeta(expr))
-		return filter, nil
-	}
-	if strings.HasPrefix(raw, "SUF:") {
-		expr := strings.TrimPrefix(raw, "SUF:")
-		filter.Expr = expr
-		filter.Regex = regexp.MustCompile(`(?i)` + regexp.QuoteMeta(expr) + `$`)
-		return filter, nil
-	}
-	filter.Expr = raw
-	return filter, nil
+	return assetFilter{Expr: spec.Expr, Anti: anti, Regex: spec.Regex}, nil
 }
 
 func (s *Service) SelectVerifier(sumAsset string, opts *Options) (Verifier, error) {
