@@ -1,7 +1,8 @@
 <!-- template_id: plan; template_version: 1.2.0 -->
 # eget 匹配与转换规则整合 实施计划
 
-> 状态：Draft 0.6 / 待人工计划批准
+> 状态：Draft 0.6 / 已获人工计划批准（2026-10-17）
+> 批准对象 = revision `0.6` + candidate `47876e48c5b8b008bcbe35dbb129a0f17e00bb05` + subject path
 
 ## 修订记录
 
@@ -71,6 +72,7 @@
 | 设计批准证据 | 用户于本会话明确批准：「Q1–Q3 按建议收敛，批准设计 0.2」 |
 | Q1–Q3 收敛留痕 | Q1=删除 `internal/tagfilter`（不留 facade）→ T11/T12；Q2=允许 `client` import 新包（方向 `client → platform/filekind`，无环）→ T07；Q3=保留三个独立「含平台」判定函数（`nameHasPlatform`、`trimPlatformSuffix`、`systemDetector.Detect` 的 anti/priority）→ T10。收敛结果与 design 内联「建议」一致，故 design 仍为 0.2，scope 自此视为冻结 |
 | 设计评审 ledger 状态说明 | `review-ledger.json` 的 `human_gate.pending=设计批准` 记录的是**设计评审时点**的状态；其后用户已在本会话明确批准（上一行原文）。ledger 作为历史评审产物不改写，其 pending 状态由该批准证据取代 |
+| 计划批准证据 | 用户于 2026-10-17 明确选择「A；F3 漂移归并 记下来 issue 后续跟进」：批准本计划 revision `0.6`（candidate `47876e4`），并明确放弃额外的第 6 轮复核（复核预算已用尽的已知风险由用户承担）。批准后仅进行了状态/元数据纠正（状态标识、批准证据、issue 编号引用），按 SR1103/SR1412 不新增版本、不重新索取批准 |
 
 ## 等价性判定规则
 
@@ -384,7 +386,7 @@ release asset 分类站点：
 
 ## 人工 Gate
 
-1. **人工计划批准（当前 Gate，待用户明确批准）**：本计划为 Draft 0.6，批准后才可进入执行。批准对象 = 文档 revision `0.6` + 本文件的 Git candidate commit + subject path（三元组由 `git_candidate_revision.py` 输出，不手填 hash）。
+1. **人工计划批准：已于 2026-10-17 获得**（用户明确选择按 revision 0.6 批准；见「输入与批准证据」）。批准对象 = 文档 revision `0.6` + candidate commit `47876e48c5b8b008bcbe35dbb129a0f17e00bb05` + subject path。
 2. **执行请求**：计划批准不等于执行授权，需单独一句当前执行请求。
 3. **外部动作**：本计划 `NOT_APPLICABLE`——不含 push、release、deploy、迁移、设备或外部消息动作。若后续需要 push，另列具名目标取得授权。
 4. **Semantic Amendment**：若实施中发现需要改变后缀集合、大小写轴或匹配结果（例如修复 F3 漂移），立即停止，按 `plan-contract` 返回 **design/plan review 与 Human Approval Gate**：先产出 design 修订（新 revision + candidate）并取得用户明确批准，再由本计划升 revision 后继续。不得仅经 plan review 就推进。
@@ -419,7 +421,7 @@ release asset 分类站点：
 
 剩余工作（不在本计划范围）：
 
-- F3 漂移**归并**（`sdk/json_index.go:223-231` 补齐 `.tar.zst/.tar.br/.tar.lz4` 并折叠大小写、`json_index.go:121-144` 折叠）：会改变匹配结果，必须先走 design 修订（0.3）+ 用户明确批准，再由新一份 plan 升 revision 实施；本计划不实施、也不自行决定。
+- F3 漂移**归并**（`sdk/json_index.go:223-231` 补齐 `.tar.zst/.tar.br/.tar.lz4` 并折叠大小写、`json_index.go:121-144` 折叠）：会改变匹配结果，必须先走 design 修订（0.3）+ 用户明确批准，再由新一份 plan 升 revision 实施；本计划不实施、也不自行决定。已开 issue **`my-tools-3gdb`** 跟进（含验收标准与语义变更路径）。
 - F6 版本解析/比较（7 套）与 F7 模板语法（3 套）：design D5/D7 deferred。
 - Q5：为规则知识补一份「新增平台/归档格式/过滤语法要改哪里」的 `docs/` 说明，实施完成后补一节。
 - R-06：「7 套版本实现」计数独立复核（属 F6 前置）。
