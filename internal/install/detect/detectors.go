@@ -5,6 +5,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 type detectorChain struct {
@@ -257,42 +259,12 @@ func SelectableReleaseAssets(assets []string) []string {
 }
 
 func classifyReleaseAsset(asset string) releaseAssetKind {
-	name := strings.ToLower(path.Base(asset))
-	switch {
-	case name == "releases" ||
-		name == "latest.yml" ||
-		name == "latest-mac.yml" ||
-		name == "latest-linux.yml" ||
-		name == "latest.json" ||
-		strings.HasSuffix(name, ".blockmap") ||
-		strings.HasSuffix(name, ".yml") ||
-		strings.HasSuffix(name, ".yaml") ||
-		strings.HasSuffix(name, ".sbom.json") ||
-		strings.HasSuffix(name, ".spdx.json") ||
-		strings.HasSuffix(name, ".cyclonedx.json") ||
-		strings.HasSuffix(name, ".intoto") ||
-		strings.HasSuffix(name, ".intoto.jsonl") ||
-		strings.HasSuffix(name, ".provenance") ||
-		strings.HasSuffix(name, ".attestation"):
+	switch filekind.ClassifyAsset(asset) {
+	case filekind.AssetMetadata:
 		return releaseAssetMetadata
-	case strings.HasSuffix(name, ".sha256") ||
-		strings.HasSuffix(name, ".sha256sum") ||
-		strings.HasSuffix(name, ".sha512") ||
-		strings.HasSuffix(name, ".sha512sum") ||
-		strings.HasSuffix(name, ".md5") ||
-		strings.HasSuffix(name, ".md5sum") ||
-		strings.HasSuffix(name, ".checksums.txt") ||
-		strings.HasSuffix(name, ".checksum.txt"):
+	case filekind.AssetChecksum:
 		return releaseAssetChecksum
-	case strings.HasSuffix(name, ".sig") ||
-		strings.HasSuffix(name, ".asc") ||
-		strings.HasSuffix(name, ".minisig") ||
-		strings.HasSuffix(name, ".pem") ||
-		strings.HasSuffix(name, ".crt") ||
-		strings.HasSuffix(name, ".cert") ||
-		strings.HasSuffix(name, ".gpg") ||
-		strings.HasSuffix(name, ".sigstore") ||
-		strings.HasSuffix(name, ".sigstore.json"):
+	case filekind.AssetSignature:
 		return releaseAssetSignature
 	default:
 		return releaseAssetInstallable
