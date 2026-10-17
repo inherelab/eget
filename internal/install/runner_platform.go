@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/inherelab/eget/internal/filekind"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -138,9 +139,9 @@ func isExecutableForGOOS(file ExtractedFile, goos string) bool {
 	name := firstNonEmpty(file.ArchiveName, file.Name)
 	ext := strings.ToLower(filepath.Ext(name))
 	if strings.EqualFold(goos, "windows") {
-		return ext == ".exe"
+		return ext == filekind.ExtExe
 	}
-	return isExec(name, file.mode) && ext != ".exe"
+	return isExec(name, file.mode) && ext != filekind.ExtExe
 }
 
 func archiveNameMatchesPlatform(name, goos, goarch string) bool {
@@ -181,7 +182,7 @@ func autoSelectOnlyWindowsExecutable(candidates []ExtractedFile) (ExtractedFile,
 	var selected ExtractedFile
 	count := 0
 	for _, candidate := range candidates {
-		if strings.EqualFold(filepath.Ext(candidate.ArchiveName), ".exe") {
+		if strings.EqualFold(filepath.Ext(candidate.ArchiveName), filekind.ExtExe) {
 			selected = candidate
 			count++
 		}

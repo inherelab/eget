@@ -30,6 +30,14 @@ const (
 	KindZst
 )
 
+// Single suffixes that several stations compare against after taking them from
+// a set; exporting them keeps the literal in one place.
+const (
+	ExtExe      = ".exe"
+	ExtAppImage = ".appimage"
+	ExtMsi      = ".msi"
+)
+
 // AssetClass is the release asset classification result.
 type AssetClass int
 
@@ -96,11 +104,11 @@ var (
 	ExtSetNonExecutable = []string{".deb", ".1", ".txt"}
 
 	// ExtSetExecutable is the executable suffix list used with either case axis.
-	ExtSetExecutable = []string{".exe", ".appimage"}
+	ExtSetExecutable = []string{ExtExe, ExtAppImage}
 
 	// ExtSetInstaller is the installer suffix list of install.DetectGUIInstallMode
 	// and DetectInstallerKind.
-	ExtSetInstaller = []string{".exe", ".msi"}
+	ExtSetInstaller = []string{ExtExe, ExtMsi}
 )
 
 // kindSuffixes maps the ExtSetExtractor suffixes to Kind values. Order matters:

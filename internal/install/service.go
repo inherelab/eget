@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/inherelab/eget/internal/filekind"
 	"github.com/inherelab/eget/internal/install/detect"
 	forge "github.com/inherelab/eget/internal/source/forge"
 	sourcegithub "github.com/inherelab/eget/internal/source/github"
@@ -500,8 +501,7 @@ func (s *Service) newExtractor(filename, tool string, chooser any, opts *Options
 }
 
 func requiresSystem7z(filename string, extractArchive bool) bool {
-	name := strings.ToLower(path.Base(filename))
-	return strings.HasSuffix(name, ".exe") && extractArchive
+	return extractArchive && filekind.IsExecutableFold(filename)
 }
 
 func NormalizeRepoTarget(target string) (string, error) {

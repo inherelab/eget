@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 func writeReaderWithModTime(r io.Reader, rename string, mode fs.FileMode, modTime time.Time) error {
@@ -50,28 +52,32 @@ func rename(file string, nameguess string) string {
 	if isDefinitelyNotExec(file) {
 		return file
 	}
-	switch {
-	case strings.HasSuffix(file, ".appimage"):
-		return file[:len(file)-len(".appimage")]
-	case strings.HasSuffix(file, ".exe"):
+	switch filekind.ExecutableSuffixExact(file) {
+	case filekind.ExtAppImage:
+		return file[:len(file)-len(filekind.ExtAppImage)]
+	case filekind.ExtExe:
 		return file
 	default:
 		return nameguess
 	}
 }
 
+// notExecBaseNames are base names that never denote an executable.
+var notExecBaseNames = map[string]bool{
+	"license": true, "copying": true, "notice": true, "readme": true,
+	"changelog": true, "changes": true, "authors": true, "contributors": true,
+}
+
 func isDefinitelyNotExec(file string) bool {
-	base := strings.ToLower(filepath.Base(file))
-	switch base {
-	case "license", "copying", "notice", "readme", "changelog", "changes", "authors", "contributors":
+	if notExecBaseNames[strings.ToLower(filepath.Base(file))] {
 		return true
 	}
-	return strings.HasSuffix(file, ".deb") || strings.HasSuffix(file, ".1") || strings.HasSuffix(file, ".txt")
+	return filekind.IsNonExecutableExact(file)
 }
 
 func isExec(file string, mode os.FileMode) bool {
 	if isDefinitelyNotExec(file) {
 		return false
 	}
-	return strings.HasSuffix(file, ".exe") || strings.HasSuffix(file, ".appimage") || !strings.Contains(file, ".") || mode&0o111 != 0
+	return filekind.IsExecutableExact(file) || !strings.Contains(file, ".") || mode&0o111 != 0
 }

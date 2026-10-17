@@ -23,6 +23,18 @@ func IsNonExecutableExact(name string) bool {
 	return hasSuffixExact(name, ExtSetNonExecutable)
 }
 
+// ExecutableSuffixExact returns the executable suffix of name using the
+// case-sensitive axis (install.rename, install.executableSuffix callers that
+// keep the caller's case), or an empty string.
+func ExecutableSuffixExact(name string) string {
+	for _, ext := range ExtSetExecutable {
+		if strings.HasSuffix(name, ext) {
+			return ext
+		}
+	}
+	return ""
+}
+
 // ExecutableSuffixFold returns the executable suffix of the folded name, or an
 // empty string — the mapping used by install.heuristicExecutableName and
 // normalizedAssetNameHint.

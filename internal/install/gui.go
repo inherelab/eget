@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 type InstallerKind string
@@ -34,7 +36,7 @@ func DetectGUIInstallMode(isGUI bool, fileName string) string {
 		return InstallModePortable
 	}
 	switch filepath.Ext(lower) {
-	case ".exe", ".msi":
+	case filekind.ExtExe, filekind.ExtMsi:
 		return InstallModeInstaller
 	}
 	return InstallModePortable
@@ -43,9 +45,9 @@ func DetectGUIInstallMode(isGUI bool, fileName string) string {
 func DetectInstallerKind(fileName string) InstallerKind {
 	lower := strings.ToLower(filepath.Base(fileName))
 	switch {
-	case strings.HasSuffix(lower, ".msi"):
+	case strings.HasSuffix(lower, filekind.ExtMsi):
 		return InstallerKindMSI
-	case strings.HasSuffix(lower, ".exe") && (strings.Contains(lower, "setup") || strings.Contains(lower, "installer")):
+	case strings.HasSuffix(lower, filekind.ExtExe) && (strings.Contains(lower, "setup") || strings.Contains(lower, "installer")):
 		return InstallerKindEXE
 	default:
 		return InstallerKindUnknown

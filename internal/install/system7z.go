@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 var system7zCandidates = []string{"7z", "7zz", "7za"}
@@ -31,18 +33,10 @@ func resolveSystem7zPath(configured string) string {
 
 func shouldUseSystem7z(filename string, extractArchive bool) bool {
 	name := strings.ToLower(filepath.Base(filename))
-	switch {
-	case strings.HasSuffix(name, ".7z"),
-		strings.HasSuffix(name, ".rar"),
-		strings.HasSuffix(name, ".msi"),
-		strings.HasSuffix(name, ".cab"),
-		strings.HasSuffix(name, ".iso"):
+	if filekind.RequiresSystemArchiverFold(name) {
 		return true
-	case strings.HasSuffix(name, ".exe") && extractArchive:
-		return true
-	default:
-		return false
 	}
+	return extractArchive && filekind.IsExecutableFold(name)
 }
 
 type System7zExtractor struct {

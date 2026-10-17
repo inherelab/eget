@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 type Chooser interface {
@@ -164,7 +165,7 @@ func (b *BinaryChooser) Choose(name string, dir bool, mode fs.FileMode) (bool, b
 		return false, false
 	}
 	base := path.Base(archivePathForCompare(name))
-	fmatch := base == b.Tool || base == b.Tool+".exe" || base == b.Tool+".appimage"
+	fmatch := base == b.Tool || base == b.Tool+filekind.ExtExe || base == b.Tool+filekind.ExtAppImage
 	possible := !mode.IsDir() && isExec(name, mode.Perm())
 	return fmatch && possible, possible
 }

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/inherelab/eget/internal/filekind"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -216,12 +217,5 @@ func heuristicExecutableName(name string) string {
 }
 
 func executableSuffix(name string) string {
-	switch {
-	case strings.HasSuffix(strings.ToLower(name), ".exe"):
-		return ".exe"
-	case strings.HasSuffix(strings.ToLower(name), ".appimage"):
-		return ".appimage"
-	default:
-		return ""
-	}
+	return filekind.ExecutableSuffixFold(name)
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gookit/goutil/x/ccolor"
+	"github.com/inherelab/eget/internal/filekind"
 	storepkg "github.com/inherelab/eget/internal/installed"
 )
 
@@ -227,7 +228,7 @@ func normalizedAssetNameHint(name string) string {
 	if name == "" {
 		return ""
 	}
-	for _, suffix := range []string{".exe", ".appimage"} {
+	for _, suffix := range filekind.ExtSetExecutable {
 		name = strings.TrimSuffix(name, suffix)
 	}
 	return name
