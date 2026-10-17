@@ -1,7 +1,7 @@
 <!-- template_id: plan; template_version: 1.2.0 -->
 # eget 匹配与转换规则整合 实施计划
 
-> 状态：Draft 0.4 / 待人工计划批准
+> 状态：Draft 0.5 / 待人工计划批准
 
 ## 修订记录
 
@@ -11,6 +11,7 @@
 | 0.2 | 2026-10-17 | inhere | 按第 1 轮两轴独立评审修订（Standards S-01~S-06 / Executability E-01~E-09）：S-E11 与 S-E12 的 `.exe` 判定**不再合并**（否则 `.7z/.rar/.msi/.cab/.iso` 行为改变）；补齐 `KindExact`/`IsNonExecutableExact`/`IsExecutableFold`/`ExecutableSuffixFold`/`PrefixRegex`/`SuffixRegex` 等 API 定义；S-A07 保留「提取 + 上游允许集合」两阶段；具名集合逐集合标注可用轴；characterization 用例按站点 id 落到具体 owner 文件；每条验证命令声明运行目录；补 T06/T13 追溯行；Semantic Amendment 失败路径含 design 修订；F3 归一路径明确为「design 修订 + 用户批准」 |
 | 0.3 | 2026-10-17 | inhere | 按第 2 轮（blocking closure）修订：S-A01 的 API 引用改为实际定义的 `KindExact`，删除未定义的 `IsArchiveExact/ExtExact`；`MultiExtFold`/`MultiExtExact` 固定返回格式（带点/原大小写 vs 集合字面量 + ok）以消除 S-A07 的转换歧义；`filter.Parse`/`IsPattern` 明确**不**做 TrimSpace，逐入口固定 trim 与错误文案（tag/asset/file/sdk）；补齐 `platform` 的导出类型（`OSSpec`/`ArchSpec` 与两个索引）与 `ClassifyAsset` 的归一化与判定顺序；T10 的 characterization owner 按消费者包拆分；回滚改为按**任务粒度**提交，删除不可靠的「单文件 checkout 做站点级回退」表述 |
 | 0.4 | 2026-10-17 | inhere | 按第 3 轮（blocking closure）修订：人工 Gate 的批准对象改为当前 revision；四个 tag 入口（`finder.go:109`/`:204`、`tag_semantics.go:42`/`:51`）逐点固定 `strings.TrimSpace` 位置，新增 `filter.ParseRegex` 供 `chooser` 复用正则编译而不改变自身的「先剥前缀再 trim」语义；`sdk/search_service.go` 固定保留入口自身的 `^` 剥离与 TrimSpace；T12 增加带外围空格的 characterization 用例 |
+| 0.5 | 2026-10-17 | inhere | 按第 4 轮（blocking closure）修订：`filter.Parse` **不再**默认剥离 `^`（tag 侧 `^` 属字面量，剥了会改变匹配），改为导出独立的 `filter.StripAnti`，由 asset/sdk 入口显式调用；逐入口固定 `^` 语义与归一化顺序，并补对照 characterization |
 
 > 仅语义变化递增版本；纯 identity/provenance/元数据纠正沿用原版本，并在 Git/进度记录中留痕。
 
@@ -336,12 +337,13 @@ release asset 分类站点：
 - 动作: 固定以下 API（签名与语义不得改名）：
   - `type Kind int`；`KindPlain`/`KindPrefix`/`KindSuffix`/`KindRegex`。
   - `type Spec struct { Raw string; Anti bool; Kind Kind; Expr string; Regex *regexp.Regexp }`。
-  - `func Parse(raw string) (Spec, error)`：**不**自行 `TrimSpace`（是否 trim 由调用点按现状决定，见 T12）；先剥离前导 `^`（`Anti=true`），再识别 `REG:`/`PRE:`/`SUF:`/普通值；`REG:` 用 `regexp.Compile(expr)`，失败返回 `*RegexError{Expr, Err}`（`Error()` 返回底层 `regexp` 文案、`Unwrap()` 暴露原因），**不**内联「invalid tag/asset/file regex」文案。
+  - `func StripAnti(raw string) (anti bool, rest string)`：仅当 `strings.HasPrefix(raw, "^")` 时剥一个 `^` 并返回 `anti=true`；**不** trim、**不**识别前缀。
+  - `func Parse(raw string) (Spec, error)`：**不**自行 `TrimSpace`，也**不**剥离 `^`（tag 侧的 `^` 属字面量，剥了会改变匹配）；仅识别 `REG:`/`PRE:`/`SUF:`/普通值；`REG:` 用 `regexp.Compile(expr)`，失败返回 `*RegexError{Expr, Err}`（`Error()` 返回底层 `regexp` 文案、`Unwrap()` 暴露原因），**不**内联「invalid tag/asset/file regex」文案。`Spec.Anti` 由调用点显式设定（只有 asset/sdk 入口会置 true）。
   - `func (s Spec) PrefixRegex() *regexp.Regexp` = `(?i)^` + `QuoteMeta(Expr)`；`func (s Spec) SuffixRegex() *regexp.Regexp` = `(?i)` + `QuoteMeta(Expr)` + `$`。
   - `func ParseRegex(expr string) (*regexp.Regexp, error)`：`regexp.Compile` + `*RegexError` 包装；供 `chooser` 的 `REG:` 分支复用编译与错误类型，**不**做 trim。
-  - `func IsPattern(raw string) bool`：`PRE:`/`SUF:`/`REG:` 任一前缀（与 `tagfilter.go:25-30` 等价）；同样**不**自行 `TrimSpace`（`tagfilter.IsPattern` 的 `TrimSpace` 由各调用点按 T12 保持）。
+  - `func IsPattern(raw string) bool`：`PRE:`/`SUF:`/`REG:` 任一前缀（与 `tagfilter.go:25-30` 等价，`^PRE:` 不算 pattern）；同样**不**自行 `TrimSpace`（`tagfilter.IsPattern` 的 `TrimSpace` 由各调用点按 T12 保持）。
   - **不**返回 matcher、不决定匹配对象、不接管 glob 与子串默认语义。
-- 验证: `go build ./...`；`go test ./internal/filter/... -count=1`（四种前缀 × 正/反例、`^` 组合、非法 `REG:` 返回 `*RegexError`；运行目录：Git root）
+- 验证: `go build ./...`；`go test ./internal/filter/... -count=1`（四种前缀 × 正/反例、`StripAnti` 的 `^` 语义、非法 `REG:` 返回 `*RegexError`；运行目录：Git root）
 - 完成标准: `PrefixRegex()`/`SuffixRegex()` 生成的字符串与 `tagfilter.go:46,49`、`service.go:338,344` 逐字一致；包内无 tag/asset/文件名语义，不引用 `gobwas/glob`。
 - 依赖: 无
 
@@ -352,11 +354,11 @@ release asset 分类站点：
   - `source/github/finder.go:109`：`filter.IsPattern(strings.TrimSpace(strings.TrimPrefix(f.Tag, "tags/")))`（现行 `tagfilter.IsPattern` 内部会 trim，故 trim 必须上提到调用点）。
   - `source/github/finder.go:204`：`raw := strings.TrimPrefix(f.Tag, "tags/")` 后 `filter.Parse(strings.TrimSpace(raw))`；错误包装为 `invalid tag regex %q: %w`；匹配时 `KindRegex` 用 `Spec.Regex.MatchString`，`KindPlain`/`KindPrefix` 用 `PrefixRegex().MatchString`、`KindSuffix` 用 `SuffixRegex().MatchString`（保持 `(?i)` 与锚定）。
   - `app/tag_semantics.go:42`：`filter.IsPattern(strings.TrimSpace(tag))`；`:51`：`filter.IsPattern(tag)`（此处 `tag` 已在 `:47` 被 TrimSpace，不得重复 trim 后改变边界）。
-  - `install/service.go`：**不** TrimSpace（现状 `service.go:321` 直接判前缀）；plain 值仍**不**生成 Regex（继续走 `assetDetector.matches` 的子串匹配），`^` 仍为 `Anti`，错误文案仍为 `invalid asset regex %q: %w`。
+  - `install/service.go`：先用 `anti, rest := filter.StripAnti(raw)`（现状 `service.go:321-324` 先剥 `^`、**不** trim），再 `filter.Parse(rest)` 并置 `Spec.Anti = anti`；plain 值仍**不**生成 Regex（继续走 `assetDetector.matches` 的子串匹配），错误文案仍为 `invalid asset regex %q: %w`。
   - `install/chooser.go`：**保留**自身的「先剥 `REG:` 前缀、再 `strings.TrimSpace`、空表达式判定、`invalid file regex %q` 文案」（`chooser.go:62-68`），仅把 `regexp.Compile` 换成 `filter.ParseRegex(expr)`；`^` 排除与 glob 默认留原地。
-  - `sdk/search_service.go`：**保留**入口自身的 `^` 剥离与 `keyword = strings.TrimSpace(keyword)`（`search_service.go:86-90`），再把结果交给 `filter.Parse`；plain 仍走 `strings.Contains`；非法 `REG:` 直接返回 `*filter.RegexError`（其 `Error()` 即 `regexp` 原始文案，与 `search_service.go:106-108` 一致）。
+  - `sdk/search_service.go`：保留入口自身的 `^` 剥离与 `keyword = strings.TrimSpace(keyword)`（`search_service.go:86-90`，顺序为先剥 `^` 再 trim），再把结果交给 `filter.Parse`（也可用 `filter.StripAnti` + `TrimSpace` 实现同一顺序）；plain 仍走 `strings.Contains`；非法 `REG:` 直接返回 `*filter.RegexError`（其 `Error()` 即 `regexp` 原始文案，与 `search_service.go:106-108` 一致）。
 - 验证: `go test ./internal/install/... ./internal/sdk/... ./internal/app/... ./internal/source/github/... ./internal/filter/... -count=1`；`rg -n 'internal/tagfilter' .` 为空；`go build ./...`（运行目录：Git root）
-- 完成标准: 包已删除且无残留 import；`--tag`、`--asset`、`--extract-file`、sdk search 的既有测试全绿且断言未改，含非法 `REG:` 的错误文案断言；新增 characterization：`" PRE:v1"`/`"PRE:v1 "` 在 tag 侧仍被识别为 pattern（与 `finder.go:109`/`tag_semantics.go:42,51` 现状一致），`"REG: x "` 在 chooser/sdk 侧仍按各自 trim 语义匹配。
+- 完成标准: 包已删除且无残留 import；`--tag`、`--asset`、`--extract-file`、sdk search 的既有测试全绿且断言未改，含非法 `REG:` 的错误文案断言；新增 characterization：`" PRE:v1"`/`"PRE:v1 "` 在 tag 侧仍被识别为 pattern，`"^PRE:x"` 在 tag 侧仍作为**普通值**（与 `tagfilter.Parse` 现状一致）而在 asset/sdk 侧为 anti+prefix，`"REG: x "` 在 chooser/sdk 侧仍按各自 trim 语义匹配。
 - 依赖: T11
 
 ### T13 收尾与全量验证
@@ -376,7 +378,7 @@ release asset 分类站点：
 
 ## 人工 Gate
 
-1. **人工计划批准（当前 Gate，待用户明确批准）**：本计划为 Draft 0.4，批准后才可进入执行。批准对象 = 文档 revision `0.4` + 本文件的 Git candidate commit + subject path（三元组由 `git_candidate_revision.py` 输出，不手填 hash）。
+1. **人工计划批准（当前 Gate，待用户明确批准）**：本计划为 Draft 0.5，批准后才可进入执行。批准对象 = 文档 revision `0.5` + 本文件的 Git candidate commit + subject path（三元组由 `git_candidate_revision.py` 输出，不手填 hash）。
 2. **执行请求**：计划批准不等于执行授权，需单独一句当前执行请求。
 3. **外部动作**：本计划 `NOT_APPLICABLE`——不含 push、release、deploy、迁移、设备或外部消息动作。若后续需要 push，另列具名目标取得授权。
 4. **Semantic Amendment**：若实施中发现需要改变后缀集合、大小写轴或匹配结果（例如修复 F3 漂移），立即停止，按 `plan-contract` 返回 **design/plan review 与 Human Approval Gate**：先产出 design 修订（新 revision + candidate）并取得用户明确批准，再由本计划升 revision 后继续。不得仅经 plan review 就推进。
