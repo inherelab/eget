@@ -15,6 +15,7 @@ import (
 	"github.com/gookit/goutil/x/ccolor"
 	"github.com/gookit/goutil/x/termenv"
 	"github.com/inherelab/eget/internal/cachemirror"
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 const downloadProgressRedrawFreq = 256 * 1024
@@ -161,10 +162,7 @@ func printCacheMirrorFallback(output io.Writer, err error) {
 }
 
 func isInvalidCachedDownload(cachePath string) bool {
-	ext := strings.ToLower(filepath.Ext(cachePath))
-	switch ext {
-	case ".zip", ".gz", ".tgz", ".xz", ".bz2", ".zst", ".7z", ".rar":
-	default:
+	if !filekind.IsDownloadFold(cachePath) {
 		return false
 	}
 	f, err := os.Open(cachePath)

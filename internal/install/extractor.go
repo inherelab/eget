@@ -6,9 +6,9 @@ import (
 	"compress/gzip"
 	"io"
 	"io/fs"
-	"strings"
 	"time"
 
+	"github.com/inherelab/eget/internal/filekind"
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 )
@@ -53,28 +53,28 @@ func NewExtractor(filename string, tool string, chooser Chooser) Extractor {
 	zstdunzipper := func(r io.Reader) (io.Reader, error) { return zstd.NewReader(r) }
 	nounzipper := func(r io.Reader) (io.Reader, error) { return r, nil }
 
-	switch {
-	case strings.HasSuffix(filename, ".tar.gz"), strings.HasSuffix(filename, ".tgz"):
+	switch filekind.KindExact(filename) {
+	case filekind.KindTarGz:
 		return NewArchiveExtractor(chooser, NewTarArchive, gunzipper)
-	case strings.HasSuffix(filename, ".tar.bz2"), strings.HasSuffix(filename, ".tbz"):
+	case filekind.KindTarBz2:
 		return NewArchiveExtractor(chooser, NewTarArchive, b2unzipper)
-	case strings.HasSuffix(filename, ".tar.xz"), strings.HasSuffix(filename, ".txz"):
+	case filekind.KindTarXz:
 		return NewArchiveExtractor(chooser, NewTarArchive, xunzipper)
-	case strings.HasSuffix(filename, ".tar.zst"):
+	case filekind.KindTarZst:
 		return NewArchiveExtractor(chooser, NewTarArchive, zstdunzipper)
-	case strings.HasSuffix(filename, ".tar"):
+	case filekind.KindTar:
 		return NewArchiveExtractor(chooser, NewTarArchive, nounzipper)
-	case strings.HasSuffix(filename, ".zip"):
+	case filekind.KindZip:
 		return NewArchiveExtractor(chooser, NewZipArchive, nil)
-	case strings.HasSuffix(filename, ".7z"):
+	case filekind.KindSevenZip:
 		return NewArchiveExtractor(chooser, NewSevenZipArchive, nil)
-	case strings.HasSuffix(filename, ".gz"):
+	case filekind.KindGz:
 		return &SingleFileExtractor{Rename: tool, Name: filename, Decompress: gunzipper}
-	case strings.HasSuffix(filename, ".bz2"):
+	case filekind.KindBz2:
 		return &SingleFileExtractor{Rename: tool, Name: filename, Decompress: b2unzipper}
-	case strings.HasSuffix(filename, ".xz"):
+	case filekind.KindXz:
 		return &SingleFileExtractor{Rename: tool, Name: filename, Decompress: xunzipper}
-	case strings.HasSuffix(filename, ".zst"):
+	case filekind.KindZst:
 		return &SingleFileExtractor{Rename: tool, Name: filename, Decompress: zstdunzipper}
 	default:
 		return &SingleFileExtractor{Rename: tool, Name: filename, Decompress: nounzipper}

@@ -29,17 +29,7 @@ func portableGUIArchiveExtractAll(assetURL string, opts Options) bool {
 }
 
 func isExtractAllArchiveAsset(assetURL string) bool {
-	name := strings.ToLower(path.Base(assetURL))
-	return strings.HasSuffix(name, ".zip") ||
-		strings.HasSuffix(name, ".7z") ||
-		strings.HasSuffix(name, ".tar") ||
-		strings.HasSuffix(name, ".tar.gz") ||
-		strings.HasSuffix(name, ".tgz") ||
-		strings.HasSuffix(name, ".tar.bz2") ||
-		strings.HasSuffix(name, ".tbz") ||
-		strings.HasSuffix(name, ".tar.xz") ||
-		strings.HasSuffix(name, ".txz") ||
-		strings.HasSuffix(name, ".tar.zst")
+	return filekind.IsArchiveFold(path.Base(assetURL), filekind.ExtSetExtractAll)
 }
 
 func outputPath(file ExtractedFile, output string, all bool, preferredName string, outputExplicit bool, renameFiles ...map[string]string) (string, error) {
