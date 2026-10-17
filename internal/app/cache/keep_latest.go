@@ -5,10 +5,8 @@ import (
 	"strings"
 
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/platform"
 )
-
-var keepLatestOSTokens = []string{"windows", "win", "win32", "win64", "darwin", "macos", "osx", "linux", "freebsd", "openbsd", "netbsd", "android", "illumos", "solaris", "plan9"}
-var keepLatestArchTokens = []string{"amd64", "x86_64", "x64", "386", "x86", "i386", "arm64", "aarch64", "arm32", "armv6", "armv7", "arm", "riscv64"}
 
 type versionIdentifier struct {
 	text    string
@@ -405,8 +403,8 @@ func trimTrailingAssetVersion(name string) (string, bool) {
 
 func trimPlatformSuffix(name, sep string) (string, bool) {
 	lower := strings.ToLower(name)
-	for _, osToken := range keepLatestOSTokens {
-		for _, archToken := range keepLatestArchTokens {
+	for _, osToken := range platform.OSTokens() {
+		for _, archToken := range platform.ArchTokens() {
 			suffix := sep + osToken + sep + archToken
 			if strings.HasSuffix(lower, suffix) && len(name) > len(suffix) {
 				return name[:len(name)-len(suffix)], true

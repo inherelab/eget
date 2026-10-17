@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/platform"
 )
 
 type detectorChain struct {
@@ -272,42 +273,35 @@ func classifyReleaseAsset(asset string) releaseAssetKind {
 }
 
 var (
-	installOSDarwin    = systemOS{name: "darwin", regex: regexp.MustCompile(`(?i)(darwin|mac.?(os)?|osx)`)}
-	installOSWindows   = systemOS{name: "windows", regex: regexp.MustCompile(`(?i)([^r]win|windows|\.exe$|\.msi$)`), priority: regexp.MustCompile(`(?i)\.exe$`)}
-	installOSLinux     = systemOS{name: "linux", regex: regexp.MustCompile(`(?i)(linux|ubuntu)`), anti: regexp.MustCompile(`(?i)(android)`), priority: regexp.MustCompile(`\.appimage$`)}
-	installOSNetBSD    = systemOS{name: "netbsd", regex: regexp.MustCompile(`(?i)(netbsd)`)}
-	installOSFreeBSD   = systemOS{name: "freebsd", regex: regexp.MustCompile(`(?i)(freebsd)`)}
-	installOSOpenBSD   = systemOS{name: "openbsd", regex: regexp.MustCompile(`(?i)(openbsd)`)}
-	installOSAndroid   = systemOS{name: "android", regex: regexp.MustCompile(`(?i)(android)`)}
-	installOSIllumos   = systemOS{name: "illumos", regex: regexp.MustCompile(`(?i)(illumos)`)}
-	installOSSolaris   = systemOS{name: "solaris", regex: regexp.MustCompile(`(?i)(solaris)`)}
-	installOSPlan9     = systemOS{name: "plan9", regex: regexp.MustCompile(`(?i)(plan9)`)}
-	installArchAMD64   = systemArch{name: "amd64", regex: regexp.MustCompile(`(?i)(x64|amd64|x86(-|_)?64)`)}
-	installArchI386    = systemArch{name: "386", regex: regexp.MustCompile(`(?i)(x32|amd32|x86(-|_)?32|i?386)`)}
-	installArchArm     = systemArch{name: "arm", regex: regexp.MustCompile(`(?i)(arm32|armv6|arm\b)`)}
-	installArchArm64   = systemArch{name: "arm64", regex: regexp.MustCompile(`(?i)(arm64|armv8|aarch64)`)}
-	installArchRiscv64 = systemArch{name: "riscv64", regex: regexp.MustCompile(`(?i)(riscv64)`)}
+	installGOOSMap   = buildGOOSMap()
+	installGOARCHMap = buildGOARCHMap()
 )
 
-var installGOOSMap = map[string]systemOS{
-	"darwin":  installOSDarwin,
-	"windows": installOSWindows,
-	"linux":   installOSLinux,
-	"netbsd":  installOSNetBSD,
-	"openbsd": installOSOpenBSD,
-	"freebsd": installOSFreeBSD,
-	"android": installOSAndroid,
-	"illumos": installOSIllumos,
-	"solaris": installOSSolaris,
-	"plan9":   installOSPlan9,
+// systemOSFrom / systemArchFrom adapt the shared recognition table
+// (internal/platform) to the local types; the anti/priority policy stays in
+// systemOS.Match.
+func systemOSFrom(spec platform.OSSpec) systemOS {
+	return systemOS{name: spec.Name, regex: spec.Regex, anti: spec.Anti, priority: spec.Priority}
 }
 
-var installGOARCHMap = map[string]systemArch{
-	"amd64":   installArchAMD64,
-	"386":     installArchI386,
-	"arm":     installArchArm,
-	"arm64":   installArchArm64,
-	"riscv64": installArchRiscv64,
+func systemArchFrom(spec platform.ArchSpec) systemArch {
+	return systemArch{name: spec.Name, regex: spec.Regex}
+}
+
+func buildGOOSMap() map[string]systemOS {
+	m := make(map[string]systemOS, len(platform.GOOSSpecIndex))
+	for name, spec := range platform.GOOSSpecIndex {
+		m[name] = systemOSFrom(spec)
+	}
+	return m
+}
+
+func buildGOARCHMap() map[string]systemArch {
+	m := make(map[string]systemArch, len(platform.GOARCHSpecIndex))
+	for name, spec := range platform.GOARCHSpecIndex {
+		m[name] = systemArchFrom(spec)
+	}
+	return m
 }
 
 func IsKnownGOOS(value string) bool {

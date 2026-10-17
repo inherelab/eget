@@ -4,10 +4,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/platform"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -183,22 +183,16 @@ func shouldUsePreferredExecutableName(originalName, preferredName string) bool {
 	tokens := strings.FieldsFunc(remainder, func(r rune) bool {
 		return r == '-' || r == '_' || r == '.'
 	})
-	return hasAnyToken(tokens, osTokens...) ||
-		hasAnyToken(tokens, archTokens...) ||
-		hasAnyToken(tokens, executableVariantTokens...) ||
+	return platform.HasAnyToken(tokens, platform.OSTokens()...) ||
+		platform.HasAnyToken(tokens, platform.ArchTokens()...) ||
+		platform.HasAnyToken(tokens, platform.VariantTokens()...) ||
 		hasVersionToken(tokens)
 }
 
 func heuristicExecutableName(name string) string {
 	ext := executableSuffix(name)
 	base := strings.TrimSuffix(name, ext)
-	patterns := []string{
-		`(?i)[-_.](windows|darwin|linux|freebsd|openbsd|netbsd|android|illumos|solaris|plan9|macos|osx)[-_.](amd64|x86_64|x64|386|x86|i386|arm64|aarch64|armv?6|armv?7|arm|riscv64)$`,
-		`(?i)[-_.](amd64|x86_64|x64|386|x86|i386|arm64|aarch64|armv?6|armv?7|arm|riscv64)[-_.](windows|darwin|linux|freebsd|openbsd|netbsd|android|illumos|solaris|plan9|macos|osx)$`,
-		`(?i)[-_.](windows|darwin|linux|freebsd|openbsd|netbsd|android|illumos|solaris|plan9|macos|osx)$`,
-	}
-	for _, pattern := range patterns {
-		re := regexp.MustCompile(pattern)
+	for _, re := range platform.TrimPlatformSuffixRegexps() {
 		if trimmed := re.ReplaceAllString(base, ""); trimmed != "" && trimmed != base {
 			return trimmed + ext
 		}

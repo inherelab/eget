@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/platform"
 	"github.com/inherelab/eget/internal/util"
 )
 
@@ -37,14 +38,14 @@ func autoSelectWindowsMSVCAsset(candidates []string, goos, goarch string) (strin
 	sawGNU := false
 	for _, candidate := range candidates {
 		tokens := platformTokens(path.Base(candidate))
-		if !hasAnyToken(tokens, osAliases(goos)...) || !hasAnyToken(tokens, archAliases(goarch)...) {
+		if !platform.HasAnyToken(tokens, osAliases(goos)...) || !platform.HasAnyToken(tokens, archAliases(goarch)...) {
 			return "", false
 		}
-		if hasAnyToken(tokens, "gnu") {
+		if platform.HasAnyToken(tokens, "gnu") {
 			sawGNU = true
 			continue
 		}
-		if hasAnyToken(tokens, "msvc") {
+		if platform.HasAnyToken(tokens, "msvc") {
 			if selected != "" {
 				return "", false
 			}
@@ -146,36 +147,19 @@ func isExecutableForGOOS(file ExtractedFile, goos string) bool {
 
 func archiveNameMatchesPlatform(name, goos, goarch string) bool {
 	tokens := platformTokens(name)
-	if hasAnyToken(tokens, osTokens...) && !hasAnyToken(tokens, osAliases(goos)...) {
+	if platform.HasAnyToken(tokens, platform.OSTokens()...) && !platform.HasAnyToken(tokens, osAliases(goos)...) {
 		return false
 	}
-	if hasAnyToken(tokens, archTokens...) && !hasAnyToken(tokens, archAliases(goarch)...) {
+	if platform.HasAnyToken(tokens, platform.ArchTokens()...) && !platform.HasAnyToken(tokens, archAliases(goarch)...) {
 		return false
 	}
 	return true
 }
 
 func platformTokens(name string) []string {
-	base := strings.ToLower(util.NormalizeSlashesLower(name))
-	base = strings.TrimSuffix(base, executableSuffix(base))
-	tokens := strings.FieldsFunc(base, func(r rune) bool {
-		return r == '-' || r == '.' || r == '/' || r == '\\'
-	})
-	tokens = append(tokens, strings.FieldsFunc(base, func(r rune) bool {
-		return r == '-' || r == '_' || r == '.' || r == '/' || r == '\\'
-	})...)
-	return tokens
-}
-
-func hasAnyToken(tokens []string, aliases ...string) bool {
-	for _, token := range tokens {
-		for _, alias := range aliases {
-			if token == alias {
-				return true
-			}
-		}
-	}
-	return false
+	base := util.NormalizeSlashesLower(name)
+	base = strings.TrimSuffix(base, filekind.ExecutableSuffixFold(base))
+	return platform.SplitTokens(base)
 }
 
 func autoSelectOnlyWindowsExecutable(candidates []ExtractedFile) (ExtractedFile, bool) {
@@ -191,31 +175,9 @@ func autoSelectOnlyWindowsExecutable(candidates []ExtractedFile) (ExtractedFile,
 }
 
 func archSelectionPatterns(goarch string) []*regexp.Regexp {
-	switch strings.ToLower(goarch) {
-	case "amd64":
-		return compileArchPatterns(`(^|/)(x64|amd64|x86_64)(/|$)`)
-	case "386":
-		return compileArchPatterns(`(^|/)(x86|i386|386)(/|$)`)
-	case "arm64":
-		return compileArchPatterns(`(^|/)(arm64|aarch64)(/|$)`)
-	case "arm":
-		return compileArchPatterns(`(^|/)(arm32|armv6|armv7|arm)(/|$)`)
-	default:
-		return nil
-	}
+	return platform.DirArchPatterns(goarch)
 }
 
-func compileArchPatterns(exprs ...string) []*regexp.Regexp {
-	patterns := make([]*regexp.Regexp, 0, len(exprs))
-	for _, expr := range exprs {
-		patterns = append(patterns, regexp.MustCompile(expr))
-	}
-	return patterns
-}
-
-var osTokens = []string{"windows", "win", "win32", "win64", "darwin", "macos", "osx", "linux", "freebsd", "openbsd", "netbsd", "android", "illumos", "solaris", "plan9"}
-var archTokens = []string{"amd64", "x86_64", "x64", "386", "x86", "i386", "arm64", "aarch64", "arm32", "armv6", "armv7", "arm", "riscv64"}
-var executableVariantTokens = []string{"portable"}
 var versionTokenPattern = regexp.MustCompile(`^v?\d+$`)
 
 func hasVersionToken(tokens []string) bool {
@@ -228,27 +190,11 @@ func hasVersionToken(tokens []string) bool {
 }
 
 func osAliases(goos string) []string {
-	switch strings.ToLower(goos) {
-	case "windows":
-		return []string{"windows", "win", "win32", "win64"}
-	case "darwin":
-		return []string{"darwin", "macos", "osx"}
-	default:
-		return []string{strings.ToLower(goos)}
-	}
+	osAliases, _ := platform.Aliases(goos, "")
+	return osAliases
 }
 
 func archAliases(goarch string) []string {
-	switch strings.ToLower(goarch) {
-	case "amd64":
-		return []string{"amd64", "x86_64", "x64"}
-	case "386":
-		return []string{"386", "x86", "i386"}
-	case "arm64":
-		return []string{"arm64", "aarch64"}
-	case "arm":
-		return []string{"arm32", "armv6", "armv7", "arm"}
-	default:
-		return []string{strings.ToLower(goarch)}
-	}
+	_, archAliases := platform.Aliases("", goarch)
+	return archAliases
 }

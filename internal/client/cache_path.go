@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/inherelab/eget/internal/filekind"
+	"github.com/inherelab/eget/internal/platform"
 )
 
 type CacheMeta struct {
@@ -125,7 +126,7 @@ func cachePlatform(name, goos, goarch string) string {
 
 func nameHasPlatform(name string) bool {
 	tokens := cacheNameTokens(name)
-	return hasAnyCacheToken(tokens, cacheOSTokens...) || hasAnyCacheToken(tokens, cacheArchTokens...)
+	return hasAnyCacheToken(tokens, platform.OSTokens()...) || hasAnyCacheToken(tokens, platform.ArchTokens()...)
 }
 
 func cacheNameTokens(name string) []string {
@@ -145,9 +146,6 @@ func hasAnyCacheToken(tokens []string, aliases ...string) bool {
 	}
 	return false
 }
-
-var cacheOSTokens = []string{"windows", "win", "win32", "win64", "darwin", "macos", "osx", "linux", "freebsd", "openbsd", "netbsd", "android", "illumos", "solaris", "plan9"}
-var cacheArchTokens = []string{"amd64", "x86_64", "x64", "386", "x86", "i386", "arm64", "aarch64", "arm32", "armv6", "armv7", "arm", "riscv64"}
 
 var cacheVersionPattern = regexp.MustCompile(`(?i)(?:^|[^0-9])v?(\d+(?:\.\d+)+(?:[-+][0-9A-Za-z.-]+)?)`)
 
