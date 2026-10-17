@@ -8,6 +8,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 type JSONParseOptions struct {
@@ -221,12 +223,7 @@ func parseZuluFilename(filename string) (string, string, string, bool) {
 }
 
 func archiveExt(filename string) string {
-	for _, ext := range []string{".tar.gz", ".tar.xz", ".tar.bz2", ".zip", ".7z"} {
-		if strings.HasSuffix(filename, ext) {
-			return strings.TrimPrefix(ext, ".")
-		}
-	}
-	ext := path.Ext(filename)
+	ext, _ := filekind.MultiExtExact(filename, filekind.ExtSetArchiveLegacy)
 	return strings.TrimPrefix(ext, ".")
 }
 

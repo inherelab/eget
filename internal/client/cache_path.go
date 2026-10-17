@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 type CacheMeta struct {
@@ -73,13 +75,7 @@ func cacheSourceFileName(rawURL string, u *url.URL) string {
 }
 
 func archiveExt(name string) string {
-	lower := strings.ToLower(name)
-	for _, ext := range []string{".tar.gz", ".tar.xz", ".tar.bz2", ".tar.zst", ".tar.br", ".tar.lz4"} {
-		if strings.HasSuffix(lower, ext) {
-			return name[len(name)-len(ext):]
-		}
-	}
-	return path.Ext(name)
+	return filekind.MultiExtFold(name, filekind.ExtSetCacheMulti)
 }
 
 func cacheVersion(rawURL string, u *url.URL, fileName, fallback string) string {

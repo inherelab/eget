@@ -1,9 +1,10 @@
 package cache
 
 import (
-	"path"
 	"strconv"
 	"strings"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 var keepLatestOSTokens = []string{"windows", "win", "win32", "win64", "darwin", "macos", "osx", "linux", "freebsd", "openbsd", "netbsd", "android", "illumos", "solaris", "plan9"}
@@ -433,13 +434,7 @@ func normalizeFamilySeparators(s string) string {
 }
 
 func cacheAssetExt(name string) string {
-	lower := strings.ToLower(name)
-	for _, ext := range []string{".tar.gz", ".tar.xz", ".tar.bz2", ".tar.zst", ".tar.br", ".tar.lz4"} {
-		if strings.HasSuffix(lower, ext) {
-			return name[len(name)-len(ext):]
-		}
-	}
-	return path.Ext(name)
+	return filekind.MultiExtFold(name, filekind.ExtSetCacheMulti)
 }
 
 func isLowerHex8(s string) bool {
