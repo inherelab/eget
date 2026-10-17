@@ -1,0 +1,108 @@
+{
+  "schema": "inhere-doc-workflow/review-ledger@1",
+  "subject": "eget 匹配与转换规则整合设计",
+  "git_root": "inhere-tools/eget",
+  "subject_path": "docs/design/2026-10-17-rule-consolidation-design.md",
+  "delivery_track": "Full",
+  "exposure": "high",
+  "exposure_basis": "SR1409 低暴露度条件之一「未投产且无生产用户/生产数据」无法举证：仓库有 52 个 tag、v1.14.1 为 0.1 候选 80a190f 的直接父提交、.github/workflows/release.yml 在 push.tags(v*) 上发布、README.md:31-40 面向用户提供 install.sh/install.ps1；「无生产用户」无遥测可证，按 SR1409 unknown 处理。",
+  "exposure_decided_by": "user",
+  "exposure_decision_note": "2026-10-17 用户选定「按高暴露定档」；评审仅出具证据（R-01），不代为定档。",
+  "required_axes": ["Standards/Governance", "Spec/Executability"],
+  "reviewer_isolation": "两轴由两个互不可见的独立子代理会话分别出具（ses_eb7823375ffe73OfDsn08beO9Z / ses_eb7823375ffdEYnsNF73WGGIwj）；均非设计作者；主会话仅汇编，未修改发现内容。",
+  "required_sections": [
+    {"section": "思考模式/核心目标/scope freeze/review budget/停止条件 公开声明", "where": "会话级先行声明（SR1108「开始前」、planning-core begin_document_work）；文档内仅可见 scope freeze（设计 :48 范围冻结说明）", "status": "covered-elsewhere", "note": "见 R-13（LOW/DEFERRED_ENHANCEMENT，判定为会话级声明，非文档缺陷）"},
+    {"section": "修订记录", "where": "设计 :6-12", "status": "covered"},
+    {"section": "背景与用户可见目标", "where": "设计 :14-24", "status": "covered"},
+    {"section": "名词", "where": "设计 :26-38", "status": "covered"},
+    {"section": "范围、非目标、受影响项目", "where": "设计 :40-57", "status": "covered"},
+    {"section": "已确认事实与证据源", "where": "设计 :59-79（F1-F10）", "status": "covered-with-corrective", "note": "F2 完整性仍未闭合，见 X-01/X-03"},
+    {"section": "总体方案与架构视图", "where": "设计 :81-131", "status": "covered"},
+    {"section": "关键流程", "where": "设计 :133-160", "status": "covered"},
+    {"section": "安全、数据、运维与回滚", "where": "设计 :162-170", "status": "covered"},
+    {"section": "决策", "where": "设计 :172-184", "status": "covered"},
+    {"section": "未决问题", "where": "设计 :186-196", "status": "covered"},
+    {"section": "结论与人工计划 Gate", "where": "设计 :198-206", "status": "covered-with-corrective", "note": "评审产物路径为现在时断言，见 R-11；本 ledger 落地后该断言在 HEAD 处成立"}
+  ],
+  "dependency_edges": [
+    "app/cache → platform, filekind",
+    "install → platform, filekind",
+    "install/detect → platform",
+    "client → platform",
+    "sdk → filekind, filter",
+    "forbidden: platform/filekind/filter → install/app/client（防 import cycle）"
+  ],
+  "global_invariants": [
+    "等价性：迁移前后同一输入产生同一输出（含大小写轴与正则整表迁移）",
+    "不改 CLI 参数、配置文件字段、命令输出与任何匹配结果",
+    "不改缓存 layout、installed store、sdk.installed.json 结构与 key 计算",
+    "无 Secret、无部署、无出机器动作；回滚为 revert",
+    "design 不授权 plan，也不授权实施（SR1107 Gate 顺序）"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "kind": "discovery",
+      "candidate": {"commit": "80a190fcdba2be710b7f817bd6f5267709e1570c", "revision": "0.1"},
+      "axes": ["merged:Standards/Governance+Spec/Executability"],
+      "exposure_at_review": "claimed low (unevidenced)",
+      "reviewer": "independent subagent (merged axis)",
+      "report": "docs/review/2026-10-17-rule-consolidation-design-review.md",
+      "verdict": "BLOCKED",
+      "open_core_blocking": ["R-01"],
+      "findings": ["R-01", "R-02", "R-03", "R-04", "R-05", "R-06", "R-07", "R-08", "R-09", "R-10"]
+    },
+    {
+      "round": 2,
+      "kind": "blocking-closure",
+      "candidate": {"commit": "5146d5c32cfe070e27ea6c39b4f812dc4e8d5156", "revision": "0.2"},
+      "axes": ["Standards/Governance", "Spec/Executability"],
+      "reports": [
+        "docs/review/rule-consolidation-design/r02-0.2-standards-review.md",
+        "docs/review/rule-consolidation-design/r02-0.2-executability-review.md"
+      ],
+      "verdicts": {"Standards/Governance": "PASS", "Spec/Executability": "PASS"},
+      "open_core_blocking": [],
+      "closure_confirmation": {
+        "R-01": {"status": "CLOSED", "by": "Standards/Governance", "note": "暴露度改判高暴露，依据链可复核且与仓库事实一致；未越权替代人类定档"},
+        "R-02": {"status": "NOT_CLOSED", "by": "Spec/Executability", "note": "0.2 补入 4 处；独立搜索再发现 4 处 .exe 站点与 1 处归档变体未列入，见 X-01/X-03"},
+        "R-03": {"status": "CLOSED", "by": "Spec/Executability", "note": "armv?6 确不可由 token 表生成，整表迁移为唯一等价路径"},
+        "R-04": {"status": "CLOSED", "by": "Spec/Executability", "note": "glob/子串默认语义边界正确；「4 个入口」计数为模糊表述，非行为问题"},
+        "R-05": {"status": "NOT_CLOSED_PARTIAL", "by": "Spec/Executability", "note": "F3 四站点已标注；F2 可执行后缀组的逐站点敏感/折叠归属未落文档，见 X-02"},
+        "R-06": {"status": "UNVERIFIED", "by": "none", "note": "0.2 已补 source/sourceforge/version.go:11,65-102；两轴均未独立复核「7 套」计数（覆盖缺口）"},
+        "R-07": {"status": "CLOSED", "by": "Standards/Governance"},
+        "R-08": {"status": "CLOSED", "by": "Standards/Governance"},
+        "R-09": {"status": "CLOSED", "by": "Standards/Governance"},
+        "R-10": {"status": "CLOSED", "by": "Standards/Governance"}
+      },
+      "findings": [
+        {"id": "R-11", "axis": "Standards/Governance", "severity": "MEDIUM", "disposition": "CORE_CORRECTIVE", "title": "「评审产物见 docs/review/rule-consolidation-design/」在 0.2 提交时为现在时断言而目录为空", "status": "resolved-by-artifact", "note": "本 ledger 与两轴报告已落地，该断言在 HEAD 处成立；如需严格时序语态，见 follow_ups"},
+        {"id": "R-12", "axis": "Standards/Governance", "severity": "LOW", "disposition": "CORE_CORRECTIVE", "title": "把高暴露定档表述为「已由独立评审纠正」，弱化人类 Gate 授权来源", "status": "open"},
+        {"id": "R-13", "axis": "Standards/Governance", "severity": "LOW", "disposition": "DEFERRED_ENHANCEMENT", "title": "思考模式/review budget/停止条件在候选文档内不可见（判定为会话级声明）", "status": "accepted-as-is"},
+        {"id": "X-01", "axis": "Spec/Executability", "severity": "MEDIUM", "disposition": "CORE_CORRECTIVE", "title": "F2「12 处」仍不完整：再发现 4 处 .exe 判定站点（service.go:502-505、runner_platform.go:139-143、runner_platform.go:184、gui.go:36-39），且 gui.go:44-50 区间不含同名函数", "status": "open"},
+        {"id": "X-02", "axis": "Spec/Executability", "severity": "MEDIUM", "disposition": "CORE_CORRECTIVE", "title": "F2 可执行后缀组未逐站点标注大小写轴归属（该组实测混合：file_modes/chooser 敏感 vs system7z/gui/runner_output/runner_select/runner_download 折叠）", "status": "open"},
+        {"id": "X-03", "axis": "Spec/Executability", "severity": "LOW", "disposition": "CORE_CORRECTIVE", "title": "sdk/json_index.go:121-143 的 -tar.xz/-tar.gz/-zip 归档后缀判定未纳入 F2/F3", "status": "open"},
+        {"id": "X-04", "axis": "Spec/Executability", "severity": "LOW", "disposition": "CORE_CORRECTIVE", "title": "D8「client 现仅依赖 stdlib」在包粒度不成立（结论无环仍正确）", "status": "open"}
+      ]
+    }
+  ],
+  "open_core_blocking": [],
+  "follow_ups": [
+    {"item": "F2 全量站点清单补全（X-01/X-03）并逐站点标注 Xxx/XxxFold（X-02）", "target": "plan 的显式验收项，或下一次 design 修订"},
+    {"item": "D8 表述修正为「client/cache_path.go 现仅依赖 stdlib；整个 client 包依赖 config/cachemirror/util/source/github，均不依赖新包」（X-04）", "target": "下一次 design 修订"},
+    {"item": "R-11 语态修正 / R-12 把定档权归回用户", "target": "下一次 design 修订"},
+    {"item": "R-06「7 套版本实现」计数独立复核", "target": "plan 或下一次修订"},
+    {"item": "Q1-Q3 收敛并留痕（范围冻结前置）", "target": "人类 plan Gate 前"}
+  ],
+  "limitations": [
+    "两轴均未运行 go build / go test；等价性结论为静态阅读，不构成行为证明。",
+    "未覆盖 cmd/、web/、internal/app/web/** 与全部测试文件；后缀/过滤知识可能仍有未发现站点。",
+    "R-06 的计数与 F2 的全量性只能由定向搜索支持，不排除非常规表述遗漏。",
+    "R-13 的会话级声明无法由评审者核实（评审者不可见主会话）。"
+  ],
+  "human_gate": {
+    "pending": "设计批准（进入实施计划）",
+    "requires": "用户明确批准",
+    "does_not_authorize": ["plan 编写", "实施", "commit/push 之外的动作", "部署"]
+  }
+}
