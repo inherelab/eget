@@ -472,6 +472,12 @@ release asset 分类站点：
 5. 新增 `filter.RegexErrorOf` 辅助函数，供调用点取 `RegexError.Expr` 以保留各自错误文案。
 6. **后续修复（2026-10-18，超出本计划范围）**：本计划刻意保留的 F3 漂移与 `node-json` 解析器均已在后续修复中处理——`filekind.ExtSetArchiveLegacy` 已删除，改为共享的 `ExtSetArchiveMulti`（折叠大小写）；`parseNodeFileDescriptor` 改为按 nodejs.org 真实描述符展开。见 issue `my-tools-3gdb`、`my-tools-ycv1`；计划内的站点表/轴声明因此不再反映当前代码。
 
+### 剩余工作收尾（2026-10-18，不改变已批准的 revision 0.6）
+
+「完成 Gate 与剩余工作」列出的两项在本计划完成后单独处理，逐项记于此节：
+
+- **Q5（为规则知识补 `docs/` 说明）done**：`docs/architecture.md` 新增「Matching Rule Knowledge」一节——三个规则包各持有哪类知识、消费站点在哪、以及「OS/arch token 或别名 / 识别正则 / 目录-arch 与平台后缀模式 / 归档与可执行后缀 / release asset 分类成员 / 过滤语法前缀」分别改哪个文件；Runtime Layout 同时补入三个包的条目。
+
 ### 发现但未处理（超出本计划范围）
 
 - `internal/app/list_outdated_test.go` 在 HEAD 处即不满足 `gofmt`（预存在，与本次改动无关）；本计划未修，保持该文件原样。

@@ -38,6 +38,9 @@ eget install inhere/markview --tag nightly
 - `internal/cli`: `gookit/gcli` command registration, argument binding, handlers, and rendering.
 - `internal/app`: use-case orchestration for install/add/list/update/config/search/query.
 - `internal/install`: target detection, asset discovery, download, checksum, extraction, and runner pipeline.
+- `internal/platform`: OS/arch/variant token tables, `goos`/`goarch` aliases, and the recognition regex tables shared by the matching sites.
+- `internal/filekind`: multi-segment extensions, archive/executable/installer suffix sets, and release asset classification.
+- `internal/filter`: the shared parser for the `PRE:`/`SUF:`/`REG:` filter grammar and the `^` exclusion prefix.
 - `internal/config`: config paths, loading, merging, and persistence.
 - `internal/installed`: package installed-state store.
 - `internal/sdk`: SDK target parsing, index cache, resumable downloads, extraction, and SDK installed-state store.
@@ -45,6 +48,34 @@ eget install inhere/markview --tag nightly
 - `internal/source/sourceforge`: SourceForge file discovery and latest-version checks.
 - `internal/source/forge`: GitLab/Gitea/Forgejo release asset discovery and latest-version checks.
 - `internal/source/urltemplate`: configured `template:<id>` sources for independent download sites. It renders URLs from latest metadata and platform variables, then returns a normal asset URL to the shared install pipeline.
+
+## Matching Rule Knowledge
+
+The "asset name to platform / file kind / filter" rules live in three internal packages, so a new platform, archive format, or filter syntax is added in one place:
+
+- `internal/platform`: OS/arch/variant token tables, `goos`/`goarch` to file-name aliases, and the directory-arch and platform-suffix regex tables.
+- `internal/filekind`: multi-segment extensions, archive/executable/installer suffix sets, release asset classification, and the case axis (`XxxExact` compares the name as-is, `XxxFold` lower-cases it first).
+- `internal/filter`: the parser for the explicit `PRE:` / `SUF:` / `REG:` filter grammar and the `^` exclusion prefix. It only parses; matching stays with the caller.
+
+They hold rule data and query primitives, never decision policy: "does this name belong to this platform", "which extractor to build", and "what to match against" stay at the call sites in `internal/install`, `internal/install/detect`, `internal/client`, `internal/app/cache`, `internal/sdk`, and `internal/source`. The migration that created them is `docs/plans/2026-10-17-rule-consolidation-plan.md`.
+
+Where to add or change a rule:
+
+| Change | Location |
+|---|---|
+| OS/arch/variant token or alias | `internal/platform/tokens.go` (`OSTokens`, `ArchTokens`, `VariantTokens`, `Aliases`) |
+| OS/arch recognition regex | `internal/platform/detect.go` (`DetectOSSpecs`, `DetectArchSpecs`); `Anti`/`Priority` are applied by the detector, not by the table |
+| Directory-arch or platform-suffix pattern | `internal/platform/patterns.go` (`DirArchPatterns`, `TrimPlatformSuffixRegexps`) |
+| Archive/executable/installer suffix | `internal/filekind/filekind.go` (the named `ExtSet*` sets and the `Ext*` constants) |
+| Release asset class member | `internal/filekind/releaseasset.go` (`metadataNames`, `metadataSuffixes`, `checksumSuffixes`, `signatureSuffixes`) |
+| Filter syntax prefix | `internal/filter/parse.go`, plus `IsPattern` in `internal/filter/filter.go` |
+
+Two properties of these tables are behaviour, not style, and must survive an edit:
+
+- Suffix sets are per consuming site, not per concept. Sets with different content stay separate even when they overlap: `ExtSetExtractor` carries the single-file compressors, `ExtSetArchiveMulti` only the multi-segment archives.
+- The case axis is part of the result. A site that lower-cases before comparing and one that does not disagree on `TOOL.TAR.GZ`, so every exported primitive names the axis it uses.
+
+Version knowledge is deliberately not in these packages yet: release-asset version extraction and comparison still exist per site, as does the `{name}{version}{os}{arch}{ext}` template syntax.
 
 ## Install Flow
 
