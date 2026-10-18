@@ -81,6 +81,13 @@ The tool fallbacks run once per process, with helper prompts disabled and a shor
 never hang the request. When none yields a token, requests stay anonymous at the unauthenticated
 API rate limit (60 requests/hour), which is what raises "403 API rate limit exceeded".
 
+A token discovered through steps 3–4 is only attached to `api.github.com` requests. If GitHub
+rejects it with `401 Bad credentials` — a stale `gh` login or an outdated git credential — eget
+retries that request anonymously, warns once, and stops using the token for the rest of the
+process. An expired local login therefore cannot break commands that work without one. Set
+`EGET_DISABLE_EXTERNAL_TOKEN=1` to skip the local logins entirely. A token you configure yourself
+(steps 1–2) is never dropped: its 401 keeps failing loudly, because it is your own credential.
+
 ## Import and Export
 
 Export a portable configuration from the old machine:

@@ -77,6 +77,12 @@ url = "${PROXY_URL}"
 工具类 fallback 每个进程至多执行一次，helper 的交互提示已禁用并带短超时，不会卡住请求。全部取不到
 时保持匿名请求（未认证 API 限额 60 次/小时），这就是出现 "403 API rate limit exceeded" 的原因。
 
+第 3–4 步取到的 token 只用于 `api.github.com` 请求。如果 GitHub 返回 `401 Bad credentials`（gh 登录
+过期、或 git 凭据已失效），eget 会改用匿名重试该请求、只提示一次，并在本进程内不再使用该 token——
+过期的本机登录因此不会再让本来能匿名工作的命令失败。设置 `EGET_DISABLE_EXTERNAL_TOKEN=1` 可完全
+跳过本机登录复用。你自己配置的 token（第 1–2 步）不会被丢弃：它的 401 会照旧报错，因为那是你自己的
+凭据问题。
+
 ## 配置导入导出
 
 在旧机器导出可迁移配置：

@@ -119,6 +119,25 @@ func doRequestWithRetries(client *http.Client, retries int, newRequest func() (*
 		resp, err := httpDo(client, req)
 		if err == nil {
 			verbosef("response: %s %s", req.URL.String(), resp.Status)
+			if resp.StatusCode == http.StatusUnauthorized && rejectUnauthorizedExternalToken(req) {
+				// A stale local gh/git login must not break a request that works
+				// anonymously: the token is now rejected, so rebuilding the request
+				// sends it without the Authorization header.
+				if resp.Body != nil {
+					_ = resp.Body.Close()
+				}
+				anonReq, anonErr := newRequest()
+				if anonErr != nil {
+					return nil, anonErr
+				}
+				anonResp, anonDoErr := httpDo(client, anonReq)
+				if anonDoErr != nil {
+					lastErr = anonDoErr
+					break
+				}
+				verbosef("response (anonymous): %s %s", anonReq.URL.String(), anonResp.Status)
+				return anonResp, nil
+			}
 			return resp, nil
 		}
 		lastErr = err
