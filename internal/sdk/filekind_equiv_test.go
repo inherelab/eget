@@ -62,26 +62,31 @@ func TestEquivS_A07(t *testing.T) {
 	// archiveExt knows .tar.xz, the Zulu allow-list does not.
 	_, _, _, ok = parseZuluFilename("zulu8.0.382-linux_x64.tar.xz")
 	assert.False(t, ok)
-	_, _, _, ok = parseZuluFilename("zulu8.0.382-linux_x64.TAR.GZ")
-	assert.False(t, ok)
+
+	// The extension comparison folds case now, so an upper-case name resolves to
+	// the same allow-list entry as its lower-case sibling.
+	osName, arch, ext, ok = parseZuluFilename("zulu8.0.382-linux_x64.TAR.GZ")
+	assert.True(t, ok)
+	assert.Eq(t, "linux", osName)
+	assert.Eq(t, "tar.gz", ext)
 }
 
-// TestEquivS_A08 pins archiveExt: the deliberately narrow legacy set on the
-// sensitive axis.
+// TestEquivS_A08 pins archiveExt after the drift fix (my-tools-3gdb): the
+// multi-segment set matches the other archive stations and the comparison folds
+// case, so the extension label is stable for any source casing.
 func TestEquivS_A08(t *testing.T) {
 	assert.Eq(t, "tar.gz", archiveExt("tool.tar.gz"))
 	assert.Eq(t, "tar.xz", archiveExt("tool.tar.xz"))
 	assert.Eq(t, "tar.bz2", archiveExt("tool.tar.bz2"))
+	assert.Eq(t, "tar.zst", archiveExt("tool.tar.zst"))
+	assert.Eq(t, "tar.br", archiveExt("tool.tar.br"))
+	assert.Eq(t, "tar.lz4", archiveExt("tool.tar.lz4"))
 	assert.Eq(t, "zip", archiveExt("tool.zip"))
 	assert.Eq(t, "7z", archiveExt("tool.7z"))
 
-	// Drift kept on purpose: the legacy set lacks these, so only the tail of
-	// path.Ext is reported.
-	assert.Eq(t, "zst", archiveExt("tool.tar.zst"))
-	assert.Eq(t, "br", archiveExt("tool.tar.br"))
-	assert.Eq(t, "lz4", archiveExt("tool.tar.lz4"))
+	// Folded: upper case reports the same label as the lower-case sibling.
+	assert.Eq(t, "tar.gz", archiveExt("TOOL.TAR.GZ"))
+	assert.Eq(t, "zip", archiveExt("TOOL.ZIP"))
 
-	// Sensitive axis.
-	assert.Eq(t, "GZ", archiveExt("TOOL.TAR.GZ"))
 	assert.Eq(t, "", archiveExt("tool"))
 }

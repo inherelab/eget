@@ -432,7 +432,7 @@ func normalizeFamilySeparators(s string) string {
 }
 
 func cacheAssetExt(name string) string {
-	return filekind.MultiExtFold(name, filekind.ExtSetCacheMulti)
+	return filekind.MultiExtFold(name, filekind.ExtSetArchiveMulti)
 }
 
 func isLowerHex8(s string) bool {

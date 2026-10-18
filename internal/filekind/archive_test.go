@@ -50,38 +50,38 @@ func TestKindExact(t *testing.T) {
 
 func TestMultiExtFold(t *testing.T) {
 	t.Run("matches and preserves the original case", func(t *testing.T) {
-		assert.Eq(t, ".tar.gz", MultiExtFold("tool_1.0_linux_x64.tar.gz", ExtSetCacheMulti))
-		assert.Eq(t, ".tar.br", MultiExtFold("tool_1.0_linux_x64.tar.br", ExtSetCacheMulti))
-		assert.Eq(t, ".tar.lz4", MultiExtFold("tool_1.0_linux_x64.tar.lz4", ExtSetCacheMulti))
-		assert.Eq(t, ".TAR.BR", MultiExtFold("TOOL-x64.TAR.BR", ExtSetCacheMulti))
+		assert.Eq(t, ".tar.gz", MultiExtFold("tool_1.0_linux_x64.tar.gz", ExtSetArchiveMulti))
+		assert.Eq(t, ".tar.br", MultiExtFold("tool_1.0_linux_x64.tar.br", ExtSetArchiveMulti))
+		assert.Eq(t, ".tar.lz4", MultiExtFold("tool_1.0_linux_x64.tar.lz4", ExtSetArchiveMulti))
+		assert.Eq(t, ".TAR.BR", MultiExtFold("TOOL-x64.TAR.BR", ExtSetArchiveMulti))
 	})
 
 	t.Run("falls back to path.Ext", func(t *testing.T) {
-		assert.Eq(t, ".zip", MultiExtFold("tool.zip", ExtSetCacheMulti))
-		assert.Eq(t, "", MultiExtFold("tool", ExtSetCacheMulti))
-		// .tar.zst is not part of the legacy set, so only the tail is reported.
-		assert.Eq(t, ".zst", MultiExtFold("tool.tar.zst", ExtSetArchiveLegacy))
+		assert.Eq(t, ".zip", MultiExtFold("tool.zip", ExtSetArchiveMulti))
+		assert.Eq(t, "", MultiExtFold("tool", ExtSetArchiveMulti))
+		// .tar.zst is part of the set, so the multi-segment form is reported.
+		assert.Eq(t, ".tar.zst", MultiExtFold("tool.tar.zst", ExtSetArchiveMulti))
 	})
 }
 
 func TestMultiExtExact(t *testing.T) {
 	t.Run("returns the set literal on a match", func(t *testing.T) {
-		ext, ok := MultiExtExact("tool_1.0_linux_x64.tar.gz", ExtSetArchiveLegacy)
+		ext, ok := MultiExtExact("tool_1.0_linux_x64.tar.gz", ExtSetArchiveMulti)
 		assert.True(t, ok)
 		assert.Eq(t, ".tar.gz", ext)
 		assert.Eq(t, "tar.gz", ext[1:])
 	})
 
-	t.Run("legacy set stays narrow", func(t *testing.T) {
+	t.Run("matches the multi-segment forms", func(t *testing.T) {
 		for _, name := range []string{"tool.tar.zst", "tool.tar.br", "tool.tar.lz4"} {
-			ext, ok := MultiExtExact(name, ExtSetArchiveLegacy)
-			assert.False(t, ok, name)
+			ext, ok := MultiExtExact(name, ExtSetArchiveMulti)
+			assert.True(t, ok, name)
 			assert.NotEq(t, "", ext, name)
 		}
 	})
 
 	t.Run("case sensitive axis", func(t *testing.T) {
-		ext, ok := MultiExtExact("TOOL.TAR.GZ", ExtSetArchiveLegacy)
+		ext, ok := MultiExtExact("TOOL.TAR.GZ", ExtSetArchiveMulti)
 		assert.False(t, ok)
 		assert.Eq(t, ".GZ", ext)
 	})

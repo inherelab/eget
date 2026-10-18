@@ -470,6 +470,7 @@ release asset 分类站点：
 3. `platform.SplitTokens` 保留原 `platformTokens` 的两趟切分语义（两趟结果拼接）；后缀裁剪留在调用点。
 4. T10 的 characterization 在迁移**之后**补写（偏离计划的“先测后迁”顺序）；已用反向验证补足证据：同一批用例在迁移前提交 `b7f72d8` 上全部通过。
 5. 新增 `filter.RegexErrorOf` 辅助函数，供调用点取 `RegexError.Expr` 以保留各自错误文案。
+6. **后续修复（2026-10-18，超出本计划范围）**：本计划刻意保留的 F3 漂移与 `node-json` 解析器均已在后续修复中处理——`filekind.ExtSetArchiveLegacy` 已删除，改为共享的 `ExtSetArchiveMulti`（折叠大小写）；`parseNodeFileDescriptor` 改为按 nodejs.org 真实描述符展开。见 issue `my-tools-3gdb`、`my-tools-ycv1`；计划内的站点表/轴声明因此不再反映当前代码。
 
 ### 发现但未处理（超出本计划范围）
 

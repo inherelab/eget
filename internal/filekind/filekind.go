@@ -49,10 +49,10 @@ const (
 	AssetMetadata
 )
 
-// Named suffix sets. Each set mirrors exactly one original call site: never
-// merge two sets, because the sites differ in both content and intent
-// (ExtSetExtractor carries the single-file compressors, ExtSetArchiveLegacy is
-// the deliberately narrower sdk variant).
+// Named suffix sets. Each set mirrors the sites that consume it: never merge two
+// sets that differ in content, because the sites differ in intent
+// (ExtSetExtractor carries the single-file compressors, ExtSetArchiveMulti only
+// the multi-segment archives).
 var (
 	// ExtSetExtractor is the suffix list of install.NewExtractor.
 	ExtSetExtractor = []string{
@@ -79,20 +79,14 @@ var (
 		".tar.zst",
 	}
 
-	// ExtSetCacheMulti is the multi-segment list shared by client.archiveExt
-	// and app/cache.cacheAssetExt.
-	ExtSetCacheMulti = []string{
+	// ExtSetArchiveMulti is the multi-segment archive list shared by
+	// client.archiveExt, app/cache.cacheAssetExt and the sdk index parsers.
+	ExtSetArchiveMulti = []string{
 		".tar.gz", ".tar.xz", ".tar.bz2", ".tar.zst", ".tar.br", ".tar.lz4",
 	}
 
 	// ExtSetDownload is the suffix list of install.isInvalidCachedDownload.
 	ExtSetDownload = []string{".zip", ".gz", ".tgz", ".xz", ".bz2", ".zst", ".7z", ".rar"}
-
-	// ExtSetArchiveLegacy is the sdk/json_index.go variant: it lacks
-	// .tar.zst/.tar.br/.tar.lz4 compared to the cache sets. The drift is kept on
-	// purpose for equivalence; merging it back is a semantic change that needs a
-	// design revision plus user approval.
-	ExtSetArchiveLegacy = []string{".tar.gz", ".tar.xz", ".tar.bz2", ".zip", ".7z"}
 
 	// ExtSetSystemArchiver is the unconditional set of
 	// install.shouldUseSystem7z; the ".exe" case is conditional and stays at the

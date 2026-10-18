@@ -284,9 +284,18 @@ func parseZuluFilename(filename string) (string, string, string, bool) {
 	return osName, arch, ext, true
 }
 
+// archiveExt returns the extension of an index file name without the leading
+// dot: the multi-segment archive form when it matches, otherwise the last dot
+// segment. The comparison is case-insensitive, so a source that ships
+// "X.TAR.GZ" reports the same extension as its lower-case sibling.
 func archiveExt(filename string) string {
-	ext, _ := filekind.MultiExtExact(filename, filekind.ExtSetArchiveLegacy)
-	return strings.TrimPrefix(ext, ".")
+	lower := strings.ToLower(filename)
+	for _, ext := range filekind.ExtSetArchiveMulti {
+		if strings.HasSuffix(lower, ext) {
+			return ext[1:]
+		}
+	}
+	return strings.TrimPrefix(path.Ext(lower), ".")
 }
 
 func newIndex(sdkName, sourceURL string, now func() time.Time, items []IndexItem) Index {

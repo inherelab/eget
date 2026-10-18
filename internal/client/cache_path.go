@@ -76,7 +76,7 @@ func cacheSourceFileName(rawURL string, u *url.URL) string {
 }
 
 func archiveExt(name string) string {
-	return filekind.MultiExtFold(name, filekind.ExtSetCacheMulti)
+	return filekind.MultiExtFold(name, filekind.ExtSetArchiveMulti)
 }
 
 func cacheVersion(rawURL string, u *url.URL, fileName, fallback string) string {
