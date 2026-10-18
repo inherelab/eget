@@ -40,11 +40,15 @@ func TestParseJSONIndexForGo(t *testing.T) {
 }
 
 func TestParseJSONIndexForNode(t *testing.T) {
+	// The descriptors are taken verbatim from nodejs.org/dist/index.json; a
+	// descriptor names a platform, not a file (see parseNodeFileDescriptor).
 	body := strings.NewReader(`[
   {
     "version": "v20.11.1",
     "date": "2024-02-13",
-    "files": ["win-x64-zip", "linux-x64-tar.xz"]
+    "files": ["aix-ppc64", "headers", "linux-arm64", "linux-x64", "linux-x64-musl",
+              "osx-arm64-tar", "osx-x64-pkg", "osx-x64-tar", "src",
+              "win-arm64-7z", "win-arm64-zip", "win-x64-exe", "win-x64-msi", "win-x64-zip"]
   }
 ]`)
 
@@ -57,10 +61,45 @@ func TestParseJSONIndexForNode(t *testing.T) {
 	}
 
 	assert.Eq(t, "20.11.1", index.Items[0].Version)
-	winFile := indexFileByOS(t, index.Items[0].Files, "win")
-	assert.Eq(t, "x64", winFile.Arch)
-	assert.Eq(t, "zip", winFile.Ext)
-	assert.Eq(t, "https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip", winFile.URL)
+	files := index.Items[0].Files
+
+	winZip := indexFileByOSExt(t, files, "win-x64", "zip")
+	assert.Eq(t, "https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip", winZip.URL)
+	assert.Eq(t, "7z", indexFileByOSExt(t, files, "win-arm64", "7z").Ext)
+
+	// A bare descriptor expands to the tarballs the dist publishes.
+	assert.Eq(t, "https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-x64.tar.gz",
+		indexFileByOSExt(t, files, "linux-x64", "tar.gz").URL)
+	assert.Eq(t, "https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-x64.tar.xz",
+		indexFileByOSExt(t, files, "linux-x64", "tar.xz").URL)
+	assert.Eq(t, "https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-x64-musl.tar.gz",
+		indexFileByOSExt(t, files, "linux-x64-musl", "tar.gz").URL)
+
+	// "osx-x64-tar" is published under the darwin name.
+	darwin := indexFileByOSExt(t, files, "darwin-x64", "tar.gz")
+	assert.Eq(t, "https://nodejs.org/dist/v20.11.1/node-v20.11.1-darwin-x64.tar.gz", darwin.URL)
+	assert.Eq(t, "tar.xz", indexFileByOSExt(t, files, "darwin-arm64", "tar.xz").Ext)
+
+	// aix publishes only .tar.gz; headers/src and the installers are not archives.
+	assert.Eq(t, "tar.gz", indexFileByOSExt(t, files, "aix-ppc64", "tar.gz").Ext)
+	for _, entry := range files {
+		assert.NotEq(t, "aix-ppc64/tar.xz", entry.OS+"-"+entry.Arch+"/"+entry.Ext)
+		assert.False(t, entry.Ext == "exe" || entry.Ext == "msi" || entry.Ext == "pkg", entry.Filename)
+		assert.False(t, strings.Contains(entry.Filename, "headers") || entry.Filename == "node-v20.11.1.tar.gz", entry.Filename)
+	}
+}
+
+// indexFileByOSExt finds one entry by its os-arch pair and extension, which is
+// what a node-json descriptor expands into.
+func indexFileByOSExt(t *testing.T, files []IndexFile, osArch, ext string) IndexFile {
+	t.Helper()
+	for _, file := range files {
+		if file.OS+"-"+file.Arch == osArch && file.Ext == ext {
+			return file
+		}
+	}
+	t.Fatalf("expected file for %s .%s in %#v", osArch, ext, files)
+	return IndexFile{}
 }
 
 func TestParseJSONIndexForZulu(t *testing.T) {

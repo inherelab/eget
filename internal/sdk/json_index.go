@@ -96,19 +96,17 @@ func parseNodeJSONIndex(body io.Reader, opts JSONParseOptions) (Index, error) {
 		version := strings.TrimPrefix(release.Version, "v")
 		item := IndexItem{Version: version, Stable: isStableVersion(version)}
 		for _, file := range release.Files {
-			osName, arch, ext, ok := parseNodeFileDescriptor(file)
-			if !ok {
-				continue
+			for _, entry := range parseNodeFileDescriptor(file) {
+				filename := fmt.Sprintf("node-v%s-%s-%s.%s", version, entry.os, entry.arch, entry.ext)
+				rel, _ := url.Parse(path.Join(path.Dir(base.Path), "v"+version, filename))
+				item.Files = append(item.Files, IndexFile{
+					OS:       entry.os,
+					Arch:     entry.arch,
+					Ext:      entry.ext,
+					URL:      base.ResolveReference(rel).String(),
+					Filename: filename,
+				})
 			}
-			filename := fmt.Sprintf("node-v%s-%s-%s.%s", version, osName, arch, ext)
-			rel, _ := url.Parse(path.Join(path.Dir(base.Path), "v"+version, filename))
-			item.Files = append(item.Files, IndexFile{
-				OS:       osName,
-				Arch:     arch,
-				Ext:      ext,
-				URL:      base.ResolveReference(rel).String(),
-				Filename: filename,
-			})
 		}
 		if len(item.Files) > 0 {
 			items = append(items, item)
@@ -120,29 +118,93 @@ func parseNodeJSONIndex(body io.Reader, opts JSONParseOptions) (Index, error) {
 	return newIndex(opts.SDK, opts.SourceURL, opts.Now, items), nil
 }
 
-func parseNodeFileDescriptor(value string) (string, string, string, bool) {
-	switch {
-	case strings.HasSuffix(value, "-tar.xz"):
-		parts := strings.Split(strings.TrimSuffix(value, "-tar.xz"), "-")
-		if len(parts) != 2 {
-			return "", "", "", false
-		}
-		return parts[0], parts[1], "tar.xz", true
-	case strings.HasSuffix(value, "-tar.gz"):
-		parts := strings.Split(strings.TrimSuffix(value, "-tar.gz"), "-")
-		if len(parts) != 2 {
-			return "", "", "", false
-		}
-		return parts[0], parts[1], "tar.gz", true
-	case strings.HasSuffix(value, "-zip"):
-		parts := strings.Split(strings.TrimSuffix(value, "-zip"), "-")
-		if len(parts) != 2 {
-			return "", "", "", false
-		}
-		return parts[0], parts[1], "zip", true
-	default:
-		return "", "", "", false
+// nodeDescriptor is one archive a nodejs.org index.json file descriptor stands
+// for. A descriptor names a platform, not a file: "linux-x64" is published as
+// both node-vX-linux-x64.tar.gz and .tar.xz.
+type nodeDescriptor struct {
+	os   string
+	arch string
+	ext  string
+}
+
+// nodeExtToken maps the trailing token of a descriptor to the archive
+// extension; "tar" is the .tar.gz form ("osx-x64-tar").
+var nodeExtToken = map[string]string{
+	"zip": "zip",
+	"7z":  "7z",
+	"tar": "tar.gz",
+}
+
+// nodeDescriptorOS maps descriptor OS tokens to the token used in file names
+// ("osx-x64-tar" is published as node-vX-darwin-x64.tar.gz).
+var nodeDescriptorOS = map[string]string{"osx": "darwin"}
+
+// nodeNonArchiveDescriptors name entries that are not installable platform
+// archives: the shared headers/source tarballs and the Windows/macOS installers
+// ("win-x64-exe", "win-x64-msi", "osx-x64-pkg").
+var nodeNonArchiveDescriptors = map[string]bool{"headers": true, "src": true}
+
+// nodeTarballOS lists the platforms that publish both .tar.gz and .tar.xz; the
+// rest (aix) publish only .tar.gz. Checked against
+// nodejs.org/dist/{v22.9.0,v24.0.0,v26.12.0}/SHASUMS256.txt.
+var nodeTarballOS = map[string]bool{"linux": true, "darwin": true}
+
+// parseNodeFileDescriptor expands one nodejs.org index.json file descriptor into
+// the index entries it stands for, e.g.
+//
+//	linux-x64       -> linux/x64/{tar.gz,tar.xz}
+//	osx-x64-tar     -> darwin/x64/{tar.gz,tar.xz}
+//	win-x64-zip     -> win/x64/zip
+//	linux-x64-musl  -> linux/x64-musl/{tar.gz,tar.xz}
+//
+// Descriptors without an installable archive (headers, src, installers) yield
+// nothing.
+func parseNodeFileDescriptor(value string) []nodeDescriptor {
+	desc := strings.ToLower(strings.TrimSpace(value))
+	if desc == "" || nodeNonArchiveDescriptors[desc] {
+		return nil
 	}
+
+	parts := strings.Split(desc, "-")
+	if len(parts) < 2 {
+		return nil
+	}
+
+	ext := ""
+	if mapped, ok := nodeExtToken[parts[len(parts)-1]]; ok {
+		ext = mapped
+		parts = parts[:len(parts)-1]
+	} else if last := parts[len(parts)-1]; last == "tar.gz" || last == "tar.xz" {
+		ext = last
+		parts = parts[:len(parts)-1]
+	} else if last == "exe" || last == "msi" || last == "pkg" {
+		// Installer, not an archive the SDK can extract.
+		return nil
+	}
+	if len(parts) < 2 {
+		return nil
+	}
+
+	osName := strings.Join(parts[:1], "")
+	if mapped, ok := nodeDescriptorOS[osName]; ok {
+		osName = mapped
+	}
+	arch := strings.Join(parts[1:], "-")
+	if arch == "" {
+		return nil
+	}
+
+	if ext != "" && ext != "tar.gz" {
+		return []nodeDescriptor{{os: osName, arch: arch, ext: ext}}
+	}
+	// A bare descriptor, and the "-tar" form, name the platform's tarball: the
+	// dist publishes .tar.gz for all of them and .tar.xz for the platforms that
+	// build it.
+	entries := []nodeDescriptor{{os: osName, arch: arch, ext: "tar.gz"}}
+	if nodeTarballOS[osName] {
+		entries = append(entries, nodeDescriptor{os: osName, arch: arch, ext: "tar.xz"})
+	}
+	return entries
 }
 
 type zuluJSONPackage struct {

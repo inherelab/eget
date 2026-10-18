@@ -10,26 +10,38 @@ import (
 // internal/filekind (docs/plans/2026-10-17-rule-consolidation-plan.md, S-A06/
 // S-A07/S-A08). They must keep passing unchanged after the migration.
 
-// TestEquivS_A06 pins parseNodeFileDescriptor: the node index uses "-"
-// separated suffixes and the sensitive axis.
-func TestEquivS_A06(t *testing.T) {
-	osName, arch, ext, ok := parseNodeFileDescriptor("linux-x64-tar.xz")
-	assert.True(t, ok)
-	assert.Eq(t, "linux", osName)
-	assert.Eq(t, "x64", arch)
-	assert.Eq(t, "tar.xz", ext)
-
-	_, _, _, ok = parseNodeFileDescriptor("linux-x64-tar.gz")
-	assert.True(t, ok)
-	_, _, _, ok = parseNodeFileDescriptor("linux-x64-zip")
-	assert.True(t, ok)
-
-	// Sensitive axis: upper case is not recognised.
-	_, _, _, ok = parseNodeFileDescriptor("linux-x64-TAR.XZ")
-	assert.False(t, ok)
-	// Not part of the node index naming convention.
-	_, _, _, ok = parseNodeFileDescriptor("linux-x64-tar.zst")
-	assert.False(t, ok)
+// TestNodeFileDescriptorMatchesUpstream replaces the earlier S-A06
+// characterization: that test pinned the old parser (only "-tar.xz", "-tar.gz"
+// and "-zip"), which did not match nodejs.org/dist/index.json at all — see
+// my-tools-ycv1. The descriptors below are verbatim samples from the real index.
+func TestNodeFileDescriptorMatchesUpstream(t *testing.T) {
+	cases := []struct {
+		desc string
+		want []nodeDescriptor
+	}{
+		{"linux-x64", []nodeDescriptor{{os: "linux", arch: "x64", ext: "tar.gz"}, {os: "linux", arch: "x64", ext: "tar.xz"}}},
+		{"linux-x64-musl", []nodeDescriptor{{os: "linux", arch: "x64-musl", ext: "tar.gz"}, {os: "linux", arch: "x64-musl", ext: "tar.xz"}}},
+		{"linux-armv7l", []nodeDescriptor{{os: "linux", arch: "armv7l", ext: "tar.gz"}, {os: "linux", arch: "armv7l", ext: "tar.xz"}}},
+		{"aix-ppc64", []nodeDescriptor{{os: "aix", arch: "ppc64", ext: "tar.gz"}}},
+		{"osx-x64-tar", []nodeDescriptor{{os: "darwin", arch: "x64", ext: "tar.gz"}, {os: "darwin", arch: "x64", ext: "tar.xz"}}},
+		{"osx-arm64-tar", []nodeDescriptor{{os: "darwin", arch: "arm64", ext: "tar.gz"}, {os: "darwin", arch: "arm64", ext: "tar.xz"}}},
+		{"win-x64-zip", []nodeDescriptor{{os: "win", arch: "x64", ext: "zip"}}},
+		{"win-arm64-7z", []nodeDescriptor{{os: "win", arch: "arm64", ext: "7z"}}},
+		{"LINUX-X64", []nodeDescriptor{{os: "linux", arch: "x64", ext: "tar.gz"}, {os: "linux", arch: "x64", ext: "tar.xz"}}},
+		// Not installable platform archives.
+		{"headers", nil},
+		{"src", nil},
+		{"win-x64-exe", nil},
+		{"win-x64-msi", nil},
+		{"osx-x64-pkg", nil},
+		{"", nil},
+		{"linux", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			assert.Eq(t, tc.want, parseNodeFileDescriptor(tc.desc))
+		})
+	}
 }
 
 // TestEquivS_A07 pins parseZuluFilename: extraction via archiveExt, then the
