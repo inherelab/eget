@@ -477,6 +477,7 @@ release asset 分类站点：
 「完成 Gate 与剩余工作」列出的两项在本计划完成后单独处理，逐项记于此节：
 
 - **Q5（为规则知识补 `docs/` 说明）done**：`docs/architecture.md` 新增「Matching Rule Knowledge」一节——三个规则包各持有哪类知识、消费站点在哪、以及「OS/arch token 或别名 / 识别正则 / 目录-arch 与平台后缀模式 / 归档与可执行后缀 / release asset 分类成员 / 过滤语法前缀」分别改哪个文件；Runtime Layout 同时补入三个包的条目。
+- **R-06（「7 套版本实现」计数独立复核）done**：定向搜索独立复核——F6 的 7 处站点逐条可复现（现位置：`app/cache/keep_latest.go:87-245`、`sdk/html_index.go:249-287`、`install/runner_select.go:189-224`、`install/runner_platform.go:181-190`、`app/tag_semantics.go:12,83`、`client/cache_path.go:150-158`、`source/sourceforge/version.go:11-102`），其中 4 处行号在实施期漂移；F6 未声明站点类别边界，同一读法下另有 4 处同类站点未列入（`sdk/html_index.go:103` `versionDirectoryNameRe`、`sdk/target.go:9` `versionPrefixPattern`、`app/self_update.go:222-260` `selfSemver`、`extpkg/parse.go:200,233` uv/cargo 输出解析），故「7 套」只在狭义定义下成立。修订 F6 属语义变化，需 design 修订（0.3）+ 用户批准，本轮未执行；结论同时写入 `docs/review/rule-consolidation-design/review-ledger.json` 的 follow_ups。
 
 ### 发现但未处理（超出本计划范围）
 

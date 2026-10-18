@@ -91,7 +91,7 @@
     {"item": "F2 全量站点清单补全（X-01/X-03）并逐站点标注 Xxx/XxxFold（X-02）", "target": "plan 的显式验收项，或下一次 design 修订"},
     {"item": "D8 表述修正为「client/cache_path.go 现仅依赖 stdlib；整个 client 包依赖 config/cachemirror/util/source/github，均不依赖新包」（X-04）", "target": "下一次 design 修订"},
     {"item": "R-11 语态修正 / R-12 把定档权归回用户", "target": "下一次 design 修订"},
-    {"item": "R-06「7 套版本实现」计数独立复核", "target": "plan 或下一次修订"},
+    {"item": "R-06「7 套版本实现」计数独立复核", "target": "plan 或下一次修订", "status": "done (2026-10-18)", "result": "狭义定义（release asset / tag / 索引 / 缓存的版本抽取与排序）下 F6 的 7 处逐条复现：app/cache/keep_latest.go:87-245、sdk/html_index.go:249-287、install/runner_select.go:189-224、install/runner_platform.go:181-190、app/tag_semantics.go:12,83、client/cache_path.go:150-158、source/sourceforge/version.go:11-102；其中 4 处行号在实施期漂移。F6 未声明站点类别边界，同一读法下另有 4 处同类站点未列入（sdk/html_index.go:103 versionDirectoryNameRe、sdk/target.go:9 versionPrefixPattern、app/self_update.go:222-260 selfSemver、extpkg/parse.go:200,233 uv/cargo 输出解析），故「7 套」只在狭义定义下成立。修订 F6 属语义变化，需 design 修订（0.3）+ 用户批准，本轮未执行。"},
     {"item": "Q1-Q3 收敛并留痕（范围冻结前置）", "target": "人类 plan Gate 前"}
   ],
   "limitations": [
