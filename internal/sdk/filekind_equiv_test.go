@@ -69,6 +69,9 @@ func TestEquivS_A07(t *testing.T) {
 	assert.True(t, ok)
 	assert.Eq(t, "linux", osName)
 	assert.Eq(t, "tar.gz", ext)
+	// Quirk kept: the extension comparison folds case, but the suffix trim that
+	// splits off the platform does not, so the arch keeps the suffix tail.
+	assert.Eq(t, "x64.TAR.GZ", arch)
 }
 
 // TestEquivS_A08 pins archiveExt after the drift fix (my-tools-3gdb): the
