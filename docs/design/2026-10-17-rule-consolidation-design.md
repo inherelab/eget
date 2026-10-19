@@ -1,7 +1,7 @@
 <!-- template_id: design; template_version: 1.1.1 -->
 # eget 匹配与转换规则整合 设计
 
-> 状态：Draft 0.2 / 待人工计划批准
+> 状态：Draft 0.3 / 待人工计划批准
 
 ## 修订记录
 
@@ -9,6 +9,7 @@
 |---|---|---|---|
 | 0.1 | 2026-10-17 | inhere | 初稿：确认规则散落事实，给出平台/文件类型/过滤三类知识的集中化方案 |
 | 0.2 | 2026-10-17 | inhere | 按独立评审 R-01~R-10 修订：暴露度改判高暴露、改走两轴独立评审；F2/F3/F4/F6/F8 事实表校正；`runner_output` 三条正则改为整表迁移；明确 glob/子串默认语义不进入 `filter`；`filekind` 增加大小写轴；补范围冻结与命名映射边界说明 |
+| 0.3 | 2026-10-18 | inhere | 按 R-06 独立复核更正 F6 事实表：显式声明「版本规则」的站点类别限定（含 4 处漂移行号更正），并新增 F6b 行记录同属该限定但 0.1/0.2 未列出的 4 处同类站点；D5 的计数表述同步。D5「本轮不整合」的决策不变 |
 
 > 仅语义变化递增版本；纯 identity/provenance/元数据纠正沿用原版本，并在 Git/进度记录中留痕。
 
@@ -58,7 +59,7 @@
 
 ## 已确认事实与规范
 
-事实（均为当前 HEAD 的只读证据；0.2 已按独立评审校正）：
+事实（均为当前 HEAD 的只读证据；0.2 已按独立评审校正，0.3 已按 R-06 复核更正 F6/F6b）：
 
 | 编号 | 事实 | 证据位置 |
 |---|---|---|
@@ -67,7 +68,8 @@
 | F3 | 多段扩展名列表 `.tar.gz/.tar.xz/...` 有 2 份逐字重复 + 1 份等价 switch + 1 份漂移变体 | 逐字：`internal/client/cache_path.go:77`、`internal/app/cache/keep_latest.go:437`；等价 `strings.HasSuffix` switch：`internal/install/extractor.go:57-64`；漂移变体（缺 `.tar.zst/.tar.br/.tar.lz4` 且未折叠大小写）：`internal/sdk/json_index.go:224` |
 | F4 | 过滤语法重复：`PRE:`/`SUF:` 有 2 套重复实现（已满足 SR1405.1 前提），`REG:`/`^` 前缀解析另分布在 4 个入口 | `PRE:`/`SUF:`：`internal/tagfilter/tagfilter.go:25-53`、`internal/install/service.go:319-349`；`^` anti：`internal/install/service.go:321-324`、`internal/install/chooser.go:128-135`；`REG:` 入口：`internal/install/chooser.go:57-71`、`internal/sdk/search_service.go:105-106` |
 | F5 | release asset 分类是 30+ 后缀硬编码 switch | `internal/install/detect/detectors.go:259-300` |
-| F6 | 版本解析/比较规则有 7 套实现 | `internal/app/cache/keep_latest.go:88-279`、`internal/sdk/html_index.go:245-287`、`internal/install/runner_select.go:188-223`、`internal/install/runner_platform.go:218-227`、`internal/app/tag_semantics.go:12`、`internal/client/cache_path.go:156-163`、`internal/source/sourceforge/version.go:11,65-102` |
+| F6 | 版本解析/比较规则有 7 套实现（限定：从 asset 名 / release tag / 索引目录 / 缓存路径抽取版本并排序或判等；0.3 更正 4 处漂移行号） | `internal/app/cache/keep_latest.go:87-245`、`internal/sdk/html_index.go:249-287`、`internal/install/runner_select.go:189-224`、`internal/install/runner_platform.go:181-190`、`internal/app/tag_semantics.go:12,83`、`internal/client/cache_path.go:150-158`、`internal/source/sourceforge/version.go:11-102` |
+| F6b | 同属 F6 限定、但 0.1/0.2 未列出的同类站点 4 处（0.3 按 R-06 复核补入） | `internal/sdk/html_index.go:103-115`（`versionDirectoryNameRe`）、`internal/sdk/target.go:9,44`（`versionPrefixPattern`）、`internal/app/self_update.go:222-260`（`selfSemver`/`parseSelfSemver`/`lessThan`）、`internal/extpkg/parse.go:200,233`（`uv tool list`/`cargo install --list` 输出解析） |
 | F7 | `{name}{version}{os}{arch}{ext}` 模板语法有 3 套实现（2 正向 + 1 逆向解析） | `internal/source/urltemplate/template.go:60-75`、`internal/sdk/template.go:16-29`、`internal/sdk/html_index.go:187-218` |
 | F8 | 上述 5 组知识分属 `detect`/`install`/`client`/`app/cache`/`sdk`/`source` 六处，当前无任何共享低层包 | `internal/` 下 23 个含 `.go` 的包已枚举（`internal/source` 根目录无 Go 文件），无 `rules`/`platform`/`match` 类包；`util` 是唯一低层共享包 |
 | F9 | F1 中 3 份 token 数组已逐字相同，属已发生的复制粘贴；F3 的 2 份逐字重复、F4 的 2 处 `PRE:`/`SUF:` 实现同类 | 同 F1、F3、F4 |
@@ -182,7 +184,7 @@ releases assets
 | D2 | 建立 `internal/filekind`，把后缀集合与 release asset 分类改为表驱动，并显式建模大小写轴（`Xxx`/`XxxFold`）；`install` 只保留「类型 → 构造函数」映射 | F2、F3、F5（评审 R-02、R-05） |
 | D3 | 建立 `internal/filter`，统一显式 `PRE:`/`SUF:`/`REG:`/`^` 语法；`tagfilter` 并入（见 Q1）；glob 与子串默认语义**不**迁移 | F4、F10（评审 R-04） |
 | D4 | 只做「数据集中」，不下移判定策略；判定语义保持在原包 | 保证等价性、避免大爆炸式改写 |
-| D5 | 版本解析/比较规则（F6，7 套）本轮**不整合**，记为 deferred | 各调用点模型不同（asset family / sdk index / tag 语义），统一需先决定单一模型，属独立设计 |
+| D5 | 版本解析/比较规则（F6 的 7 套 + F6b 的 4 处同类站点）本轮**不整合**，记为 deferred | 各调用点模型不同（asset family / sdk index / tag 语义），统一需先决定单一模型，属独立设计；0.3 对 F6/F6b 的更正是事实表校正，不改变本决策 |
 | D6 | **不**引入运行时规则文件/规则引擎，保持编译期表 | 无扩展性需求证据；SR1405.1 要求平台化需用户明确要求 |
 | D7 | 模板语法（F7）本轮**不整合**，记为 deferred | 属渲染层，与本设计的三类知识正交；`urltemplate` 与 `sdk` 的生命周期不同 |
 | D8 | 新包只能依赖 stdlib 与既有低层 `util`，禁止 import `install`/`app` | 防止 import cycle（`client` 现仅依赖 stdlib，`install` 已依赖 `client`） |
