@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/inherelab/eget/internal/app"
@@ -13,6 +14,7 @@ import (
 	"github.com/inherelab/eget/internal/client"
 	cfgpkg "github.com/inherelab/eget/internal/config"
 	"github.com/inherelab/eget/internal/extpkg"
+	"github.com/inherelab/eget/internal/filter"
 	"github.com/inherelab/eget/internal/install"
 	storepkg "github.com/inherelab/eget/internal/installed"
 	forge "github.com/inherelab/eget/internal/source/forge"
@@ -144,29 +146,11 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 			}
 			return app.LatestInfo{Tag: info.Version, PublishedAt: info.PublishedAt}, nil
 		}
-		var tag string
-		var publishedAt time.Time
-		var err error
 		if target.Tag != "" {
-			tag, publishedAt, err = githubClient.ReleaseInfo(repo, target.Tag)
-			if err == nil && target.Asset != "" {
-				if asset, ok, assetErr := githubReleaseAsset(githubClient, repo, target.Tag, target.Asset); assetErr != nil {
-					err = assetErr
-				} else if ok {
-					return app.LatestInfo{
-						Tag:            tag,
-						PublishedAt:    publishedAt,
-						AssetID:        asset.ID,
-						AssetName:      asset.Name,
-						AssetSize:      asset.Size,
-						AssetUpdatedAt: asset.UpdatedAt,
-						AssetDigest:    asset.Digest,
-					}, nil
-				}
-			}
-		} else {
-			tag, publishedAt, err = githubClient.LatestReleaseInfo(repo, target.Prerelease)
+			latest, tagErr := githubTagLatestInfo(githubClient, repo, target)
+			return latest, tagErr
 		}
+		tag, publishedAt, err := githubClient.LatestReleaseInfo(repo, target.Prerelease)
 		return app.LatestInfo{Tag: tag, PublishedAt: publishedAt}, err
 	}
 	listService := app.ListService{
@@ -262,6 +246,47 @@ func urlTemplateConfigFromSection(section cfgpkg.Section) urltemplate.Config {
 		LatestJSONPath: util.DerefString(section.LatestJSONPath),
 		VersionRegex:   util.DerefString(section.VersionRegex),
 	}
+}
+
+func githubTagLatestInfo(githubClient *client.GitHubClient, repo string, target app.LatestCheckTarget) (app.LatestInfo, error) {
+	raw := strings.TrimSpace(target.Tag)
+
+	// A tag pattern (PRE:/SUF:/REG:) never names a concrete release. Resolve it
+	// through the same tag matching an install uses (a release scan anchored at
+	// the pattern), then read the matched tag's publish time; sending the
+	// pattern itself to the release-by-tag endpoint only 404s.
+	if filter.IsPattern(raw) {
+		resolved, err := githubClient.ResolveTag(repo, raw, target.Prerelease)
+		if err != nil {
+			return app.LatestInfo{}, err
+		}
+		tag, publishedAt, err := githubClient.ReleaseInfo(repo, resolved)
+		if err != nil {
+			return app.LatestInfo{}, err
+		}
+		return app.LatestInfo{Tag: tag, PublishedAt: publishedAt}, nil
+	}
+
+	tag, publishedAt, err := githubClient.ReleaseInfo(repo, raw)
+	if err != nil {
+		return app.LatestInfo{}, err
+	}
+	if target.Asset != "" {
+		if asset, ok, assetErr := githubReleaseAsset(githubClient, repo, tag, target.Asset); assetErr != nil {
+			return app.LatestInfo{}, assetErr
+		} else if ok {
+			return app.LatestInfo{
+				Tag:            tag,
+				PublishedAt:    publishedAt,
+				AssetID:        asset.ID,
+				AssetName:      asset.Name,
+				AssetSize:      asset.Size,
+				AssetUpdatedAt: asset.UpdatedAt,
+				AssetDigest:    asset.Digest,
+			}, nil
+		}
+	}
+	return app.LatestInfo{Tag: tag, PublishedAt: publishedAt}, nil
 }
 
 func githubReleaseAsset(githubClient *client.GitHubClient, repo, tag, assetName string) (client.Asset, bool, error) {
