@@ -1,16 +1,19 @@
 package config
 
 type Section struct {
-	ExtractAll           *bool             `toml:"extract_all" mapstructure:"extract_all"`
-	AssetFilters         []string          `toml:"asset_filters" mapstructure:"asset_filters"`
-	CacheDir             *string           `toml:"cache_dir" mapstructure:"cache_dir"`
-	ProxyURL             *string           `toml:"proxy_url" mapstructure:"proxy_url"`
-	Prerelease           *bool             `toml:"prerelease" mapstructure:"prerelease"`
-	UserAgent            *string           `toml:"user_agent" mapstructure:"user_agent"`
-	DownloadOnly         *bool             `toml:"download_only" mapstructure:"download_only"`
-	Desc                 *string           `toml:"desc" mapstructure:"desc"`
-	File                 *string           `toml:"file" mapstructure:"file"`
-	GithubToken          *string           `toml:"github_token" mapstructure:"github_token"`
+	ExtractAll   *bool    `toml:"extract_all" mapstructure:"extract_all"`
+	AssetFilters []string `toml:"asset_filters" mapstructure:"asset_filters"`
+	CacheDir     *string  `toml:"cache_dir" mapstructure:"cache_dir"`
+	ProxyURL     *string  `toml:"proxy_url" mapstructure:"proxy_url"`
+	Prerelease   *bool    `toml:"prerelease" mapstructure:"prerelease"`
+	UserAgent    *string  `toml:"user_agent" mapstructure:"user_agent"`
+	DownloadOnly *bool    `toml:"download_only" mapstructure:"download_only"`
+	Desc         *string  `toml:"desc" mapstructure:"desc"`
+	File         *string  `toml:"file" mapstructure:"file"`
+	GithubToken  *string  `toml:"github_token" mapstructure:"github_token"`
+	// DisableExternalToken stops reuse of the local gh/git logins for GitHub
+	// API auth. Only a [global] setting is honored; it does nothing per package.
+	DisableExternalToken *bool             `toml:"disable_external_token" mapstructure:"disable_external_token"`
 	GuiTarget            *string           `toml:"gui_target" mapstructure:"gui_target"`
 	IgnoreUpdate         *bool             `toml:"ignore_update" mapstructure:"ignore_update"`
 	IgnoreUpdatePackages []string          `toml:"ignore_update_packages,omitempty" mapstructure:"ignore_update_packages"`

@@ -27,7 +27,7 @@ func tokenFrom(value string) (string, error) {
 
 var ErrNoToken = errors.New("no github token")
 
-func getGitHubToken(external string) (string, error) {
+func getGitHubToken(external string, disableExternal bool) (string, error) {
 	if external != "" {
 		return tokenFrom(external)
 	}
@@ -37,11 +37,11 @@ func getGitHubToken(external string) (string, error) {
 	if os.Getenv("GITHUB_TOKEN") != "" {
 		return tokenFrom(os.Getenv("GITHUB_TOKEN"))
 	}
-	return externalGitHubToken()
+	return externalGitHubToken(disableExternal)
 }
 
 func setAuthHeader(req *http.Request, opts Options) error {
-	token, err := getGitHubToken(opts.GithubToken)
+	token, err := getGitHubToken(opts.GithubToken, opts.DisableExternalToken)
 	if err != nil {
 		if errors.Is(err, ErrNoToken) {
 			return nil

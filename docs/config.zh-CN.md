@@ -79,9 +79,9 @@ url = "${PROXY_URL}"
 
 第 3–4 步取到的 token 只用于 `api.github.com` 请求。如果 GitHub 返回 `401 Bad credentials`（gh 登录
 过期、或 git 凭据已失效），eget 会改用匿名重试该请求、只提示一次，并在本进程内不再使用该 token——
-过期的本机登录因此不会再让本来能匿名工作的命令失败。设置 `EGET_DISABLE_EXTERNAL_TOKEN=1` 可完全
-跳过本机登录复用。你自己配置的 token（第 1–2 步）不会被丢弃：它的 401 会照旧报错，因为那是你自己的
-凭据问题。
+过期的本机登录因此不会再让本来能匿名工作的命令失败。设置环境变量 `EGET_DISABLE_EXTERNAL_TOKEN=1`，
+或配置文件 `[global] disable_external_token = true`，可完全跳过本机登录复用。你自己配置的 token
+（第 1–2 步）不会被丢弃：它的 401 会照旧报错，因为那是你自己的凭据问题。
 
 ## 配置导入导出
 

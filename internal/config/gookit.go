@@ -343,6 +343,9 @@ func sectionToMap(section Section) map[string]any {
 	if section.GithubToken != nil {
 		data["github_token"] = *section.GithubToken
 	}
+	if section.DisableExternalToken != nil {
+		data["disable_external_token"] = *section.DisableExternalToken
+	}
 	if section.GuiTarget != nil {
 		data["gui_target"] = *section.GuiTarget
 	}

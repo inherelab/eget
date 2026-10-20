@@ -7,6 +7,24 @@ import (
 	"github.com/gookit/goutil/x/assert"
 )
 
+func TestLoadFileSupportsDisableExternalToken(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "eget.toml")
+
+	writeTestFile(t, configPath, `
+[global]
+disable_external_token = true
+`)
+
+	cfg, err := LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("load file: %v", err)
+	}
+	if cfg.Global.DisableExternalToken == nil || !*cfg.Global.DisableExternalToken {
+		t.Fatalf("expected global disable_external_token=true, got %#v", cfg.Global.DisableExternalToken)
+	}
+}
+
 func TestLoadFileSupportsLegacyRepoSections(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "eget.toml")

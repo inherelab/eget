@@ -48,24 +48,27 @@ type Options struct {
 	GhproxyFallbacks []string
 	// GithubToken from --github-token / [global] github_token; api.github.com
 	// requests authenticate with it or the env/gh/git fallbacks (see client).
-	GithubToken         string
-	System              string
-	ExtractFile         string
-	All                 bool
-	StripComponents     int
-	Quiet               bool
-	DownloadOnly        bool
-	FallbackVersions    int
-	Retries             int
-	ChunkConcurrency    int
-	BatchConcurrency    int
-	ChunkConcurrencySet bool
-	BatchConcurrencySet bool
-	UpgradeOnly         bool
-	Asset               []string
-	RenameFiles         map[string]string
-	Hash                bool
-	Verify              string
+	GithubToken string
+	// DisableExternalToken turns off the gh/git credential fallbacks; set from
+	// [global] disable_external_token.
+	DisableExternalToken bool
+	System               string
+	ExtractFile          string
+	All                  bool
+	StripComponents      int
+	Quiet                bool
+	DownloadOnly         bool
+	FallbackVersions     int
+	Retries              int
+	ChunkConcurrency     int
+	BatchConcurrency     int
+	ChunkConcurrencySet  bool
+	BatchConcurrencySet  bool
+	UpgradeOnly          bool
+	Asset                []string
+	RenameFiles          map[string]string
+	Hash                 bool
+	Verify               string
 	// Silent asks the GUI installer to run unattended (MSI /qn). EXE installers
 	// keep their own flags; configure install_args for those.
 	Silent bool

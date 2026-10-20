@@ -85,7 +85,8 @@ A token discovered through steps 3–4 is only attached to `api.github.com` requ
 rejects it with `401 Bad credentials` — a stale `gh` login or an outdated git credential — eget
 retries that request anonymously, warns once, and stops using the token for the rest of the
 process. An expired local login therefore cannot break commands that work without one. Set
-`EGET_DISABLE_EXTERNAL_TOKEN=1` to skip the local logins entirely. A token you configure yourself
+`EGET_DISABLE_EXTERNAL_TOKEN=1` in the environment or `disable_external_token = true` under
+`[global]` in the config file to skip the local logins entirely. A token you configure yourself
 (steps 1–2) is never dropped: its 401 keeps failing loudly, because it is your own credential.
 
 ## Import and Export

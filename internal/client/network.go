@@ -25,12 +25,15 @@ type Options struct {
 	GhproxyFallbacks []string
 	// GithubToken authenticates api.github.com requests; when empty the
 	// env vars and the gh/git credential fallbacks are consulted (auth.go).
-	GithubToken      string
-	DisableSSL       bool
-	Retries          int
-	ChunkConcurrency int
-	UserAgent        string
-	CacheMirror      cachemirror.Options
+	GithubToken string
+	// DisableExternalToken skips those gh/git credential fallbacks; it never
+	// affects a token configured explicitly (opt-token/env)
+	DisableExternalToken bool
+	DisableSSL           bool
+	Retries              int
+	ChunkConcurrency     int
+	UserAgent            string
+	CacheMirror          cachemirror.Options
 }
 
 type DownloadResult struct {

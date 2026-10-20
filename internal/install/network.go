@@ -24,20 +24,21 @@ var verboseEnabled bool
 
 func ClientOptions(opts Options) client.Options {
 	return client.Options{
-		ProxyURL:         opts.ProxyURL,
-		ProxyExclude:     append([]string(nil), opts.ProxyExclude...),
-		APICacheEnabled:  opts.APICacheEnabled,
-		APICacheDir:      opts.APICacheDir,
-		APICacheTime:     opts.APICacheTime,
-		GhproxyEnabled:   opts.GhproxyEnabled,
-		GhproxyHostURL:   opts.GhproxyHostURL,
-		GhproxyFallbacks: append([]string(nil), opts.GhproxyFallbacks...),
-		GithubToken:      opts.GithubToken,
-		DisableSSL:       opts.DisableSSL,
-		Retries:          opts.Retries,
-		ChunkConcurrency: opts.ChunkConcurrency,
-		UserAgent:        opts.UserAgent,
-		CacheMirror:      opts.CacheMirror,
+		ProxyURL:             opts.ProxyURL,
+		ProxyExclude:         append([]string(nil), opts.ProxyExclude...),
+		APICacheEnabled:      opts.APICacheEnabled,
+		APICacheDir:          opts.APICacheDir,
+		APICacheTime:         opts.APICacheTime,
+		GhproxyEnabled:       opts.GhproxyEnabled,
+		GhproxyHostURL:       opts.GhproxyHostURL,
+		GhproxyFallbacks:     append([]string(nil), opts.GhproxyFallbacks...),
+		GithubToken:          opts.GithubToken,
+		DisableExternalToken: opts.DisableExternalToken,
+		DisableSSL:           opts.DisableSSL,
+		Retries:              opts.Retries,
+		ChunkConcurrency:     opts.ChunkConcurrency,
+		UserAgent:            opts.UserAgent,
+		CacheMirror:          opts.CacheMirror,
 	}
 }
 

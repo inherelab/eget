@@ -77,6 +77,9 @@ func applyGlobalNetworkConfig(opts *install.Options, cfg *cfgpkg.File) {
 	if cfg.Global.GithubToken != nil {
 		opts.GithubToken = *cfg.Global.GithubToken
 	}
+	if cfg.Global.DisableExternalToken != nil && *cfg.Global.DisableExternalToken {
+		opts.DisableExternalToken = true
+	}
 }
 
 func installOptionsFromDownload(opts *DownloadOptions) install.Options {

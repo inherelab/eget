@@ -229,6 +229,9 @@ func (s *cliService) handleConfigDoctor() error {
 	}
 	ccolor.Printf("proxy_url: %s\n", setStatus(util.DerefString(cfg.Global.ProxyURL)))
 	ccolor.Printf("github_token: %s\n", setStatus(util.DerefString(cfg.Global.GithubToken)))
+	if cfg.Global.DisableExternalToken != nil {
+		ccolor.Printf("disable_external_token: %v\n", *cfg.Global.DisableExternalToken)
+	}
 	ccolor.Printf("cache_dir_writable: %v\n", dirWritable(cacheDir))
 	ccolor.Printf("target_dir_writable: %v\n", dirWritable(targetDir))
 	ccolor.Printf("sdk_target_dir_writable: %v\n", dirWritable(sdkTargetDir))
@@ -270,6 +273,7 @@ func (s *cliService) printDoctorEnv() {
 		{name: "EGET_CONFIG_DIR"},
 		{name: "EGET_BIN"},
 		{name: "EGET_GITHUB_TOKEN", secret: true},
+		{name: "EGET_DISABLE_EXTERNAL_TOKEN"},
 		{name: "EGET_SELF_UPDATE_SOURCE"},
 	} {
 		value, ok := lookupEnv(item.name)

@@ -37,8 +37,8 @@ const DisableExternalTokenEnv = "EGET_DISABLE_EXTERNAL_TOKEN"
 // A token GitHub rejects with 401 is dropped for the rest of the process (see
 // rejectUnauthorizedExternalToken): a stale local login must not break requests
 // that work anonymously.
-func externalGitHubToken() (string, error) {
-	if externalTokensDisabled() || externalTokenRejected.Load() {
+func externalGitHubToken(configDisabled bool) (string, error) {
+	if configDisabled || externalTokensDisabled() || externalTokenRejected.Load() {
 		return "", ErrNoToken
 	}
 	token, err := resolveExternalGitHubToken()
@@ -80,7 +80,7 @@ func rejectUnauthorizedExternalToken(req *http.Request) bool {
 
 	externalTokenRejected.Store(true)
 	externalTokenWarnOnce.Do(func() {
-		fmt.Fprintf(os.Stderr, "warning: the GitHub token from the local gh/git login was rejected (401 Bad credentials); retrying anonymously. Set %s=1 to stop reusing local logins.\n", DisableExternalTokenEnv)
+		fmt.Fprintf(os.Stderr, "warning: the GitHub token from the local gh/git login was rejected (401 Bad credentials); retrying anonymously. Set %s=1 or [global] disable_external_token = true to stop reusing local logins.\n", DisableExternalTokenEnv)
 	})
 	return true
 }
