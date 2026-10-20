@@ -92,6 +92,10 @@ func compareFamilyTags(a, b string) (int, bool) {
 	}
 }
 
+// tagFamilyPerPage pins matching-refs pagination: a full page must be
+// followed by a probe, a short page is the last one.
+const tagFamilyPerPage = 100
+
 // TagFamilyLatest reports the version-maximum tag among the repository's refs
 // that share the literal prefix, via the matching-refs endpoint (one small
 // response even for monorepos that publish hundreds of releases).
@@ -104,7 +108,7 @@ func TagFamilyLatest(repo, prefix string, getter HTTPGetter) (string, bool) {
 	if prefix == "" || getter == nil {
 		return "", false
 	}
-	base := fmt.Sprintf("https://api.github.com/repos/%s/git/matching-refs/tags/%s", repo, strings.ReplaceAll(prefix, " ", ""))
+	base := fmt.Sprintf("https://api.github.com/repos/%s/git/matching-refs/tags/%s?per_page=%d", repo, strings.ReplaceAll(prefix, " ", ""), tagFamilyPerPage)
 
 	var best, bestSuffix string
 	seen := make(map[string]bool)
@@ -113,7 +117,7 @@ func TagFamilyLatest(repo, prefix string, getter HTTPGetter) (string, bool) {
 	for page := 1; ; page++ {
 		rawURL := base
 		if page > 1 {
-			rawURL = fmt.Sprintf("%s?page=%d", base, page)
+			rawURL = fmt.Sprintf("%s&page=%d", base, page)
 		}
 		refs, err := fetchFamilyRefs(rawURL, getter)
 		if err != nil {
@@ -143,7 +147,7 @@ func TagFamilyLatest(repo, prefix string, getter HTTPGetter) (string, bool) {
 				best, bestSuffix = tag, suffix
 			}
 		}
-		if len(refs) == 0 || fresh == 0 {
+		if len(refs) == 0 || len(refs) < tagFamilyPerPage || fresh == 0 {
 			break
 		}
 	}

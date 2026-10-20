@@ -72,7 +72,7 @@ func TestTagFamilyLatestPicksMaxFromSingleResponse(t *testing.T) {
 	if tag != "cua-driver-rs-v0.37.0" {
 		t.Fatalf("tag = %q", tag)
 	}
-	if firstURL != "https://api.github.com/repos/trycua/cua/git/matching-refs/tags/cua-driver-rs-v" {
+	if firstURL != "https://api.github.com/repos/trycua/cua/git/matching-refs/tags/cua-driver-rs-v?per_page=100" {
 		t.Fatalf("first url = %s", firstURL)
 	}
 }
@@ -82,8 +82,8 @@ func TestTagFamilyLatestFollowsPaginationWhileFresh(t *testing.T) {
 	// page ends the loop instead of spinning
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v":        jsonResponse(http.StatusOK, `[{"ref":"refs/tags/app-v1.1.0"},{"ref":"refs/tags/app-v1.0.0"}]`),
-			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v?page=2": jsonResponse(http.StatusOK, `[]`),
+			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v?per_page=100":        jsonResponse(http.StatusOK, `[{"ref":"refs/tags/app-v1.1.0"},{"ref":"refs/tags/app-v1.0.0"}]`),
+			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v?per_page=100&page=2": jsonResponse(http.StatusOK, `[]`),
 		},
 	}
 
@@ -97,8 +97,8 @@ func TestTagFamilyLatestFollowsPaginationWhileFresh(t *testing.T) {
 func TestTagFamilyLatestFailOpen(t *testing.T) {
 	paginated := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v":        jsonResponse(http.StatusOK, `[{"ref":"refs/tags/app-v0.37"},{"ref":"refs/tags/app-v0.37.0"}]`),
-			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v?page=2": jsonResponse(http.StatusOK, `[]`),
+			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v?per_page=100":        jsonResponse(http.StatusOK, `[{"ref":"refs/tags/app-v0.37"},{"ref":"refs/tags/app-v0.37.0"}]`),
+			"https://api.github.com/repos/acme/app/git/matching-refs/tags/app-v?per_page=100&page=2": jsonResponse(http.StatusOK, `[]`),
 		},
 	}
 
