@@ -1,13 +1,14 @@
 <!-- template_id: design; template_version: 1.1.1 -->
 # eget tag 家族 refs 快路径 设计
 
-> 状态：Draft 0.1 / 待人工计划批准
+> 状态：Draft 0.2 / 待人工计划批准
 
 ## 修订记录
 
 | 版本 | 日期 | 作者 | 摘要 |
 |---|---|---|---|
 | 0.1 | 2026-10-20 | inhere | 初稿：为 tag 模式过期检查引入 matching-refs 快路径；固定窄版本比较器与 fail-open 级联；明确与 release 扫描 stable-preference 的关系及一处接受偏差 |
+| 0.2 | 2026-10-20 | inhere | 按 design contract 补「架构」章节：固定 tagfamily.go 与各 owner 的分工、TagFamilyMax 形状及回退条件、依赖方向 |
 
 > 仅语义变化递增版本；纯 identity/provenance/元数据纠正沿用原版本，并在 Git/进度记录中留痕。
 
@@ -83,6 +84,25 @@
 
 - 端点：`GET https://api.github.com/repos/{repo}/git/matching-refs/tags/{url.PathEscape(P)}`；沿用现有 getter（代理、`api_cache`、鉴权回退），分页跟随 `rel="next"`（`per_page=100` 起步，与扫描分页循环同构、复用早停思路），实测单响应已含全家族。
 - 快路径请求同样进入 api_cache（30 分钟 TTL），重复检查近零成本。
+
+## 架构
+
+总层分工（快路径是检查侧末端的一小步，不新建包）：
+
+```text
+internal/source/github (owner)
+  ├─ tagfamily.go  // 新增：matching-refs 抓取(带分页) + 窄版本比较器
+  │      TagFamilyMax(repo, prefix, getter) → (maxTag string, ok bool)
+  │      // ok=false 一律 fail-open；请求走现有 getter，进 api_cache
+  └─ finder.go     // 不改：Find/FindMatch 仍是唯一权威解析路径
+internal/app
+  └─ list.go       // LatestCheckTarget 增 InstalledTag，checkOutdatedItem 填充
+internal/cli
+  └─ wiring.go     // githubTagLatestInfo 增快路径分支：位面前缀 + InstalledTag
+                   // 非空才尝试；ok=false 或 max≠installed → ResolveRelease 扫描
+```
+
+依赖方向：`cli → app/filter/source-github → filter`，与 consolidation 计划的低层包消费方向一致；不新增包、不引入新依赖。
 
 ## 关键流程
 
