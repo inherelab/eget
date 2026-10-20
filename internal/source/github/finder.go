@@ -55,6 +55,9 @@ type Release struct {
 	Prerelease bool      `json:"prerelease"`
 	Tag        string    `json:"tag_name"`
 	CreatedAt  time.Time `json:"created_at"`
+	// PublishedAt is the release publish time when the API returns one; a
+	// drafted release lists created_at only.
+	PublishedAt time.Time `json:"published_at"`
 }
 
 type Error struct {
@@ -86,6 +89,8 @@ type AssetFinder struct {
 	MinTime    time.Time
 	Getter     HTTPGetter
 	tag        string
+	published  time.Time
+	created    time.Time
 	assets     map[string]releaseAsset
 }
 
@@ -99,6 +104,11 @@ func NewAssetFinder(repo, tag string, prerelease bool, minTime time.Time) *Asset
 		MinTime:    minTime,
 	}
 }
+
+// releasesPerPage is the page size for the release-scan pagination: the API
+// caps per_page at 100, and larger pages dramatically cut the request count
+// for monorepos with long release histories (e.g. 27 pages of 30 become 3).
+const releasesPerPage = 100
 
 func (f *AssetFinder) Find() ([]string, error) {
 	if f.Getter == nil {
@@ -163,21 +173,48 @@ func (f *AssetFinder) ReleaseVersion() string {
 	return f.tag
 }
 
+// ReleasePublishedAt reports when the resolved release was published, falling
+// back to its creation time when the API did not list a publish time.
+func (f *AssetFinder) ReleasePublishedAt() time.Time {
+	if f.published.IsZero() {
+		return f.created
+	}
+	return f.published
+}
+
 // ResolveTag resolves a tag, or a tag pattern, to a concrete release tag. An
 // empty tag resolves the repository's latest release and a pattern resolves the
 // newest matching release, so callers such as `query` accept the same tag
 // grammar as an install without selecting an asset.
 func ResolveTag(repo, tag string, prerelease bool, getter HTTPGetter) (string, error) {
+	resolved, err := ResolveRelease(repo, tag, prerelease, getter)
+	if err != nil {
+		return "", err
+	}
+	return resolved.Tag, nil
+}
+
+// ResolveRelease resolves a tag, or a tag pattern, to a concrete release and
+// also reports when the matched release was published (falling back to the
+// release creation time when GitHub does not list a publish time).
+func ResolveRelease(repo, tag string, prerelease bool, getter HTTPGetter) (ResolvedRelease, error) {
 	finder := NewAssetFinder(repo, finderTag(tag), prerelease, time.Time{})
 	finder.Getter = getter
 	if _, err := finder.Find(); err != nil {
-		return "", err
+		return ResolvedRelease{}, err
 	}
 	resolved := finder.ReleaseVersion()
 	if resolved == "" {
-		return "", fmt.Errorf("no matching tag for '%s'", strings.TrimSpace(tag))
+		return ResolvedRelease{}, fmt.Errorf("no matching tag for '%s'", strings.TrimSpace(tag))
 	}
-	return resolved, nil
+	return ResolvedRelease{Tag: resolved, PublishedAt: finder.ReleasePublishedAt()}, nil
+}
+
+// ResolvedRelease is a release picked by tag resolution: the concrete tag and
+// when it was published.
+type ResolvedRelease struct {
+	Tag         string
+	PublishedAt time.Time
 }
 
 func finderTag(tag string) string {
@@ -228,7 +265,7 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 	staleMatch := false
 
 	for page := 1; ; page++ {
-		url := fmt.Sprintf("https://api.github.com/repos/%s/releases?page=%d", f.Repo, page)
+		url := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=%d&page=%d", f.Repo, releasesPerPage, page)
 		verbosef("github finder fallback request: %s", url)
 		resp, err := f.Getter.Get(url)
 		if err != nil {
@@ -275,7 +312,14 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 			}
 		}
 
-		if len(releases) < 30 {
+		if len(releases) < releasesPerPage {
+			break
+		}
+		// Releases are listed newest-first: once a stable match is on record
+		// (or any match, when prereleases are selected) no later page can
+		// hold a newer one, so stop paginating instead of walking the whole
+		// monorepo release history every check.
+		if newestStable != nil || (f.Prerelease && newestAny != nil) {
 			break
 		}
 	}
@@ -295,6 +339,8 @@ func (f *AssetFinder) FindMatch() ([]string, error) {
 	}
 
 	f.tag = chosen.Tag
+	f.published = chosen.PublishedAt
+	f.created = chosen.CreatedAt
 	f.storeReleaseAssets(chosen.Assets)
 	return releaseAssetURLs(chosen.Assets), nil
 }

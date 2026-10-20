@@ -253,18 +253,15 @@ func githubTagLatestInfo(githubClient *client.GitHubClient, repo string, target 
 
 	// A tag pattern (PRE:/SUF:/REG:) never names a concrete release. Resolve it
 	// through the same tag matching an install uses (a release scan anchored at
-	// the pattern), then read the matched tag's publish time; sending the
-	// pattern itself to the release-by-tag endpoint only 404s.
+	// the pattern, newest-first with early pagination stop), then read the
+	// matched tag's publish time; sending the pattern itself to the
+	// release-by-tag endpoint only 404s.
 	if filter.IsPattern(raw) {
-		resolved, err := githubClient.ResolveTag(repo, raw, target.Prerelease)
+		resolved, err := githubClient.ResolveRelease(repo, raw, target.Prerelease)
 		if err != nil {
 			return app.LatestInfo{}, err
 		}
-		tag, publishedAt, err := githubClient.ReleaseInfo(repo, resolved)
-		if err != nil {
-			return app.LatestInfo{}, err
-		}
-		return app.LatestInfo{Tag: tag, PublishedAt: publishedAt}, nil
+		return app.LatestInfo{Tag: resolved.Tag, PublishedAt: resolved.PublishedAt}, nil
 	}
 
 	tag, publishedAt, err := githubClient.ReleaseInfo(repo, raw)

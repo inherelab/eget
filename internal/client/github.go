@@ -228,10 +228,21 @@ func (c *GitHubClient) ListReleases(repo string, limit int, includePrerelease bo
 // ResolveTag resolves a tag, or a tag pattern (PRE:/SUF:/REG:), to a concrete
 // release tag, reusing the installer's tag-matching semantics.
 func (c *GitHubClient) ResolveTag(repo, tag string, includePrerelease bool) (string, error) {
+	resolved, err := c.ResolveRelease(repo, tag, includePrerelease)
+	if err != nil {
+		return "", err
+	}
+	return resolved.Tag, nil
+}
+
+// ResolveRelease resolves a tag, or a tag pattern, to a concrete release and
+// reports the matched release's publish time, avoiding a second release-by-tag
+// lookup for callers that also need when the release was published.
+func (c *GitHubClient) ResolveRelease(repo, tag string, includePrerelease bool) (sourcegithub.ResolvedRelease, error) {
 	getter := sourcegithub.HTTPGetterFunc(func(rawURL string) (*http.Response, error) {
 		return c.get(rawURL, c.opts)
 	})
-	return sourcegithub.ResolveTag(repo, tag, includePrerelease, getter)
+	return sourcegithub.ResolveRelease(repo, tag, includePrerelease, getter)
 }
 
 func (c *GitHubClient) ReleaseAssets(repo, tag string) ([]Asset, error) {

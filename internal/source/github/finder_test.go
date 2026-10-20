@@ -67,8 +67,8 @@ func TestAssetFinderFind(t *testing.T) {
 func TestAssetFinderFindMatchFallback(t *testing.T) {
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/inhere/markview/releases/tags/v1.2.3": jsonResponse(http.StatusNotFound, `{"message":"not found"}`),
-			"https://api.github.com/repos/inhere/markview/releases?page=1":      jsonResponse(http.StatusOK, `[{"tag_name":"v1.2.3-rc1","created_at":"2026-04-18T00:00:00Z","assets":[{"browser_download_url":"https://example.com/match.tar.gz"}]}]`),
+			"https://api.github.com/repos/inhere/markview/releases/tags/v1.2.3":         jsonResponse(http.StatusNotFound, `{"message":"not found"}`),
+			"https://api.github.com/repos/inhere/markview/releases?per_page=100&page=1": jsonResponse(http.StatusOK, `[{"tag_name":"v1.2.3-rc1","created_at":"2026-04-18T00:00:00Z","assets":[{"browser_download_url":"https://example.com/match.tar.gz"}]}]`),
 		},
 	}
 	finder := NewAssetFinder("inhere/markview", "tags/v1.2.3", false, time.Time{})
@@ -168,7 +168,7 @@ func TestAssetFinderFindMatchAnchorsPlainTag(t *testing.T) {
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
 			"https://api.github.com/repos/trycua/cua/releases/tags/cua-driver-rs-v": jsonResponse(http.StatusNotFound, `{"message":"not found"}`),
-			"https://api.github.com/repos/trycua/cua/releases?page=1": jsonResponse(http.StatusOK, `[
+			"https://api.github.com/repos/trycua/cua/releases?per_page=100&page=1": jsonResponse(http.StatusOK, `[
 				{"tag_name":"x-cua-driver-rs-v9.9.9","created_at":"2026-10-06T00:00:00Z","assets":[{"browser_download_url":"https://example.com/wrong.tar.gz"}]},
 				{"tag_name":"cua-driver-rs-v0.34.0","created_at":"2026-10-05T00:00:00Z","assets":[{"browser_download_url":"https://example.com/right.tar.gz"}]}
 			]`),
@@ -195,7 +195,7 @@ func TestAssetFinderFindMatchPatternSkipsExactLookup(t *testing.T) {
 	// asserts the pattern fast-path.
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/trycua/cua/releases?page=1": jsonResponse(http.StatusOK, `[
+			"https://api.github.com/repos/trycua/cua/releases?per_page=100&page=1": jsonResponse(http.StatusOK, `[
 				{"tag_name":"nightly-lume-v0.6.2-nightly.20261008","created_at":"2026-10-08T04:59:00Z","assets":[{"browser_download_url":"https://example.com/lume.tar.gz"}]},
 				{"tag_name":"cua-driver-rs-v0.34.0","created_at":"2026-10-05T22:30:00Z","assets":[{"browser_download_url":"https://example.com/driver.zip"}]}
 			]`),
@@ -221,7 +221,7 @@ func TestAssetFinderFindMatchPrereleaseFallback(t *testing.T) {
 	// without -p (monorepos do this to protect the repository-wide Latest).
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/trycua/cua/releases?page=1": jsonResponse(http.StatusOK, `[{"tag_name":"cua-driver-rs-v0.34.0","prerelease":true,"created_at":"2026-10-05T22:30:00Z","assets":[{"browser_download_url":"https://example.com/driver.zip"}]}]`),
+			"https://api.github.com/repos/trycua/cua/releases?per_page=100&page=1": jsonResponse(http.StatusOK, `[{"tag_name":"cua-driver-rs-v0.34.0","prerelease":true,"created_at":"2026-10-05T22:30:00Z","assets":[{"browser_download_url":"https://example.com/driver.zip"}]}]`),
 		},
 	}
 	finder := NewAssetFinder("trycua/cua", "tags/PRE:cua-driver-rs-v", false, time.Time{})
@@ -245,7 +245,7 @@ func TestAssetFinderFindMatchPrefersStableOverPrerelease(t *testing.T) {
 	newGetter := func() *fakeGetter {
 		return &fakeGetter{
 			responses: map[string]*http.Response{
-				"https://api.github.com/repos/acme/app/releases?page=1": jsonResponse(http.StatusOK, releases),
+				"https://api.github.com/repos/acme/app/releases?per_page=100&page=1": jsonResponse(http.StatusOK, releases),
 			},
 		}
 	}
@@ -275,7 +275,7 @@ func TestAssetFinderFindMatchPrefersStableOverPrerelease(t *testing.T) {
 func TestAssetFinderFindMatchReportsNoUpgradeForStaleMatch(t *testing.T) {
 	getter := &fakeGetter{
 		responses: map[string]*http.Response{
-			"https://api.github.com/repos/trycua/cua/releases?page=1": jsonResponse(http.StatusOK, `[{"tag_name":"cua-driver-rs-v0.34.0","created_at":"2026-10-05T00:00:00Z","assets":[]}]`),
+			"https://api.github.com/repos/trycua/cua/releases?per_page=100&page=1": jsonResponse(http.StatusOK, `[{"tag_name":"cua-driver-rs-v0.34.0","created_at":"2026-10-05T00:00:00Z","assets":[]}]`),
 		},
 	}
 	finder := NewAssetFinder("trycua/cua", "tags/PRE:cua-driver-rs-v", false, time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC))
@@ -283,5 +283,67 @@ func TestAssetFinderFindMatchReportsNoUpgradeForStaleMatch(t *testing.T) {
 
 	if _, err := finder.Find(); err != ErrNoUpgrade {
 		t.Fatalf("Find() err = %v, want ErrNoUpgrade", err)
+	}
+}
+
+func TestAssetFinderFindMatchStopsPaginatingAfterStableMatch(t *testing.T) {
+	// A full 30-item first page with the newest stable driver release on it:
+	// resolving must stop here instead of walking the remaining pages of a
+	// long monorepo release history. fakeGetter fails on any page=2 URL, so
+	// a second request would fail the test.
+	var releases []string
+	for i := 0; i < releasesPerPage-1; i++ {
+		releases = append(releases, fmt.Sprintf(`{"tag_name":"other-v0.1.%d","created_at":"2026-10-01T00:00:00Z","assets":[]}`, i))
+	}
+	// exactly one full page whose newest stable match is its first entry: the
+	// loop cannot end via a short page, so it only stops via the stable-match
+	// early exit and must not ask for page 2
+	pageOne := fmt.Sprintf(`[{"tag_name":"cua-driver-rs-v0.36.0","created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z","assets":[]},%s]`,
+		strings.Join(releases, ","))
+
+	getter := &fakeGetter{
+		responses: map[string]*http.Response{
+			"https://api.github.com/repos/trycua/cua/releases?per_page=100&page=1": jsonResponse(http.StatusOK, pageOne),
+		},
+	}
+	finder := NewAssetFinder("trycua/cua", "tags/PRE:cua-driver-rs-v", false, time.Time{})
+	finder.Getter = getter
+
+	_, err := finder.Find()
+	if err != nil {
+		t.Fatalf("Find() early stop: %v", err)
+	}
+	if finder.ReleaseVersion() != "cua-driver-rs-v0.36.0" {
+		t.Fatalf("ReleaseVersion() = %q", finder.ReleaseVersion())
+	}
+	if !finder.ReleasePublishedAt().Equal(time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC)) {
+		t.Fatalf("ReleasePublishedAt() = %s", finder.ReleasePublishedAt())
+	}
+}
+
+func TestResolveReleaseReportsPublishedOrCreatedTime(t *testing.T) {
+	getRelease := func(body string) HTTPGetter {
+		return HTTPGetterFunc(func(url string) (*http.Response, error) {
+			return jsonResponse(http.StatusOK, body), nil
+		})
+	}
+
+	resolved, err := ResolveRelease("acme/app", "PRE:app-v", false, getRelease(
+		`[{"tag_name":"app-v2.0.0","created_at":"2026-04-20T10:00:00Z","published_at":"2026-04-21T12:00:00Z","assets":[]}]`))
+	if err != nil {
+		t.Fatalf("ResolveRelease(): %v", err)
+	}
+	if resolved.Tag != "app-v2.0.0" || !resolved.PublishedAt.Equal(time.Date(2026, 4, 21, 12, 0, 0, 0, time.UTC)) {
+		t.Fatalf("resolved = %#v", resolved)
+	}
+
+	// a drafted-only publish history falls back to created_at
+	resolved, err = ResolveRelease("acme/app", "PRE:app-v", false, getRelease(
+		`[{"tag_name":"app-v2.0.1","created_at":"2026-04-22T10:00:00Z","assets":[]}]`))
+	if err != nil {
+		t.Fatalf("ResolveRelease(): %v", err)
+	}
+	if !resolved.PublishedAt.Equal(time.Date(2026, 4, 22, 10, 0, 0, 0, time.UTC)) {
+		t.Fatalf("resolved = %#v", resolved)
 	}
 }

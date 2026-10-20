@@ -26,16 +26,12 @@ func TestGithubTagLatestInfoResolvesTagPatternByReleaseScan(t *testing.T) {
 	var requested []string
 	client := client.NewGitHubClientWithGetter(client.Options{}, func(rawURL string, opts client.Options) (*http.Response, error) {
 		requested = append(requested, rawURL)
-		switch {
-		case strings.Contains(rawURL, "/releases?"):
+		if strings.Contains(rawURL, "/releases?") {
 			body := `[
- {"tag_name":"agent-v0.9.1","prerelease":false,"created_at":"2026-10-19T10:14:46Z"},
- {"tag_name":"cua-sdk-v0.5.0","prerelease":false,"created_at":"2026-10-19T05:28:20Z"},
- {"tag_name":"cua-driver-rs-v0.36.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z"},
- {"tag_name":"cua-driver-rs-v0.35.4","prerelease":false,"created_at":"2026-10-14T12:32:00Z"}]`
-			return latestInfoResponse(http.StatusOK, "200 OK", body), nil
-		case strings.Contains(rawURL, "/releases/tags/cua-driver-rs-v0.36.0"):
-			body := `{"tag_name":"cua-driver-rs-v0.36.0","created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"}`
+		 {"tag_name":"agent-v0.9.1","prerelease":false,"created_at":"2026-10-19T10:14:46Z","published_at":"2026-10-19T10:20:00Z"},
+		 {"tag_name":"cua-sdk-v0.5.0","prerelease":false,"created_at":"2026-10-19T05:28:20Z","published_at":"2026-10-19T05:30:00Z"},
+		 {"tag_name":"cua-driver-rs-v0.36.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"},
+		 {"tag_name":"cua-driver-rs-v0.35.4","prerelease":false,"created_at":"2026-10-14T12:32:00Z","published_at":"2026-10-14T12:32:14Z"}]`
 			return latestInfoResponse(http.StatusOK, "200 OK", body), nil
 		}
 		t.Fatalf("unexpected request: %s", rawURL)
@@ -50,10 +46,14 @@ func TestGithubTagLatestInfoResolvesTagPatternByReleaseScan(t *testing.T) {
 	got, err := githubTagLatestInfo(client, "trycua/cua", target)
 
 	assert.NoErr(t, err)
-	// the pattern is resolved through a release scan, never sent to the
-	// release-by-tag endpoint (which would 404 for a non-tag value)
-	for _, rawURL := range requested {
-		assert.False(t, strings.Contains(rawURL, "/releases/tags/PRE"), "pattern must not be sent to release-by-tag: %s", rawURL)
+	// the pattern is resolved from the newest-first release scan in a single
+	// early-stopped page: no release-by-tag call (which would 404 for a
+	// pattern) and no extra follow-up lookup of the matched release
+	if len(requested) != 1 {
+		t.Fatalf("expected 1 API call for the early-stopped scan, got %d: %v", len(requested), requested)
+	}
+	if strings.Contains(requested[0], "/releases/tags/") {
+		t.Fatalf("pattern must not be sent to release-by-tag: %s", requested[0])
 	}
 	assert.Eq(t, "cua-driver-rs-v0.36.0", got.Tag)
 	assert.Eq(t, time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC), got.PublishedAt)
