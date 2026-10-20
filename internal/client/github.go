@@ -245,6 +245,16 @@ func (c *GitHubClient) ResolveRelease(repo, tag string, includePrerelease bool) 
 	return sourcegithub.ResolveRelease(repo, tag, includePrerelease, getter)
 }
 
+// TagFamilyLatest reports the version-max tag of the ref family sharing the
+// literal prefix via the matching-refs endpoint; ok=false means inconclusive
+// (fail-open to the release scan) and never an error worth reporting.
+func (c *GitHubClient) TagFamilyLatest(repo, prefix string) (string, bool) {
+	getter := sourcegithub.HTTPGetterFunc(func(rawURL string) (*http.Response, error) {
+		return c.get(rawURL, c.opts)
+	})
+	return sourcegithub.TagFamilyLatest(repo, prefix, getter)
+}
+
 func (c *GitHubClient) ReleaseAssets(repo, tag string) ([]Asset, error) {
 	var payload struct {
 		Assets []struct {

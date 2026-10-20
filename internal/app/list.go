@@ -111,13 +111,14 @@ type LatestInfo struct {
 }
 
 type LatestCheckTarget struct {
-	Name       string
-	Repo       string
-	SourcePath string
-	Package    cfgpkg.Section
-	Tag        string
-	Asset      string
-	Prerelease bool
+	Name         string
+	Repo         string
+	SourcePath   string
+	Package      cfgpkg.Section
+	Tag          string
+	InstalledTag string
+	Asset        string
+	Prerelease   bool
 }
 
 type LatestInfoFunc func(target LatestCheckTarget) (LatestInfo, error)
@@ -615,13 +616,14 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 	}
 
 	latest, err := latestInfo(LatestCheckTarget{
-		Name:       item.Name,
-		Repo:       item.Repo,
-		SourcePath: item.SourcePath,
-		Package:    item.Package,
-		Tag:        item.Tag,
-		Asset:      item.Asset,
-		Prerelease: item.Prerelease,
+		Name:         item.Name,
+		Repo:         item.Repo,
+		SourcePath:   item.SourcePath,
+		Package:      item.Package,
+		Tag:          item.Tag,
+		InstalledTag: item.InstalledTag,
+		Asset:        item.Asset,
+		Prerelease:   item.Prerelease,
 	})
 	if err != nil {
 		failure := OutdatedCheckFailure{

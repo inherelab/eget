@@ -251,6 +251,24 @@ func urlTemplateConfigFromSection(section cfgpkg.Section) urltemplate.Config {
 func githubTagLatestInfo(githubClient *client.GitHubClient, repo string, target app.LatestCheckTarget) (app.LatestInfo, error) {
 	raw := strings.TrimSpace(target.Tag)
 
+	// Fast path (design D1/D4): when the tracked tag names a literal prefix
+	// family and the installed tag is known, the matching-refs family max can
+	// settle the common answer directly. Family max == installed tag means no
+	// newer release in the family — return up-to-date without scanning every
+	// release page. Everything else — family unorderable, a newer member, or
+	// caller without a known installed tag — falls through to the release
+	// scan, which stays the only authority for what the latest is.
+	if target.InstalledTag != "" {
+		if spec, specErr := filter.Parse(raw); specErr == nil &&
+			(spec.Kind == filter.KindPrefix || spec.Kind == filter.KindPlain) {
+			if prefix := strings.TrimSpace(spec.Expr); prefix != "" {
+				if familyMax, ok := githubClient.TagFamilyLatest(repo, prefix); ok && familyMax == target.InstalledTag {
+					return app.LatestInfo{Tag: target.InstalledTag}, nil
+				}
+			}
+		}
+	}
+
 	// A tag pattern (PRE:/SUF:/REG:) never names a concrete release. Resolve it
 	// through the same tag matching an install uses (a release scan anchored at
 	// the pattern, newest-first with early pagination stop), then read the

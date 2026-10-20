@@ -22,16 +22,162 @@ func latestInfoResponse(status int, statusText, body string) *http.Response {
 	}
 }
 
+// familyRefs formats refs for the matching-refs response; a leading "*" marks
+// the refs/tags/ prefix.
+func familyRefs(tags ...string) string {
+	var parts []string
+	for _, tag := range tags {
+		parts = append(parts, `{"ref":"refs/tags/`+tag+`"}`)
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+
+func TestGithubTagLatestInfoFastPathHit(t *testing.T) {
+	// family max == installed tag: the check settles with a single light
+	// matching-refs request and never reads the release history
+	var requested []string
+	client := client.NewGitHubClientWithGetter(client.Options{}, func(rawURL string, opts client.Options) (*http.Response, error) {
+		requested = append(requested, rawURL)
+		if strings.Contains(rawURL, "/git/matching-refs/tags/cua-driver-rs-v") {
+			return latestInfoResponse(http.StatusOK, "200 OK", familyRefs(
+				"cua-driver-rs-v0.10.0", "cua-driver-rs-v0.36.0", "cua-driver-rs-v0.37.0")), nil
+		}
+		t.Fatalf("fast path hit must not read the release history: %s", rawURL)
+		return nil, nil
+	})
+
+	got, err := githubTagLatestInfo(client, "trycua/cua", app.LatestCheckTarget{
+		Tag:          "PRE:cua-driver-rs-v",
+		InstalledTag: "cua-driver-rs-v0.37.0",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "cua-driver-rs-v0.37.0", got.Tag)
+	assert.True(t, got.PublishedAt.IsZero())
+	for _, rawURL := range requested {
+		if strings.Contains(rawURL, "/releases") {
+			t.Fatalf("fast path hit must not read the release history: %s", rawURL)
+		}
+		if !strings.Contains(rawURL, "/git/matching-refs/") {
+			t.Fatalf("expected only matching-refs requests, got %v", requested)
+		}
+	}
+}
+
+func TestGithubTagLatestInfoFastPathFallsBackToScan(t *testing.T) {
+	// family max != installed tag: the release scan stays the authority for
+	// what the latest release is and for its publish time
+	var requested []string
+	client := client.NewGitHubClientWithGetter(client.Options{}, func(rawURL string, opts client.Options) (*http.Response, error) {
+		requested = append(requested, rawURL)
+		if strings.Contains(rawURL, "/git/matching-refs/tags/cua-driver-rs-v") {
+			return latestInfoResponse(http.StatusOK, "200 OK", familyRefs(
+				"cua-driver-rs-v0.35.4", "cua-driver-rs-v0.37.0")), nil
+		}
+		if strings.Contains(rawURL, "/releases?") {
+			body := `[
+		 {"tag_name":"agent-v0.9.1","prerelease":false,"created_at":"2026-10-19T10:14:46Z","published_at":"2026-10-19T10:20:00Z"},
+		 {"tag_name":"cua-driver-rs-v0.37.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"}]`
+			return latestInfoResponse(http.StatusOK, "200 OK", body), nil
+		}
+		t.Fatalf("unexpected request: %s", rawURL)
+		return nil, nil
+	})
+
+	got, err := githubTagLatestInfo(client, "trycua/cua", app.LatestCheckTarget{
+		Tag:          "PRE:cua-driver-rs-v",
+		InstalledTag: "cua-driver-rs-v0.35.4",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "cua-driver-rs-v0.37.0", got.Tag)
+	assert.Eq(t, time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC), got.PublishedAt)
+	foundFamily, foundScan := false, false
+	for _, rawURL := range requested {
+		if strings.Contains(rawURL, "/git/matching-refs/") {
+			foundFamily = true
+		}
+		if strings.Contains(rawURL, "/releases?") {
+			foundScan = true
+		}
+	}
+	if !foundFamily || !foundScan {
+		t.Fatalf("expected family probe then release scan, got %v", requested)
+	}
+}
+
+func TestGithubTagLatestInfoFailOpenEndpoints(t *testing.T) {
+	cases := []struct {
+		name     string
+		refsResp func(rawURL string) *http.Response
+	}{
+		{"refs 500", func(rawURL string) *http.Response {
+			return latestInfoResponse(http.StatusInternalServerError, "500 Internal Server Error", `{}`)
+		}},
+		{"refs empty", func(rawURL string) *http.Response {
+			return latestInfoResponse(http.StatusOK, "200 OK", "[]")
+		}},
+		{"unorderable family", func(rawURL string) *http.Response {
+			return latestInfoResponse(http.StatusOK, "200 OK", familyRefs(
+				"cua-driver-rs-v0.37", "cua-driver-rs-v0.37.0"))
+		}},
+	}
+	for _, c := range cases {
+		client := client.NewGitHubClientWithGetter(client.Options{}, func(rawURL string, opts client.Options) (*http.Response, error) {
+			if strings.Contains(rawURL, "/git/matching-refs/") {
+				return c.refsResp(rawURL), nil
+			}
+			if strings.Contains(rawURL, "/releases?") {
+				body := `[{"tag_name":"cua-driver-rs-v0.36.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"}]`
+				return latestInfoResponse(http.StatusOK, "200 OK", body), nil
+			}
+			t.Fatalf("unexpected request: %s", rawURL)
+			return nil, nil
+		})
+
+		got, err := githubTagLatestInfo(client, "trycua/cua", app.LatestCheckTarget{
+			Tag:          "PRE:cua-driver-rs-v",
+			InstalledTag: "cua-driver-rs-v0.35.4",
+		})
+
+		assert.NoErr(t, err, "case %s", c.name)
+		assert.Eq(t, "cua-driver-rs-v0.36.0", got.Tag, "case %s", c.name)
+	}
+}
+
+func TestGithubTagLatestInfoNoFamilyProbeWithoutInstalledTag(t *testing.T) {
+	// self-update style callers carry no installed tag family knowledge: the
+	// fast path must be skipped entirely
+	client := client.NewGitHubClientWithGetter(client.Options{}, func(rawURL string, opts client.Options) (*http.Response, error) {
+		if strings.Contains(rawURL, "/git/matching-refs/") {
+			t.Fatalf("no family probe expected without installed tag: %s", rawURL)
+		}
+		if strings.Contains(rawURL, "/releases?") {
+			body := `[{"tag_name":"cua-driver-rs-v0.37.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"}]`
+			return latestInfoResponse(http.StatusOK, "200 OK", body), nil
+		}
+		t.Fatalf("unexpected request: %s", rawURL)
+		return nil, nil
+	})
+
+	got, err := githubTagLatestInfo(client, "trycua/cua", app.LatestCheckTarget{
+		Tag: "PRE:cua-driver-rs-v",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "cua-driver-rs-v0.37.0", got.Tag)
+}
+
 func TestGithubTagLatestInfoResolvesTagPatternByReleaseScan(t *testing.T) {
 	var requested []string
 	client := client.NewGitHubClientWithGetter(client.Options{}, func(rawURL string, opts client.Options) (*http.Response, error) {
 		requested = append(requested, rawURL)
 		if strings.Contains(rawURL, "/releases?") {
 			body := `[
-		 {"tag_name":"agent-v0.9.1","prerelease":false,"created_at":"2026-10-19T10:14:46Z","published_at":"2026-10-19T10:20:00Z"},
-		 {"tag_name":"cua-sdk-v0.5.0","prerelease":false,"created_at":"2026-10-19T05:28:20Z","published_at":"2026-10-19T05:30:00Z"},
-		 {"tag_name":"cua-driver-rs-v0.36.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"},
-		 {"tag_name":"cua-driver-rs-v0.35.4","prerelease":false,"created_at":"2026-10-14T12:32:00Z","published_at":"2026-10-14T12:32:14Z"}]`
+			 {"tag_name":"agent-v0.9.1","prerelease":false,"created_at":"2026-10-19T10:14:46Z","published_at":"2026-10-19T10:20:00Z"},
+			 {"tag_name":"cua-sdk-v0.5.0","prerelease":false,"created_at":"2026-10-19T05:28:20Z","published_at":"2026-10-19T05:30:00Z"},
+			 {"tag_name":"cua-driver-rs-v0.36.0","prerelease":false,"created_at":"2026-10-20T08:00:00Z","published_at":"2026-10-20T09:00:00Z"},
+			 {"tag_name":"cua-driver-rs-v0.35.4","prerelease":false,"created_at":"2026-10-14T12:32:00Z","published_at":"2026-10-14T12:32:14Z"}]`
 			return latestInfoResponse(http.StatusOK, "200 OK", body), nil
 		}
 		t.Fatalf("unexpected request: %s", rawURL)
