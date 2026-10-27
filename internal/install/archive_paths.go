@@ -6,6 +6,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/inherelab/eget/internal/filekind"
 )
 
 func archiveChildPath(parent, name string) (string, bool) {
@@ -23,6 +25,18 @@ func archiveChildPath(parent, name string) (string, bool) {
 
 func archivePathForCompare(name string) string {
 	return path.Clean(strings.ReplaceAll(name, `\`, "/"))
+}
+
+// archiveStemFold returns the archive asset name without its archive suffix, so
+// a wrapper directory that repeats the asset name can be recognised. It returns
+// "" when name carries no archive suffix.
+func archiveStemFold(name string) string {
+	base := path.Base(strings.ReplaceAll(name, `\`, "/"))
+	if !filekind.IsArchiveFold(base, filekind.ExtSetExtractAll) {
+		return ""
+	}
+	ext := filekind.MultiExtFold(base, filekind.ExtSetExtractAll)
+	return strings.TrimSuffix(base, ext)
 }
 
 func safeArchiveRelativePath(name string) (string, error) {

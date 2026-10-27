@@ -303,7 +303,7 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 				IsGUI:       opts.IsGUI,
 				InstallMode: opts.InstallMode,
 			}
-			paths, err := extractAllTo(direct, source, downloaded.Size, effectiveOutput(opts), opts.StripComponents)
+			paths, err := extractAllTo(direct, source, downloaded.Size, effectiveOutput(opts), opts.StripComponents, assetName)
 			if err != nil {
 				return RunResult{}, err
 			}

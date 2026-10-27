@@ -57,6 +57,10 @@ type ArchiveExtractor struct {
 
 type ArchiveExtractOptions struct {
 	StripComponents int
+	// ArchiveName is the downloaded asset name. When StripComponents is 0 and the
+	// whole archive sits below one directory that repeats this name, that
+	// directory is redundant and gets stripped (see wrapperStripComponents).
+	ArchiveName string
 }
 
 func NewArchiveExtractor(file Chooser, ar ArchiveFn, decompress DecompFn) *ArchiveExtractor {
@@ -246,6 +250,10 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 	if output == "" {
 		output = "."
 	}
+	stripComponents := opts.StripComponents
+	if stripComponents <= 0 {
+		stripComponents = a.wrapperStripComponents(source, size, opts.ArchiveName)
+	}
 	ar, err := a.Ar(source, size, a.Decompress)
 	if err != nil {
 		return nil, err
@@ -271,7 +279,7 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 		if !direct && !possible {
 			continue
 		}
-		name, ok, err := stripArchivePath(f.Name, opts.StripComponents)
+		name, ok, err := stripArchivePath(f.Name, stripComponents)
 		if err != nil {
 			return nil, fmt.Errorf("extract: %w", err)
 		}
@@ -295,7 +303,7 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 					return nil, fmt.Errorf("extract: %w", err)
 				}
 			} else {
-				rewritten, ok := archiveSymlinkTargetForOutput(output, target, f.Name, f.LinkName, opts.StripComponents)
+				rewritten, ok := archiveSymlinkTargetForOutput(output, target, f.Name, f.LinkName, stripComponents)
 				if !ok {
 					continue
 				}
@@ -327,7 +335,7 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 			}
 			err = os.Symlink(l.oldname, l.newname)
 		} else {
-			oldname, pathErr := safeArchiveHardlinkOutputPath(output, l.archiveName, l.oldname, opts.StripComponents)
+			oldname, pathErr := safeArchiveHardlinkOutputPath(output, l.archiveName, l.oldname, stripComponents)
 			if pathErr != nil {
 				return nil, fmt.Errorf("extract: %w", pathErr)
 			}
@@ -342,10 +350,81 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 			return nil, fmt.Errorf("extract: %w", err)
 		}
 	}
-	if opts.StripComponents > 0 && len(extracted) == 0 {
+	if stripComponents > 0 && len(extracted) == 0 {
 		return nil, fmt.Errorf("extract: no files extracted")
 	}
 	return extracted, nil
+}
+
+// wrapperStripComponents reports how many leading components are a redundant
+// wrapper directory: 1 when every entry lives below a single top-level directory
+// that repeats the archive (asset) name, e.g. dbdelve-0.5.1-windows-x86_64.zip
+// shipping everything under dbdelve-0.5.1-windows-x86_64/, and 0 otherwise. The
+// name match keeps archives whose wrapper adds information (v2rayN-windows-64/
+// inside v2rayN-windows-64-desktop.zip) untouched.
+func (a *ArchiveExtractor) wrapperStripComponents(source io.ReadSeeker, size int64, archiveName string) int {
+	want := archiveStemFold(archiveName)
+	if want == "" {
+		return 0
+	}
+	if _, err := source.Seek(0, io.SeekStart); err != nil {
+		return 0
+	}
+	ar, err := a.Ar(source, size, a.Decompress)
+	if err != nil {
+		return 0
+	}
+	wrapper := ""
+	nested := false
+	for {
+		f, err := ar.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return 0
+		}
+		parts := archivePathParts(f.Name)
+		switch {
+		case len(parts) == 0:
+			return 0
+		case len(parts) == 1:
+			// Only the wrapper directory entry itself may sit at the archive root;
+			// a root-level file or link would be dropped by stripping.
+			if !f.Dir() || (wrapper != "" && !strings.EqualFold(wrapper, parts[0])) {
+				return 0
+			}
+			wrapper = parts[0]
+		default:
+			if wrapper == "" {
+				wrapper = parts[0]
+			} else if !strings.EqualFold(wrapper, parts[0]) {
+				return 0
+			}
+			nested = true
+		}
+	}
+	if !nested || !strings.EqualFold(wrapper, want) {
+		return 0
+	}
+	return 1
+}
+
+// wrapperStripComponentsInDir is wrapperStripComponents for an archive that is
+// already unpacked into dir (the system 7z path).
+func wrapperStripComponentsInDir(dir, archiveName string) int {
+	want := archiveStemFold(archiveName)
+	if want == "" {
+		return 0
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 1 || !entries[0].IsDir() {
+		return 0
+	}
+	if !strings.EqualFold(entries[0].Name(), want) {
+		return 0
+	}
+	return 1
 }
 
 func stripArchivePath(name string, components int) (string, bool, error) {

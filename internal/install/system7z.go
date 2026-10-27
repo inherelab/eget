@@ -186,6 +186,10 @@ func (e *System7zExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size i
 	if output == "" {
 		output = "."
 	}
+	stripComponents := opts.StripComponents
+	if stripComponents <= 0 {
+		stripComponents = wrapperStripComponentsInDir(tempDir, opts.ArchiveName)
+	}
 	var extracted []string
 	err = filepath.WalkDir(tempDir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -202,7 +206,7 @@ func (e *System7zExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size i
 		if err != nil {
 			return err
 		}
-		strippedRel, ok, err := stripArchivePath(filepath.ToSlash(safeRel), opts.StripComponents)
+		strippedRel, ok, err := stripArchivePath(filepath.ToSlash(safeRel), stripComponents)
 		if err != nil {
 			return err
 		}
@@ -233,7 +237,7 @@ func (e *System7zExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size i
 	if err != nil {
 		return nil, err
 	}
-	if opts.StripComponents > 0 && len(extracted) == 0 {
+	if stripComponents > 0 && len(extracted) == 0 {
 		return nil, fmt.Errorf("extract: no files extracted")
 	}
 	return extracted, nil

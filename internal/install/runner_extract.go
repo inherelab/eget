@@ -51,9 +51,12 @@ func shouldApplyDownloadedModTime(file ExtractedFile, assetURL string, opts Opti
 	return file.ArchiveName == path.Base(assetURL)
 }
 
-func extractAllTo(extractor DirectAllExtractor, source io.ReadSeeker, size int64, output string, stripComponents int) ([]string, error) {
+func extractAllTo(extractor DirectAllExtractor, source io.ReadSeeker, size int64, output string, stripComponents int, archiveName string) ([]string, error) {
 	if withOptions, ok := extractor.(directAllExtractorWithOptions); ok {
-		return withOptions.ExtractAllToWithOptions(source, size, output, ArchiveExtractOptions{StripComponents: stripComponents})
+		return withOptions.ExtractAllToWithOptions(source, size, output, ArchiveExtractOptions{
+			StripComponents: stripComponents,
+			ArchiveName:     archiveName,
+		})
 	}
 	if stripComponents > 0 {
 		return nil, fmt.Errorf("strip-components is not supported for this extractor")
