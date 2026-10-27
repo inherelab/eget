@@ -96,6 +96,27 @@ func TestArchiveExtractorExtractAllToExplicitStripComponentsWins(t *testing.T) {
 	assert.Eq(t, []string{filepath.Join(out, "dbdelve.exe")}, files)
 }
 
+func TestArchiveExtractorExtractAllToKeepsAppBundleWrapper(t *testing.T) {
+	out := t.TempDir()
+	data := zipBytes(t, map[string]string{
+		"Kero.app/Contents/Info.plist": "plist",
+		"Kero.app/Contents/MacOS/kero": "bin",
+	})
+	chooser, err := NewFileChooser("*")
+	assert.NoErr(t, err)
+
+	ex := NewArchiveExtractor(chooser, NewZipArchive, nil)
+	files, err := ex.ExtractAllToWithOptions(bytes.NewReader(data), int64(len(data)), out, ArchiveExtractOptions{
+		ArchiveName: "Kero.app.zip",
+	})
+	assert.NoErr(t, err)
+	// The bundle directory is the application itself even though it repeats the
+	// asset name, so it must survive the redundant-wrapper stripping.
+	assert.Eq(t, 2, len(files))
+	_, err = os.Stat(filepath.Join(out, "Kero.app", "Contents", "Info.plist"))
+	assert.NoErr(t, err)
+}
+
 func TestSystem7zExtractorExtractAllToAutoStripsRedundantWrapperDir(t *testing.T) {
 	out := t.TempDir()
 	origRunner := runSystem7zCommand
@@ -124,6 +145,98 @@ func TestSystem7zExtractorExtractAllToAutoStripsRedundantWrapperDir(t *testing.T
 	})
 	assert.NoErr(t, err)
 	assert.Eq(t, []string{filepath.Join(out, "dbdelve.exe")}, files)
+}
+
+func TestRunPortableGUIArchiveHoistsAppBundleToGuiTarget(t *testing.T) {
+	assetURL := "https://example.com/kero-2.1.24-darwin-arm64.zip"
+	archive := zipBytes(t, map[string]string{
+		"Kero.app/Contents/Info.plist":      "plist",
+		"Kero.app/Contents/MacOS/Kero":      "bin",
+		"Kero.app/Contents/Resources/a.txt": "res",
+	})
+	guiTarget := t.TempDir()
+
+	svc := NewDefaultService(nil, nil)
+	svc.AllDetectorFactory = func() Detector {
+		return &fakeDetector{name: assetURL}
+	}
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(archive)),
+		}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	result, err := runner.Run(assetURL, Options{
+		Name:        "kero",
+		GuiTarget:   guiTarget,
+		IsGUI:       true,
+		InstallMode: InstallModePortable,
+	})
+	if err != nil {
+		t.Fatalf("run portable gui app bundle: %v", err)
+	}
+
+	bundle := filepath.Join(guiTarget, "Kero.app")
+	assert.Eq(t, 3, len(result.ExtractedFiles))
+	for _, name := range []string{
+		filepath.Join(bundle, "Contents", "Info.plist"),
+		filepath.Join(bundle, "Contents", "MacOS", "Kero"),
+		filepath.Join(bundle, "Contents", "Resources", "a.txt"),
+	} {
+		if _, err := os.Stat(name); err != nil {
+			t.Fatalf("expected hoisted bundle file %s: %v", name, err)
+		}
+		assert.Contains(t, strings.Join(result.ExtractedFiles, "\n"), name)
+	}
+	if _, err := os.Stat(filepath.Join(guiTarget, "kero")); !os.IsNotExist(err) {
+		t.Fatalf("expected the injected <gui_target>/<name> level to be removed, stat err=%v", err)
+	}
+}
+
+func TestRunPortableGUIArchiveKeepsBundleUnderExplicitOutput(t *testing.T) {
+	assetURL := "https://example.com/kero-2.1.24-darwin-arm64.zip"
+	archive := zipBytes(t, map[string]string{
+		"Kero.app/Contents/Info.plist": "plist",
+	})
+	applications := t.TempDir()
+
+	svc := NewDefaultService(nil, nil)
+	svc.AllDetectorFactory = func() Detector {
+		return &fakeDetector{name: assetURL}
+	}
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(archive)),
+		}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	_, err := runner.Run(assetURL, Options{
+		Name:           "kero",
+		Output:         applications,
+		OutputExplicit: true,
+		GuiTarget:      applications,
+		IsGUI:          true,
+		InstallMode:    InstallModePortable,
+	})
+	if err != nil {
+		t.Fatalf("run portable gui app bundle to explicit output: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(applications, "Kero.app", "Contents", "Info.plist")); err != nil {
+		t.Fatalf("expected bundle directly under the explicit output: %v", err)
+	}
 }
 
 func TestRunPortableGUIArchiveAutoStripsWrapperDirRepeatingAssetName(t *testing.T) {

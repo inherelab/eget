@@ -39,6 +39,14 @@ func archiveStemFold(name string) string {
 	return strings.TrimSuffix(base, ext)
 }
 
+// appBundleSuffix marks a macOS application bundle directory. Such a directory is
+// the application itself, never a redundant wrapper around it.
+const appBundleSuffix = ".app"
+
+func isAppBundleFold(name string) bool {
+	return strings.HasSuffix(strings.ToLower(name), appBundleSuffix)
+}
+
 func safeArchiveRelativePath(name string) (string, error) {
 	name, err := archiveMemberPathForWrite(name)
 	if err != nil {

@@ -307,6 +307,9 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 			if err != nil {
 				return RunResult{}, err
 			}
+			if opts.IsGUI && opts.InstallMode == InstallModePortable && !opts.OutputExplicit {
+				paths = hoistPortableAppBundle(effectiveOutput(opts), opts.GuiTarget, paths)
+			}
 			printExtractedPaths(output, paths)
 			for _, out := range paths {
 				verbosef("extract output: %s", out)

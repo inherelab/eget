@@ -361,7 +361,8 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 // that repeats the archive (asset) name, e.g. dbdelve-0.5.1-windows-x86_64.zip
 // shipping everything under dbdelve-0.5.1-windows-x86_64/, and 0 otherwise. The
 // name match keeps archives whose wrapper adds information (v2rayN-windows-64/
-// inside v2rayN-windows-64-desktop.zip) untouched.
+// inside v2rayN-windows-64-desktop.zip) untouched, and a macOS *.app bundle is
+// never stripped because its directory is the application itself.
 func (a *ArchiveExtractor) wrapperStripComponents(source io.ReadSeeker, size int64, archiveName string) int {
 	want := archiveStemFold(archiveName)
 	if want == "" {
@@ -404,7 +405,7 @@ func (a *ArchiveExtractor) wrapperStripComponents(source io.ReadSeeker, size int
 			nested = true
 		}
 	}
-	if !nested || !strings.EqualFold(wrapper, want) {
+	if !nested || !strings.EqualFold(wrapper, want) || isAppBundleFold(wrapper) {
 		return 0
 	}
 	return 1
@@ -421,7 +422,7 @@ func wrapperStripComponentsInDir(dir, archiveName string) int {
 	if err != nil || len(entries) != 1 || !entries[0].IsDir() {
 		return 0
 	}
-	if !strings.EqualFold(entries[0].Name(), want) {
+	if !strings.EqualFold(entries[0].Name(), want) || isAppBundleFold(entries[0].Name()) {
 		return 0
 	}
 	return 1

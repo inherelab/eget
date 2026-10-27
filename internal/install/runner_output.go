@@ -28,6 +28,44 @@ func portableGUIArchiveExtractAll(assetURL string, opts Options) bool {
 		isExtractAllArchiveAsset(assetURL)
 }
 
+// hoistPortableAppBundle moves a macOS *.app bundle that the portable GUI layout
+// put one level below guiTarget (the injected <gui_target>/<name> directory) up to
+// <gui_target>/<App>.app, where macOS expects applications. Any other layout, an
+// existing destination or a failed rename keeps the extracted tree as it is.
+func hoistPortableAppBundle(output, guiTarget string, paths []string) []string {
+	if guiTarget == "" || output == "" || filepath.Clean(output) == filepath.Clean(guiTarget) {
+		return paths
+	}
+	entries, err := os.ReadDir(output)
+	if err != nil || len(entries) != 1 || !entries[0].IsDir() {
+		return paths
+	}
+	bundle := entries[0].Name()
+	if !isAppBundleFold(bundle) {
+		return paths
+	}
+	src := filepath.Join(output, bundle)
+	dst := filepath.Join(guiTarget, bundle)
+	if _, err := os.Stat(dst); err == nil {
+		return paths
+	}
+	if err := os.Rename(src, dst); err != nil {
+		return paths
+	}
+	_ = os.Remove(output)
+
+	hoisted := make([]string, 0, len(paths))
+	for _, path := range paths {
+		rel, err := filepath.Rel(src, path)
+		if err != nil || rel == ".." || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			hoisted = append(hoisted, path)
+			continue
+		}
+		hoisted = append(hoisted, filepath.Join(dst, rel))
+	}
+	return hoisted
+}
+
 func isExtractAllArchiveAsset(assetURL string) bool {
 	return filekind.IsArchiveFold(path.Base(assetURL), filekind.ExtSetExtractAll)
 }
