@@ -170,7 +170,7 @@ ext_package_mode = "off"
 Fields:
 
 - `target`: default install directory for CLI tools.
-- `gui_target`: default install directory for portable GUI applications.
+- `gui_target`: default install directory for portable GUI applications. Defaults to `~/Applications` on macOS, where those applications are `*.app` bundles; other platforms have no default.
 - `cache_dir`: default cache root. Raw downloads, API cache files, SDK downloads, and SDK indexes are derived from this directory.
 - `proxy_url`: legacy HTTP-layer proxy fallback. Prefer `[http_proxy].url`; `global.proxy_url` is only read when `[http_proxy]` is not configured.
 - `user_agent`: default HTTP `User-Agent`. When empty, eget uses the built-in browser UA; configured values override the default.

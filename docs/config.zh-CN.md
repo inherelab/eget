@@ -159,7 +159,7 @@ ext_package_mode = "off"
 字段说明：
 
 - `target`: CLI 工具默认安装目录。
-- `gui_target`: 免安装 GUI 应用默认安装目录。
+- `gui_target`: 免安装 GUI 应用默认安装目录。macOS 默认 `~/Applications`（这类应用是 `*.app` bundle），其他平台没有默认值。
 - `cache_dir`: 缓存根目录。原始下载缓存、API cache、SDK 下载缓存和 SDK index 都基于此目录派生。
 - `proxy_url`: 旧版 HTTP 层代理 fallback。优先使用 `[http_proxy].url`；只有未配置 `[http_proxy]` 时才会读取 `global.proxy_url`。
 - `user_agent`: HTTP 请求默认 `User-Agent`。为空时使用内置浏览器 UA；配置后覆盖默认值。

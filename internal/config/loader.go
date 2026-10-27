@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"runtime"
 )
 
 func Load() (*File, error) {
@@ -29,7 +30,11 @@ func LoadFile(path string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return decodeConfigFile(cfg)
+	decoded, err := decodeConfigFile(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return applyPlatformDefaults(decoded, runtime.GOOS), nil
 }
 
 func NewFile() *File {
@@ -42,6 +47,30 @@ func NewFile() *File {
 	cfg.SDK = make(map[string]SDKSection)
 	cfg.Ext = make(map[string]ManagerSection)
 	cfg.Global.SDKExtMap = defaultSDKExtMap()
+	return applyPlatformDefaults(cfg, runtime.GOOS)
+}
+
+// defaultGuiTarget is the platform default of global.gui_target: macOS installs
+// portable GUI applications as *.app bundles into ~/Applications, where Launchpad
+// and Spotlight look for them; every other platform keeps no default.
+func defaultGuiTarget(goos string) string {
+	if goos == "darwin" {
+		return "~/Applications"
+	}
+	return ""
+}
+
+// applyPlatformDefaults fills the defaults that are not spelled out in the file.
+// An explicit global.gui_target always wins.
+func applyPlatformDefaults(cfg *File, goos string) *File {
+	if cfg == nil {
+		return cfg
+	}
+	if cfg.Global.GuiTarget == nil {
+		if target := defaultGuiTarget(goos); target != "" {
+			cfg.Global.GuiTarget = &target
+		}
+	}
 	return cfg
 }
 
