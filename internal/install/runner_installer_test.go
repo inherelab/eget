@@ -141,6 +141,57 @@ func TestRunGUIPlainExeDefaultsToInstaller(t *testing.T) {
 	assert.Eq(t, InstallModeInstaller, result.InstallMode)
 }
 
+func TestRunKnownGUIInstallerWithSetupAssetNameDoesNotPrompt(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "DBX_0.6.58_x64-setup.exe")
+	if err := os.WriteFile(path, []byte("installer"), 0o755); err != nil {
+		t.Fatalf("write installer: %v", err)
+	}
+
+	launcher := &fakeInstallerLauncher{}
+	runner := NewRunner(NewDefaultService(nil, nil))
+	runner.InstallerLauncher = launcher
+	runner.Stderr = io.Discard
+	runner.ConfirmLaunchInstaller = func(file string) (bool, error) {
+		t.Fatalf("known gui installer should not prompt, got %q", file)
+		return false, nil
+	}
+
+	// The installed entry of `eget update` carries is_gui + install_mode=installer,
+	// so the "setup" asset name must not trigger the discovery prompt.
+	result, err := runner.Run(path, Options{IsGUI: true, InstallMode: InstallModeInstaller})
+	assert.NoErr(t, err)
+	assert.Eq(t, path, launcher.path)
+	assert.Eq(t, InstallerKindEXE, launcher.kind)
+	assert.Eq(t, InstallModeInstaller, result.InstallMode)
+}
+
+func TestRunPortableGUISetupAssetPromptOnModeChange(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "Tool_1.2.3_x64-setup.exe")
+	if err := os.WriteFile(path, []byte("installer"), 0o755); err != nil {
+		t.Fatalf("write installer: %v", err)
+	}
+
+	launcher := &fakeInstallerLauncher{}
+	runner := NewRunner(NewDefaultService(nil, nil))
+	runner.InstallerLauncher = launcher
+	runner.Stderr = io.Discard
+	var prompted string
+	runner.ConfirmLaunchInstaller = func(file string) (bool, error) {
+		prompted = file
+		return true, nil
+	}
+
+	// Switching from the recorded portable mode to an installer asset is a new
+	// behaviour for the package, so it still asks before launching.
+	result, err := runner.Run(path, Options{IsGUI: true, InstallMode: InstallModePortable})
+	assert.NoErr(t, err)
+	assert.Eq(t, "Tool_1.2.3_x64-setup.exe", prompted)
+	assert.Eq(t, path, launcher.path)
+	assert.Eq(t, InstallModeInstaller, result.InstallMode)
+}
+
 func TestRunGUIPortableExeUsesPortableMode(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "GoNavi-0.7.7-Windows-Amd64-portable.exe")

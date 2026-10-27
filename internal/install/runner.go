@@ -340,12 +340,18 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		bins = []ExtractedFile{bin}
 	}
 	selectedName := selectedFileName(assetName, bin)
+	knownGUI := opts.IsGUI
+	knownInstallMode := opts.InstallMode
 	if opts.IsGUI && opts.InstallMode == "" {
 		opts.InstallMode = DetectGUIInstallMode(true, selectedName)
 	} else if !opts.All && DetectInstallerKind(selectedName) != InstallerKindUnknown {
 		opts.IsGUI = true
 		opts.InstallMode = InstallModeInstaller
-		if !opts.DeferInstaller {
+		// Ask only when the installer behaviour is new for this package. A package
+		// already recorded/configured as a GUI installer is launched directly, even
+		// when the asset name carries "setup"/"installer" (eget update of
+		// DBX_0.6.58_x64-setup.exe used to ask while navop-...-windows-x64.exe did not).
+		if !opts.DeferInstaller && !(knownGUI && knownInstallMode == InstallModeInstaller) {
 			confirmed, err := r.confirmLaunchInstaller(selectedName)
 			if err != nil {
 				return RunResult{}, err
