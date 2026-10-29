@@ -10,7 +10,7 @@ require (
 	github.com/gookit/config/v2 v2.2.9
 	github.com/gookit/ext v0.1.2
 	github.com/gookit/gcli/v3 v3.8.5
-	github.com/gookit/goutil v0.8.3
+	github.com/gookit/goutil v0.8.6
 	github.com/gookit/rux/v2 v2.1.3
 	github.com/klauspost/compress v1.20.3
 	github.com/ulikunitz/xz v0.5.17
