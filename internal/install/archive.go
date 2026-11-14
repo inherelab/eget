@@ -57,6 +57,7 @@ type ArchiveExtractor struct {
 
 type ArchiveExtractOptions struct {
 	StripComponents int
+	RenameFiles     map[string]string
 	// ArchiveName is the downloaded asset name. When StripComponents is 0 and the
 	// whole archive sits below one directory that repeats this name, that
 	// directory is redundant and gets stripped (see wrapperStripComponents).
@@ -285,6 +286,11 @@ func (a *ArchiveExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size in
 		}
 		if !ok {
 			continue
+		}
+		if f.Type != TypeDir {
+			if renamed := renamedOutputName(ExtractedFile{Name: name, ArchiveName: f.Name}, opts.RenameFiles); renamed != "" {
+				name = renamed
+			}
 		}
 		target, err := safeArchiveOutputPath(output, name)
 		if err != nil {

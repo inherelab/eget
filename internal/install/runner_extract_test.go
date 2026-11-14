@@ -149,6 +149,62 @@ func TestRunExtractAllStripsComponentsFromZipArchive(t *testing.T) {
 	}
 }
 
+func TestRunExtractAllStripsComponentsAndRenamesZipMember(t *testing.T) {
+	assetURL := "https://example.com/exiftool.zip"
+	archive := zipBytes(t, map[string]string{
+		"exiftool-13.40/exiftool(-k).exe": "exe",
+		"exiftool-13.40/readme.txt":       "readme",
+	})
+	outputDir := t.TempDir()
+
+	svc := NewDefaultService(nil, nil)
+	svc.AllDetectorFactory = func() Detector {
+		return &fakeDetector{name: assetURL}
+	}
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(archive)),
+		}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	result, err := runner.Run(assetURL, Options{
+		All: true, Output: outputDir, StripComponents: 1,
+		RenameFiles: map[string]string{"exiftool(-k).exe": "exiftool.exe"},
+	})
+	if err != nil {
+		t.Fatalf("run extract-all with strip and rename: %v", err)
+	}
+
+	assert.Eq(t, 2, len(result.ExtractedFiles))
+	data, err := os.ReadFile(filepath.Join(outputDir, "exiftool.exe"))
+	if err != nil {
+		t.Fatalf("read renamed exe: %v", err)
+	}
+	assert.Eq(t, "exe", string(data))
+	data, err = os.ReadFile(filepath.Join(outputDir, "readme.txt"))
+	if err != nil {
+		t.Fatalf("read stripped readme: %v", err)
+	}
+	assert.Eq(t, "readme", string(data))
+	if _, err := os.Stat(filepath.Join(outputDir, "exiftool-13.40")); !os.IsNotExist(err) {
+		t.Fatalf("expected stripped root directory to be absent, stat err=%v", err)
+	}
+
+	_, err = runner.Run(assetURL, Options{
+		All: true, Output: t.TempDir(), StripComponents: 1,
+		RenameFiles: map[string]string{"exiftool(-k).exe": "../escaped.exe"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
+		t.Fatalf("expected unsafe rename to be rejected, got %v", err)
+	}
+}
+
 func TestRunExtractAllPrintsSingleHeaderForMultipleFiles(t *testing.T) {
 	assetURL := "https://example.com/ventoy.zip"
 	archive := zipBytes(t, map[string]string{
