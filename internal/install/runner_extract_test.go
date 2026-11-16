@@ -205,6 +205,77 @@ func TestRunExtractAllStripsComponentsAndRenamesZipMember(t *testing.T) {
 	}
 }
 
+func TestRunExtractAllStripsAndRenamesSystem7zMember(t *testing.T) {
+	assetURL := "https://example.com/tool.7z"
+	outputDir := t.TempDir()
+	origCommand := runSystem7zCommand
+	defer func() { runSystem7zCommand = origCommand }()
+	runSystem7zCommand = func(exe string, args ...string) ([]byte, error) {
+		if args[0] != "x" {
+			t.Fatalf("expected direct extract-all, got 7z %s", args[0])
+		}
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "-o") {
+				root := strings.TrimPrefix(arg, "-o")
+				for name, content := range map[string]string{
+					"wrapper/exiftool(-k).exe": "exe",
+					"wrapper/readme.txt":       "readme",
+				} {
+					file := filepath.Join(root, filepath.FromSlash(name))
+					if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+						return nil, err
+					}
+					if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
+						return nil, err
+					}
+				}
+				return nil, nil
+			}
+		}
+		t.Fatal("missing 7z output directory")
+		return nil, nil
+	}
+
+	svc := NewDefaultService(nil, nil)
+	svc.AllDetectorFactory = func() Detector { return &fakeDetector{name: assetURL} }
+	svc.System7zPathResolver = func(string) string { return "7z" }
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("archive"))}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	result, err := runner.Run(assetURL, Options{
+		All: true, Output: outputDir, StripComponents: 1,
+		RenameFiles: map[string]string{"exiftool(-k).exe": "exiftool.exe"},
+	})
+	if err != nil {
+		t.Fatalf("run system 7z with strip and rename: %v", err)
+	}
+	assert.Eq(t, 2, len(result.ExtractedFiles))
+	for name, want := range map[string]string{"exiftool.exe": "exe", "readme.txt": "readme"} {
+		data, err := os.ReadFile(filepath.Join(outputDir, name))
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		assert.Eq(t, want, string(data))
+	}
+	if _, err := os.Stat(filepath.Join(outputDir, "wrapper")); !os.IsNotExist(err) {
+		t.Fatalf("expected stripped wrapper to be absent, stat err=%v", err)
+	}
+
+	_, err = runner.Run(assetURL, Options{
+		All: true, Output: t.TempDir(), StripComponents: 1,
+		RenameFiles: map[string]string{"exiftool(-k).exe": "../escaped.exe"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unsafe archive path") {
+		t.Fatalf("expected unsafe rename to be rejected, got %v", err)
+	}
+}
+
 func TestRunExtractAllPrintsSingleHeaderForMultipleFiles(t *testing.T) {
 	assetURL := "https://example.com/ventoy.zip"
 	archive := zipBytes(t, map[string]string{

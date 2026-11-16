@@ -217,6 +217,11 @@ func (e *System7zExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size i
 		if !direct && !possible {
 			return nil
 		}
+		if !entry.IsDir() {
+			if renamed := renamedOutputName(ExtractedFile{Name: strippedRel, ArchiveName: filepath.ToSlash(safeRel)}, opts.RenameFiles); renamed != "" {
+				strippedRel = renamed
+			}
+		}
 		target, err := safeArchiveOutputPath(output, strippedRel)
 		if err != nil {
 			return err

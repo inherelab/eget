@@ -296,7 +296,10 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 
 	if opts.All {
 		_, goArchive := extractor.(*ArchiveExtractor)
-		if direct, ok := extractor.(DirectAllExtractor); ok && effectiveOutput(opts) != "-" && (len(opts.RenameFiles) == 0 || (goArchive && opts.StripComponents > 0)) {
+		_, systemArchive := extractor.(*System7zExtractor)
+		direct, ok := extractor.(DirectAllExtractor)
+		withOptions, supportsOptions := extractor.(directAllExtractorWithOptions)
+		if ok && effectiveOutput(opts) != "-" && (len(opts.RenameFiles) == 0 || (opts.StripComponents > 0 && supportsOptions && (goArchive || systemArchive))) {
 			result := RunResult{
 				URL:         url,
 				Tool:        tool,
@@ -306,7 +309,7 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 			}
 			var paths []string
 			if len(opts.RenameFiles) > 0 {
-				paths, err = extractor.(*ArchiveExtractor).ExtractAllToWithOptions(source, downloaded.Size, effectiveOutput(opts), ArchiveExtractOptions{
+				paths, err = withOptions.ExtractAllToWithOptions(source, downloaded.Size, effectiveOutput(opts), ArchiveExtractOptions{
 					StripComponents: opts.StripComponents,
 					ArchiveName:     assetName,
 					RenameFiles:     opts.RenameFiles,

@@ -3,6 +3,7 @@ package install
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -346,6 +347,70 @@ func TestSystem7zExtractorExtractAllToWithOptionsStripsComponents(t *testing.T) 
 	assert.Eq(t, "exe", string(data))
 	if _, err := os.Stat(filepath.Join(tmp, "ventoy-1.1.12")); !os.IsNotExist(err) {
 		t.Fatalf("expected stripped root directory to be absent, stat err=%v", err)
+	}
+}
+
+func TestSystem7zExtractorExtractAllToWithOptionsStripsAndRenamesRealArchive(t *testing.T) {
+	if os.Getenv("EGET_TEST_EXTERNAL") != "1" {
+		t.Skip("set EGET_TEST_EXTERNAL=1 to test with installed 7z")
+	}
+	exe, err := exec.LookPath("7z")
+	if err != nil {
+		t.Skip("7z not installed")
+	}
+
+	root := t.TempDir()
+	srcDir := filepath.Join(root, "src")
+	for name, content := range map[string]string{
+		"wrapper/exiftool(-k).exe": "exe",
+		"wrapper/readme.txt":       "readme",
+	} {
+		file := filepath.Join(srcDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	archivePath := filepath.Join(root, "fixture.7z")
+	cmd := exec.Command(exe, "a", "-t7z", archivePath, "wrapper")
+	cmd.Dir = srcDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create 7z fixture: %v: %s", err, out)
+	}
+	archive, err := os.Open(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer archive.Close()
+	info, err := archive.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	chooser, err := NewFileChooser("*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outputDir := filepath.Join(root, "out")
+	extractor := NewSystem7zExtractor("fixture.7z", "fixture", chooser, exe)
+	files, err := extractor.ExtractAllToWithOptions(archive, info.Size(), outputDir, ArchiveExtractOptions{
+		StripComponents: 1,
+		RenameFiles:     map[string]string{"exiftool(-k).exe": "exiftool.exe"},
+	})
+	if err != nil {
+		t.Fatalf("extract 7z fixture: %v", err)
+	}
+	assert.Eq(t, 2, len(files))
+	for name, want := range map[string]string{"exiftool.exe": "exe", "readme.txt": "readme"} {
+		data, err := os.ReadFile(filepath.Join(outputDir, name))
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		assert.Eq(t, want, string(data))
+	}
+	if _, err := os.Stat(filepath.Join(outputDir, "wrapper")); !os.IsNotExist(err) {
+		t.Fatalf("expected stripped wrapper to be absent, stat err=%v", err)
 	}
 }
 
