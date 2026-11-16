@@ -21,6 +21,7 @@ type Section struct {
 	ExtPackageMode       *string           `toml:"ext_package_mode,omitempty" mapstructure:"ext_package_mode"`
 	Name                 *string           `toml:"name" mapstructure:"name"`
 	Quiet                *bool             `toml:"quiet" mapstructure:"quiet"`
+	SelectFirst          *bool             `toml:"select_first" mapstructure:"select_first"`
 	RenameFiles          map[string]string `toml:"rename_files,omitempty" mapstructure:"rename_files"`
 	Repo                 *string           `toml:"repo" mapstructure:"repo"`
 	ShowHash             *bool             `toml:"show_hash" mapstructure:"show_hash"`
@@ -159,6 +160,7 @@ type Merged struct {
 	IsGUI               bool
 	Name                string
 	Quiet               bool
+	SelectFirst         bool
 	RenameFiles         map[string]string
 	ShowHash            bool
 	StripComponents     int
@@ -203,6 +205,7 @@ type CLIOverrides struct {
 	IsGUI            *bool
 	Name             *string
 	Quiet            *bool
+	SelectFirst      *bool
 	RenameFiles      *map[string]string
 	ShowHash         *bool
 	StripComponents  *int

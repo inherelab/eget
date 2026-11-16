@@ -657,6 +657,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	sdkTarget := "~/sdks"
 	userAgent := "custom-agent/1.0"
 	quiet := true
+	selectFirst := true
 	cacheTime := 300
 	repo := "junegunn/fzf"
 	sdkStrip := 1
@@ -665,6 +666,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	cfg.Global.UserAgent = &userAgent
 	cfg.Global.SDKExtMap = map[string]string{"windows": "zip", "linux": "tar.gz"}
 	cfg.Global.Quiet = &quiet
+	cfg.Global.SelectFirst = &selectFirst
 	cfg.ApiCache.CacheTime = &cacheTime
 	cfg.Packages["fzf"] = Section{Repo: &repo}
 	cfg.SDK["go"] = SDKSection{
@@ -700,6 +702,9 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		t.Fatalf("expected round-trip global.user_agent, got %#v", loaded.Global.UserAgent)
 	}
 	assert.Eq(t, "tar.gz", loaded.Global.SDKExtMap["linux"])
+	if loaded.Global.SelectFirst == nil || !*loaded.Global.SelectFirst {
+		t.Fatalf("expected round-trip global.select_first, got %#v", loaded.Global.SelectFirst)
+	}
 	if loaded.Global.Quiet == nil || !*loaded.Global.Quiet {
 		t.Fatalf("expected round-trip global.quiet, got %#v", loaded.Global.Quiet)
 	}

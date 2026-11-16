@@ -16,6 +16,7 @@ type UpdateOptions struct {
 	Asset            string
 	Source           bool
 	Quiet            bool
+	SelectFirst      bool
 	Retries          int
 	ChunkConcurrency int
 	BatchConcurrency int
@@ -41,7 +42,8 @@ func newUpdateCmd(handler CommandHandler) (*gcli.Command, func()) {
 		c.StrOpt(&opts.File, "file", "", "", "File to extract, multi use comma split, support glob")
 		c.StrOpt(&opts.Asset, "asset", "a", "", "Asset filter, multi use comma split")
 		c.BoolOpt(&opts.Source, "source", "", false, "Download source archive")
-		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output; select first asset when multiple candidates remain")
+		c.BoolOpt(&opts.Quiet, "quiet", "", false, "Quiet output")
+		c.BoolOpt(&opts.SelectFirst, "select-first", "", false, "Select the first asset when multiple candidates remain")
 		c.IntOpt(&opts.Retries, "retries", "", 1, "Download request attempts per URL")
 		c.IntOpt(&opts.ChunkConcurrency, "chunk", "", -1, "HTTP Range chunk concurrency: 0 auto, 1 single connection")
 		c.IntOpt(&opts.BatchConcurrency, "batch", "", -1, "Concurrent package tasks for --all: 0 auto, 1 serial")

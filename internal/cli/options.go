@@ -32,6 +32,7 @@ func installOptionsFromInstall(opts *InstallOptions) install.Options {
 		IsGUI:               opts.GUI,
 		InstallMode:         opts.InstallMode,
 		Quiet:               opts.Quiet,
+		SelectFirst:         opts.SelectFirst,
 		Silent:              opts.Silent,
 		FallbackVersions:    opts.FallbackVersions,
 		Retries:             opts.Retries,
@@ -84,16 +85,17 @@ func applyGlobalNetworkConfig(opts *install.Options, cfg *cfgpkg.File) {
 
 func installOptionsFromDownload(opts *DownloadOptions) install.Options {
 	base := installOptionsFromInstall(&InstallOptions{
-		Tag:        opts.Tag,
-		Prerelease: opts.Prerelease,
-		System:     opts.System,
-		To:         opts.To,
-		File:       opts.File,
-		Asset:      opts.Asset,
-		Rename:     opts.Rename,
-		Source:     opts.Source,
-		All:        opts.All,
-		Quiet:      opts.Quiet,
+		Tag:         opts.Tag,
+		Prerelease:  opts.Prerelease,
+		System:      opts.System,
+		To:          opts.To,
+		File:        opts.File,
+		Asset:       opts.Asset,
+		Rename:      opts.Rename,
+		Source:      opts.Source,
+		All:         opts.All,
+		Quiet:       opts.Quiet,
+		SelectFirst: opts.SelectFirst,
 	})
 	base.FallbackVersions = opts.FallbackVersions
 	base.Retries = opts.Retries
@@ -120,6 +122,7 @@ func installOptionsFromAdd(opts *AddOptions) install.Options {
 		StripComponents:     opts.StripComponents,
 		IsGUI:               opts.GUI,
 		Quiet:               opts.Quiet,
+		SelectFirst:         opts.SelectFirst,
 		Retries:             opts.Retries,
 		ChunkConcurrency:    opts.ChunkConcurrency,
 		ChunkConcurrencySet: opts.ChunkConcurrency >= 0,
@@ -135,6 +138,7 @@ func installOptionsFromUpdate(opts *UpdateOptions) install.Options {
 		Output:              opts.To,
 		System:              opts.System,
 		Quiet:               opts.Quiet,
+		SelectFirst:         opts.SelectFirst,
 		Retries:             opts.Retries,
 		ChunkConcurrency:    opts.ChunkConcurrency,
 		BatchConcurrency:    opts.BatchConcurrency,

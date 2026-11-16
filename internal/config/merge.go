@@ -9,6 +9,7 @@ func MergeInstallOptions(global, repo, pkg Section, cli CLIOverrides) Merged {
 	merged.DownloadOnly = firstBool(cli.DownloadOnly, pkg.DownloadOnly, repo.DownloadOnly, global.DownloadOnly)
 	merged.Source = firstBool(cli.Source, pkg.Source, repo.Source, global.Source)
 	merged.Quiet = firstBool(cli.Quiet, pkg.Quiet, repo.Quiet, global.Quiet)
+	merged.SelectFirst = firstBool(cli.SelectFirst, pkg.SelectFirst, repo.SelectFirst, global.SelectFirst)
 	merged.Prerelease = firstBool(cli.Prerelease, pkg.Prerelease, repo.Prerelease, global.Prerelease)
 	merged.ShowHash = firstBool(cli.ShowHash, pkg.ShowHash, repo.ShowHash, global.ShowHash)
 	merged.UpgradeOnly = firstBool(cli.UpgradeOnly, pkg.UpgradeOnly, repo.UpgradeOnly, global.UpgradeOnly)

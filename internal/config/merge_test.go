@@ -358,6 +358,29 @@ func TestMergeInstallOptionsMergesRenameFiles(t *testing.T) {
 	assert.Eq(t, map[string]string{"cli.exe": "cli-renamed.exe"}, merged.RenameFiles)
 }
 
+func TestMergeInstallOptionsUsesSelectFirstFromCLIThenPackageThenRepo(t *testing.T) {
+	merged := MergeInstallOptions(
+		Section{SelectFirst: boolPtr(true)},
+		Section{SelectFirst: boolPtr(false)},
+		Section{},
+		CLIOverrides{},
+	)
+	assert.False(t, merged.SelectFirst)
+
+	merged = MergeInstallOptions(
+		Section{SelectFirst: boolPtr(false)},
+		Section{SelectFirst: boolPtr(false)},
+		Section{SelectFirst: boolPtr(true)},
+		CLIOverrides{SelectFirst: boolPtr(true)},
+	)
+	assert.True(t, merged.SelectFirst)
+
+	merged = MergeInstallOptions(
+		Section{}, Section{}, Section{}, CLIOverrides{SelectFirst: boolPtr(true)},
+	)
+	assert.True(t, merged.SelectFirst)
+}
+
 func TestMergeInstallOptionsMergesURLTemplateFields(t *testing.T) {
 	merged := MergeInstallOptions(
 		Section{

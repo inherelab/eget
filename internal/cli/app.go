@@ -270,15 +270,15 @@ var commandAliases = map[string]string{
 
 var commandFlagSpecs = map[string]flagSpec{
 	"install": {
-		bools:  setOf("source", "prerelease", "p", "track-tag", "extract-all", "ea", "all", "gui", "quiet", "silent", "add"),
+		bools:  setOf("source", "prerelease", "p", "track-tag", "extract-all", "ea", "all", "gui", "quiet", "select-first", "silent", "add"),
 		values: setOf("tag", "system", "to", "file", "asset", "a", "rename", "name", "install-mode", "imode", "strip-components", "fallback-versions", "retries", "chunk", "batch"),
 	},
 	"download": {
-		bools:  setOf("source", "prerelease", "p", "extract-all", "ea", "quiet", "ghproxy"),
+		bools:  setOf("source", "prerelease", "p", "extract-all", "ea", "quiet", "select-first", "ghproxy"),
 		values: setOf("tag", "system", "to", "file", "asset", "a", "rename", "strip-components", "fallback-versions", "retries", "chunk"),
 	},
 	"add": {
-		bools:  setOf("source", "extract-all", "ea", "gui", "quiet"),
+		bools:  setOf("source", "extract-all", "ea", "gui", "quiet", "select-first"),
 		values: setOf("name", "tag", "system", "to", "file", "asset", "rename", "strip-components", "retries", "chunk"),
 	},
 	"list": {
@@ -286,7 +286,7 @@ var commandFlagSpecs = map[string]flagSpec{
 		values: setOf("info", "i", "ext", "with-ext"),
 	},
 	"update": {
-		bools:  setOf("all", "A", "check", "dry-run", "interactive", "i", "self", "source", "quiet"),
+		bools:  setOf("all", "A", "check", "dry-run", "interactive", "i", "self", "source", "quiet", "select-first"),
 		values: setOf("self-source", "tag", "system", "to", "file", "asset", "a", "retries", "chunk", "batch", "ext", "with-ext"),
 	},
 	"ext": {

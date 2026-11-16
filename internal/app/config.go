@@ -431,6 +431,12 @@ func sectionFromInstallOptions(repo, name string, opts install.Options) cfgpkg.S
 	if opts.IsGUI {
 		section.IsGUI = util.BoolPtr(true)
 	}
+	if opts.Quiet {
+		section.Quiet = util.BoolPtr(true)
+	}
+	if opts.SelectFirst {
+		section.SelectFirst = util.BoolPtr(true)
+	}
 	return section
 }
 

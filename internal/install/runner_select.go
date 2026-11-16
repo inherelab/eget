@@ -74,7 +74,7 @@ func (r *InstallRunner) resolveCandidate(target string, candidates []string, opt
 		}
 	}
 
-	if opts.Quiet {
+	if opts.SelectFirst {
 		return candidates[0], nil
 	}
 	if r.Prompt == nil {

@@ -382,6 +382,7 @@ Common fields:
 - `is_gui`: install as GUI package, using `gui_target` semantics.
 - `install_mode`: optional GUI install mode. With `is_gui = true`, selected `.exe` and `.msi` files default to `installer` unless the selected asset or extracted file name contains `portable`. Set `portable` or `installer` here to override detection for a package; for one-off installs, use `install --gui --install-mode portable|installer ...`.
 - `quiet`: reduce output for this package.
+- `select_first`: automatically choose the first asset when multiple candidates remain.
 - `upgrade_only`: only update when an installed package already exists.
 - `ignore_update`: skip this package in `list --outdated`, `update --check`, and `update --all`. Useful for static URL packages that have no tag information to compare. An explicit `eget update <name>` on such a package reports the skip instead of checking and failing it.
 

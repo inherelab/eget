@@ -70,10 +70,10 @@ func TestResolveCandidateDecodesPromptChoices(t *testing.T) {
 	assert.Eq(t, candidates[0], got)
 }
 
-func TestResolveCandidateQuietSelectsFirstWithoutPrompt(t *testing.T) {
+func TestResolveCandidateSelectFirstWithoutPrompt(t *testing.T) {
 	runner := &InstallRunner{Stderr: io.Discard}
 	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {
-		t.Fatalf("expected --quiet to avoid prompt, got choices %#v", choices)
+		t.Fatalf("expected --select-first to avoid prompt, got choices %#v", choices)
 		return 0, nil
 	}
 	candidates := []string{
@@ -81,10 +81,29 @@ func TestResolveCandidateQuietSelectsFirstWithoutPrompt(t *testing.T) {
 		"https://example.com/WinDjView%20Extended%204.0.1.zip",
 	}
 
-	got, err := runner.resolveCandidate("windjviewextended", candidates, Options{Quiet: true}, "4.1")
+	got, err := runner.resolveCandidate("windjviewextended", candidates, Options{SelectFirst: true}, "4.1")
 
 	assert.NoErr(t, err)
 	assert.Eq(t, candidates[0], got)
+}
+
+func TestResolveCandidateQuietStillPrompts(t *testing.T) {
+	prompted := false
+	runner := &InstallRunner{Stderr: io.Discard}
+	runner.Prompt = func(title, filterPrompt string, choices []string) (int, error) {
+		prompted = true
+		return 1, nil
+	}
+	candidates := []string{
+		"https://example.com/tool-windows-amd64.zip",
+		"https://example.com/tool-linux-amd64.zip",
+	}
+
+	got, err := runner.resolveCandidate("tool", candidates, Options{Quiet: true}, "1.0")
+
+	assert.NoErr(t, err)
+	assert.True(t, prompted)
+	assert.Eq(t, candidates[1], got)
 }
 
 func TestResolveCandidateAutoSelectsWindowsMSVCVariant(t *testing.T) {

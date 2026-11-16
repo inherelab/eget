@@ -226,6 +226,9 @@ func extractOptionsMap(opts install.Options, isGUI bool) map[string]interface{} 
 	if opts.Quiet {
 		recorded["quiet"] = true
 	}
+	if opts.SelectFirst {
+		recorded["select_first"] = true
+	}
 	if opts.DownloadOnly {
 		recorded["download_only"] = true
 	}

@@ -33,6 +33,7 @@ func optionsFromInstalledEntry(entry storepkg.Entry) install.Options {
 	opts.StripComponents, _ = intOption(entry.Options, "strip_components")
 	opts.IsGUI, _ = boolOption(entry.Options, "is_gui")
 	opts.Quiet, _ = boolOption(entry.Options, "quiet")
+	opts.SelectFirst, _ = boolOption(entry.Options, "select_first")
 	opts.DownloadOnly, _ = boolOption(entry.Options, "download_only")
 	opts.UpgradeOnly, _ = boolOption(entry.Options, "upgrade_only")
 	opts.Source, _ = boolOption(entry.Options, "download_source", "source")
@@ -88,6 +89,9 @@ func applyUpdateCLIOverrides(base, cli install.Options) install.Options {
 	}
 	if cli.Quiet {
 		base.Quiet = true
+	}
+	if cli.SelectFirst {
+		base.SelectFirst = true
 	}
 	if cli.Retries > 0 {
 		base.Retries = cli.Retries

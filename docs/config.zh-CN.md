@@ -368,6 +368,7 @@ strip_components = 1
 - `is_gui`: 按 GUI package 处理，使用 `gui_target` 相关语义。
 - `install_mode`: 可选 GUI 安装模式。配合 `is_gui = true` 时，最终选中的 `.exe` / `.msi` 默认按 `installer` 处理；如果最终选中的 asset 或归档内文件名包含 `portable`，则自动按免安装模式处理。可在这里设置 `portable` 或 `installer` 覆盖 package 自动判断；一次性安装可使用 `install --gui --install-mode portable|installer ...`。
 - `quiet`: 减少当前 package 的输出。
+- `select_first`: 存在多个资源候选时自动选择第一项。
 - `upgrade_only`: 仅当 package 已安装时才更新。
 - `ignore_update`: 在 `list --outdated`、`update --check`、`update --all` 中跳过当前 package。适合没有 tag 信息可比较的静态 URL package。显式 `eget update <name>` 更新该 package 时会提示跳过，不会执行检查。
 

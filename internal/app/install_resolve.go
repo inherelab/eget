@@ -213,6 +213,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		Name:             stringOpt(cli.Name),
 		Prerelease:       boolOpt(cli.Prerelease),
 		Quiet:            boolOpt(cli.Quiet),
+		SelectFirst:      boolOpt(cli.SelectFirst),
 		RenameFiles:      mapOpt(cli.RenameFiles),
 		ShowHash:         boolOpt(cli.Hash),
 		StripComponents:  intOpt(cli.StripComponents, cli.StripComponents > 0),
@@ -318,6 +319,7 @@ func (s Service) resolveInstallOptionsWithConfig(cfg *cfgpkg.File, target string
 		All:              merged.ExtractAll,
 		StripComponents:  merged.StripComponents,
 		Quiet:            merged.Quiet,
+		SelectFirst:      merged.SelectFirst,
 		DownloadOnly:     merged.DownloadOnly,
 		// Silent and DeferInstaller are caller-only decisions: the config file has
 		// no say, so they are copied straight from the caller and must not be lost

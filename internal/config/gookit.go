@@ -367,6 +367,9 @@ func sectionToMap(section Section) map[string]any {
 	if section.Quiet != nil {
 		data["quiet"] = *section.Quiet
 	}
+	if section.SelectFirst != nil {
+		data["select_first"] = *section.SelectFirst
+	}
 	if len(section.RenameFiles) > 0 {
 		data["rename_files"] = util.CloneStringMap(section.RenameFiles)
 	}

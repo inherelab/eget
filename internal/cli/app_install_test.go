@@ -183,6 +183,45 @@ func TestMain_StripComponentsFlagBindsInstallDownloadAndAdd(t *testing.T) {
 	}
 }
 
+func TestMain_SelectFirstFlagBindsInstallDownloadAddAndUpdate(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"install", []string{"install", "--select-first", "owner/repo"}},
+		{"download", []string{"download", "--select-first", "owner/repo"}},
+		{"add", []string{"add", "--select-first", "owner/repo"}},
+		{"update", []string{"update", "--select-first", "owner/repo"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := make([]commandCall, 0, 1)
+			handler := func(name string, options any) error {
+				calls = append(calls, commandCall{name: name, options: options})
+				return nil
+			}
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := newApp(handler, &stdout, &stderr).RunWithArgs(tt.args)
+			assert.NoErr(t, err)
+			assert.Eq(t, 1, len(calls))
+			switch opts := calls[0].options.(type) {
+			case *InstallOptions:
+				assert.True(t, opts.SelectFirst)
+			case *DownloadOptions:
+				assert.True(t, opts.SelectFirst)
+			case *AddOptions:
+				assert.True(t, opts.SelectFirst)
+			case *UpdateOptions:
+				assert.True(t, opts.SelectFirst)
+			default:
+				t.Fatalf("unexpected options type %T", calls[0].options)
+			}
+		})
+	}
+}
+
 func TestMain_GUIFlagBindsInstallAndAdd(t *testing.T) {
 	tests := []struct {
 		name string

@@ -57,6 +57,7 @@ type Options struct {
 	All                  bool
 	StripComponents      int
 	Quiet                bool
+	SelectFirst          bool
 	DownloadOnly         bool
 	FallbackVersions     int
 	Retries              int
