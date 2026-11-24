@@ -141,9 +141,33 @@ func TestGitHubClientLatestReleaseInfoCanIncludePrerelease(t *testing.T) {
 	tag, publishedAt, err := client.LatestReleaseInfo("pkgforge/aeris", true)
 
 	assert.NoErr(t, err)
-	assert.Eq(t, "https://api.github.com/repos/pkgforge/aeris/releases?per_page=1", requestedURL)
+	assert.Eq(t, "https://api.github.com/repos/pkgforge/aeris/releases?per_page=30", requestedURL)
 	assert.Eq(t, "v0.12.0-beta", tag)
 	assert.Eq(t, time.Date(2026, 4, 21, 14, 10, 17, 0, time.UTC), publishedAt)
+}
+
+// A release drafted earlier but published later must win over an older publish
+// that the API returned first.
+func TestGitHubClientLatestReleaseInfoPicksNewestPublished(t *testing.T) {
+	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {
+		payload := `[
+			{"tag_name":"v1.9.0","prerelease":true,"published_at":"2026-11-21T17:31:33Z","assets":[]},
+			{"tag_name":"v1.8.0","prerelease":true,"published_at":"2026-11-21T14:33:13Z","assets":[]},
+			{"tag_name":"v1.10.0-rc.1","prerelease":true,"published_at":"2026-11-22T08:00:00Z","assets":[]}
+		]`
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(payload)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	tag, publishedAt, err := client.LatestReleaseInfo("colitu/linux", true)
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "v1.10.0-rc.1", tag)
+	assert.Eq(t, time.Date(2026, 11, 22, 8, 0, 0, 0, time.UTC), publishedAt)
 }
 
 func TestGitHubClientReleaseInfoUsesTagEndpoint(t *testing.T) {

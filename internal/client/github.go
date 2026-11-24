@@ -114,16 +114,39 @@ func (c *GitHubClient) RepoInfo(repo string) (RepoInfo, error) {
 	}, nil
 }
 
+// latestReleaseScanWindow is how many releases are inspected when the newest
+// published release has to be picked instead of trusting the API order.
+const latestReleaseScanWindow = 30
+
+// newestPublishedRelease returns the release with the newest publish time. Zero
+// publish times never win, so a list without them keeps the API order.
+func newestPublishedRelease(releases []Release) (Release, bool) {
+	if len(releases) == 0 {
+		return Release{}, false
+	}
+	best := releases[0]
+	for _, item := range releases[1:] {
+		if item.PublishedAt.After(best.PublishedAt) {
+			best = item
+		}
+	}
+	return best, true
+}
+
 func (c *GitHubClient) LatestRelease(repo string, includePrerelease bool) (Release, error) {
 	if includePrerelease {
-		releases, err := c.ListReleases(repo, 1, true)
+		// The API lists releases by created_at, which is not the publish order: a
+		// release drafted early and published later would look older. Pick the
+		// newest published release from a window instead of the first item.
+		releases, err := c.ListReleases(repo, latestReleaseScanWindow, true)
 		if err != nil {
 			return Release{}, err
 		}
-		if len(releases) == 0 {
+		release, ok := newestPublishedRelease(releases)
+		if !ok {
 			return Release{}, fmt.Errorf("no releases found")
 		}
-		return releases[0], nil
+		return release, nil
 	}
 
 	var payload struct {
