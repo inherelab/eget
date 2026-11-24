@@ -463,6 +463,50 @@ func TestListOutdatedPackagesDetectsExplicitTagAssetChange(t *testing.T) {
 	assert.Eq(t, "nightly", items[0].LatestTag)
 }
 
+func TestListOutdatedPackagesTreatsVPrefixAsSameRelease(t *testing.T) {
+	tests := []struct {
+		name      string
+		installed string
+		latest    string
+		outdated  bool
+	}{
+		{name: "installed bare version", installed: "1.9.0", latest: "v1.9.0"},
+		{name: "latest bare version", installed: "v1.9.0", latest: "1.9.0"},
+		{name: "tag case differs", installed: "V1.9.0", latest: "v1.9.0"},
+		{name: "newer release", installed: "1.9.0", latest: "v1.10.0", outdated: true},
+		{name: "prerelease suffix differs", installed: "1.9.0-rc1", latest: "v1.9.0", outdated: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := ListService{
+				LoadConfig: func() (*cfgpkg.File, error) {
+					return cfgpkg.NewFile(), nil
+				},
+				LoadInstalled: func() (*storepkg.Config, error) {
+					return &storepkg.Config{Installed: map[string]storepkg.Entry{
+						"colitu/linux": {Repo: "colitu/linux", Tag: tt.installed},
+					}}, nil
+				},
+				LatestInfo: func(target LatestCheckTarget) (LatestInfo, error) {
+					return LatestInfo{Tag: tt.latest}, nil
+				},
+			}
+
+			items, failures, checked, err := svc.ListOutdatedPackages()
+
+			assert.NoErr(t, err)
+			assert.Eq(t, 0, len(failures))
+			assert.Eq(t, 1, checked)
+			if tt.outdated {
+				assert.Eq(t, 1, len(items))
+				return
+			}
+			assert.Eq(t, 0, len(items))
+		})
+	}
+}
+
 func TestListOutdatedPackagesChecksForgeRepo(t *testing.T) {
 	svc := ListService{
 		LoadConfig: func() (*cfgpkg.File, error) {

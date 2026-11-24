@@ -638,7 +638,7 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 	if latest.Tag == "" {
 		return outdatedCheckResult{}
 	}
-	if latest.Tag == item.InstalledTag && !explicitTagAssetChanged(item, latest) {
+	if sameReleaseTag(latest.Tag, item.InstalledTag) && !explicitTagAssetChanged(item, latest) {
 		return outdatedCheckResult{}
 	}
 
@@ -652,6 +652,23 @@ func checkOutdatedItem(item ListItem, latestInfo LatestInfoFunc) outdatedCheckRe
 		PublishedAt:  latest.PublishedAt,
 	}
 	return outdatedCheckResult{outdated: &outdated}
+}
+
+// sameReleaseTag reports whether two tags name the same release. An installed
+// record can hold the bare version while the release tag carries a "v" prefix
+// (or the other way around), and GitHub tags are case-insensitive: comparing the
+// raw strings reported "1.9.0 -> v1.9.0" as an update of the same version.
+func sameReleaseTag(a, b string) bool {
+	a, b = normalizeReleaseTag(a), normalizeReleaseTag(b)
+	return a != "" && a == b
+}
+
+func normalizeReleaseTag(tag string) string {
+	tag = strings.ToLower(strings.TrimSpace(tag))
+	if len(tag) > 1 && tag[0] == 'v' && tag[1] >= '0' && tag[1] <= '9' {
+		return tag[1:]
+	}
+	return tag
 }
 
 func explicitTagAssetChanged(item ListItem, latest LatestInfo) bool {
