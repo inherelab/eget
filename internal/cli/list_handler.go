@@ -167,7 +167,7 @@ func listPackageRow(item app.ListItem) []any {
 		item.Repo,
 		listPackageVersion(item),
 		packageSource(item),
-		formatListTime(item.InstalledAt),
+		listItemTime(item),
 	}
 }
 
@@ -211,6 +211,15 @@ func packageSource(item app.ListItem) string {
 
 func formatListTime(value time.Time) string {
 	return clirender.CompactTime(value)
+}
+
+// listItemTime renders the "Update Time" column: the last successful update,
+// falling back to the install time when the package was never updated.
+func listItemTime(item app.ListItem) string {
+	if !item.UpdatedAt.IsZero() {
+		return formatListTime(item.UpdatedAt)
+	}
+	return formatListTime(item.InstalledAt)
 }
 
 func formatOutdatedTime(value time.Time) string {

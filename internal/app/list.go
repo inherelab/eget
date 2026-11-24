@@ -30,6 +30,7 @@ type ListItem struct {
 	InstalledTag   string
 	Installed      bool
 	InstalledAt    time.Time
+	UpdatedAt      time.Time
 	Asset          string
 	AssetID        int64
 	AssetSize      int64
@@ -206,6 +207,7 @@ func (s ListService) ListPackages() ([]ListItem, error) {
 			}
 			item.InstalledTag = entry.Tag
 			item.InstalledAt = entry.InstalledAt
+			item.UpdatedAt = entry.UpdatedAt
 			item.Asset = entry.Asset
 			item.AssetID = entry.AssetID
 			item.AssetSize = entry.AssetSize

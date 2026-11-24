@@ -237,6 +237,41 @@ func TestHandleListOutdatedSkipsProxyNoticeWhenGitHubAPIExcluded(t *testing.T) {
 	assert.NotContains(t, gotErr, "http_proxy for GitHub API request")
 }
 
+func TestHandleListShowsUpdatedAtWhenPresent(t *testing.T) {
+	installed := time.Date(2026, 11, 13, 4, 31, 34, 0, time.UTC)
+	updated := time.Date(2026, 11, 22, 9, 15, 2, 0, time.UTC)
+	svc := &cliService{
+		listService: app.ListService{
+			LoadConfig: func() (*cfgpkg.File, error) {
+				cfg := cfgpkg.NewFile()
+				cfg.Packages["linux"] = cfgpkg.Section{Repo: util.StringPtr("colitu/linux")}
+				return cfg, nil
+			},
+			LoadInstalled: func() (*storepkg.Config, error) {
+				return &storepkg.Config{Installed: map[string]storepkg.Entry{
+					"linux": {Repo: "colitu/linux", Tag: "v1.9.0", InstalledAt: installed, UpdatedAt: updated},
+				}}, nil
+			},
+		},
+	}
+
+	var out bytes.Buffer
+	ccolor.SetOutput(&out)
+	defer ccolor.SetOutput(os.Stdout)
+
+	if err := svc.handleList(&ListOptions{}); err != nil {
+		t.Fatalf("handle list: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "2026-11-22 09:15:02") {
+		t.Fatalf("expected the update time to be the last update, got %q", got)
+	}
+	if strings.Contains(got, "2026-11-13 04:31:34") {
+		t.Fatalf("expected the install time to be replaced by the update time, got %q", got)
+	}
+}
+
 func TestHandleListPrintsOnlyInstalledPackagesByDefault(t *testing.T) {
 	now := time.Date(2026, 5, 5, 13, 20, 19, 0, time.FixedZone("CST", 8*60*60))
 	svc := &cliService{
