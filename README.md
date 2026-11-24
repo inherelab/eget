@@ -419,10 +419,10 @@ The target argument accepted by `install` and `download` can be:
   monorepo, which marks them prerelease to protect the repository-wide Latest pointer) the
   newest prerelease is used, so a tag pattern does not need `-p`.
 - `--system`: Override the target OS/arch, for example `windows/amd64` or `linux/arm64`.
-- `--to`: Set the install or download output path; accepts either a directory or a full file path.
+- `--to`: Set the install or download output path. A path that names an existing directory or ends with a separator receives the extracted files; an explicit path with a file extension is written as that single file. With `--extract-all` or multi-pattern `--file`, a file target that cannot hold the whole result is an error instead of a directory carrying the file name.
 - `--file`: Select file(s) to extract from an archive; supports comma-separated file names or glob patterns such as `README.md,LICENSE`. Exclusions can use `^`, such as `*.exe,^*x86*,^*.sig`; exclude-only expressions such as `^*.sig` match all files except excluded entries. Use `REG:<expr>` for a Go regular-expression include or `^REG:<expr>` for an exclude; regexes match both normalized archive paths and basenames. For 7z-readable `.exe` installers, system 7z is required.
 - `--asset`: Filter release assets by keyword; multiple filters can be separated by commas. Regex is also supported with the `REG:` prefix, for example `REG:\\.deb$`. Prefix and suffix matching are supported with `PRE:` and `SUF:`, for example `PRE:codex` or `SUF:.zip`. Exclusions can use `^`, such as `^REG:...` or `^SUF:.sha256`. Filters can be scoped to the target OS with a Go OS prefix such as `windows:zip`, `linux:tar.gz`, or `darwin:SUF:.zip`; scoped filters only apply when the current `--system` OS matches.
-- `--rename`: Rename extracted files with comma-separated `from=to` pairs, for example `--rename "tool-windows-amd64.exe=tool.exe"`. This works with `--file` and `--extract-all`, and is persisted by `install --add`.
+- `--rename`: Rename extracted files with comma-separated `from=to` pairs, for example `--rename "tool-windows-amd64.exe=tool.exe"`. The `from` side accepts the same glob patterns as `--file`, matched against the archive path or the base name, so `--rename "MobaXterm_Personal_*.exe=MobaXterm.exe"` works; a literal key wins over a glob. An invalid glob and a rule that renamed nothing are both reported instead of passing silently. This works with `--file` and `--extract-all`, and is persisted by `install --add`.
 - `--source`: Download the source archive instead of a prebuilt binary release.
 - `--extract-all`, `--ea`: Extract all files from the archive instead of selecting a single target file.
 - `--strip-components N`: Remove `N` leading archive path components when extracting all files, useful for archives that wrap contents in a versioned top-level directory.
@@ -492,7 +492,7 @@ Global options:
 Notes:
 
 - `install --name` can rename a single executable asset, for example installing `chlog-windows-amd64.exe` as `chlog.exe`.
-- `install --rename` can rename selected files while extracting multiple files; the config field is `rename_files`, for example `rename_files = { "codex-x86_64-pc-windows-msvc.exe" = "codex.exe" }`.
+- `install --rename` can rename selected files while extracting multiple files; the config field is `rename_files`, for example `rename_files = { "codex-x86_64-pc-windows-msvc.exe" = "codex.exe" }`. Glob keys such as `rename_files = { "MobaXterm_Personal_*.exe" = "MobaXterm.exe" }` are supported for single-match patterns.
 - `install --add` only applies to repo targets and appends the managed package definition after a successful install.
 - `global.gui_target` is used only for portable GUI applications. GUI installers such as `.msi` or `setup.exe` are launched and do not record a final install directory. Use `install_mode = "installer"` for installer `.exe` assets with product/version/platform names rather than setup-style names.
 - `download` stores the raw downloaded asset by default; extraction only happens when `--file` or `--extract-all` is provided.

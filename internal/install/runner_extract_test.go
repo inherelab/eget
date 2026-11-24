@@ -6,12 +6,189 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/gookit/goutil/x/assert"
 	"github.com/gookit/goutil/x/ccolor"
 )
+
+func TestRunExtractAllAppliesRenameGlobPattern(t *testing.T) {
+	assetURL := "https://example.com/MobaXterm_Portable_v26.6.zip"
+	archive := zipBytes(t, map[string]string{
+		"MobaXterm_Personal_26.6.exe": "moba",
+		"CygUtils.plugin":             "plugin",
+	})
+	outputDir := t.TempDir()
+
+	svc := NewDefaultService(nil, nil)
+	svc.SystemDetectorFactory = func(goos, goarch string) (Detector, error) {
+		return &fakeDetector{name: assetURL}, nil
+	}
+	origGetWithOptions := downloadGetWithOptions
+	defer func() { downloadGetWithOptions = origGetWithOptions }()
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(archive)),
+		}, nil
+	}
+
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	result, err := runner.Run(assetURL, Options{
+		All:         true,
+		Output:      outputDir,
+		System:      "windows/amd64",
+		RenameFiles: map[string]string{"MobaXterm_Personal_*.exe": "MobaXterm.exe"},
+	})
+	assert.NoErr(t, err)
+
+	target := filepath.Join(outputDir, "MobaXterm.exe")
+	info, err := os.Stat(target)
+	assert.NoErr(t, err)
+	assert.False(t, info.IsDir())
+	if _, err := os.Stat(filepath.Join(outputDir, "MobaXterm_Personal_26.6.exe")); !os.IsNotExist(err) {
+		t.Fatalf("expected the original asset name to be renamed, stat err=%v", err)
+	}
+	assert.Contains(t, result.ExtractedFiles, target)
+}
+
+func TestRunExtractAllWritesSingleFileToExplicitFileTarget(t *testing.T) {
+	assetURL := "https://example.com/MobaXterm_Portable_v26.6.zip"
+	target := filepath.Join(t.TempDir(), "MobaXterm.exe")
+	direct := &writingDirectAllExtractor{files: map[string]string{
+		"MobaXterm_Personal_26.6.exe": "moba",
+	}}
+
+	defer stubDownloadBody(t, []byte("archive"))()
+	runner := NewRunner(directAllService(assetURL, direct))
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	result, err := runner.Run(assetURL, Options{All: true, Output: target, OutputExplicit: true})
+	assert.NoErr(t, err)
+
+	info, err := os.Stat(target)
+	if err != nil {
+		t.Fatalf("expected the extracted file at the file target: %v", err)
+	}
+	assert.False(t, info.IsDir())
+	body, err := os.ReadFile(target)
+	assert.NoErr(t, err)
+	assert.Eq(t, "moba", string(body))
+	assert.Eq(t, []string{target}, result.ExtractedFiles)
+	entries, err := os.ReadDir(filepath.Dir(target))
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, len(entries))
+}
+
+func TestRunExtractAllRejectsMultipleFilesForExplicitFileTarget(t *testing.T) {
+	assetURL := "https://example.com/MobaXterm_Portable_v26.6.zip"
+	target := filepath.Join(t.TempDir(), "MobaXterm.exe")
+	direct := &writingDirectAllExtractor{files: map[string]string{
+		"MobaXterm_Personal_26.6.exe": "moba",
+		"CygUtils.plugin":             "plugin",
+	}}
+
+	defer stubDownloadBody(t, []byte("archive"))()
+	runner := NewRunner(directAllService(assetURL, direct))
+	runner.Stdout = io.Discard
+	runner.Stderr = io.Discard
+	_, err := runner.Run(assetURL, Options{All: true, Output: target, OutputExplicit: true})
+
+	assert.ErrMsgContains(t, err, "is a file target but 2 files were extracted")
+}
+
+func TestRunWarnsAboutUnmatchedRenamePattern(t *testing.T) {
+	assetURL := "https://example.com/MobaXterm_Portable_v26.6.zip"
+	archive := zipBytes(t, map[string]string{
+		"MobaXterm_Personal_26.6.exe": "moba",
+	})
+	outputDir := t.TempDir()
+
+	svc := NewDefaultService(nil, nil)
+	svc.SystemDetectorFactory = func(goos, goarch string) (Detector, error) {
+		return &fakeDetector{name: assetURL}, nil
+	}
+	defer stubDownloadBody(t, archive)()
+	var stderr bytes.Buffer
+	runner := NewRunner(svc)
+	runner.Stdout = io.Discard
+	runner.Stderr = &stderr
+	_, err := runner.Run(assetURL, Options{
+		All:         true,
+		Output:      outputDir,
+		System:      "windows/amd64",
+		RenameFiles: map[string]string{"missing-*.dll": "missing.dll"},
+	})
+	assert.NoErr(t, err)
+	assert.Contains(t, stderr.String(), "missing-*.dll")
+	assert.Contains(t, stderr.String(), "matched no extracted file")
+}
+
+// stubDownloadBody serves body for every download request and restores the hook.
+func stubDownloadBody(t *testing.T, body []byte) func() {
+	t.Helper()
+	origGetWithOptions := downloadGetWithOptions
+	downloadGetWithOptions = func(url string, opts Options) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(body)),
+		}, nil
+	}
+	return func() { downloadGetWithOptions = origGetWithOptions }
+}
+
+// writingDirectAllExtractor creates the files it reports, like a real extract-all.
+type writingDirectAllExtractor struct {
+	files map[string]string
+}
+
+func (f *writingDirectAllExtractor) Extract(io.ReadSeeker, int64, bool) (ExtractedFile, []ExtractedFile, error) {
+	return ExtractedFile{}, nil, nil
+}
+
+func (f *writingDirectAllExtractor) ExtractAllTo(_ io.ReadSeeker, _ int64, output string) ([]string, error) {
+	paths := make([]string, 0, len(f.files))
+	for name, body := range f.files {
+		target := filepath.Join(output, name)
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(target, []byte(body), 0o644); err != nil {
+			return nil, err
+		}
+		paths = append(paths, target)
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
+func (f *writingDirectAllExtractor) ExtractAllToWithOptions(source io.ReadSeeker, size int64, output string, _ ArchiveExtractOptions) ([]string, error) {
+	return f.ExtractAllTo(source, size, output)
+}
+
+func directAllService(assetURL string, direct *writingDirectAllExtractor) *Service {
+	svc := NewService()
+	svc.AllDetectorFactory = func() Detector {
+		return &fakeDetector{name: assetURL}
+	}
+	svc.ExtractorFactory = func(filename, tool string, chooser any) any {
+		return direct
+	}
+	svc.System7zPathResolver = func(configured string) string {
+		return ""
+	}
+	svc.GlobChooserFactory = func(pattern string) (any, error) {
+		return NewFileChooser(pattern)
+	}
+	svc.NoVerifierFactory = func() Verifier {
+		return &fakeVerifier{}
+	}
+	return svc
+}
 
 func TestRunExtractAllUsesDirectExtractorWithoutListing(t *testing.T) {
 	assetURL := "https://example.com/tool.7z"

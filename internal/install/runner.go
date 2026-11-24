@@ -173,6 +173,9 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err := validateInstallAction(opts); err != nil {
 		return RunResult{}, err
 	}
+	if err := validateRenamePatterns(opts.RenameFiles); err != nil {
+		return RunResult{}, err
+	}
 
 	downloaded, err := r.downloadBody(url, opts)
 	if err != nil {
@@ -212,6 +215,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 		if err != nil {
 			return RunResult{}, err
 		}
+		warnUnmatchedRenamePatterns(r.Stderr, opts.RenameFiles, result.ExtractedFiles)
 		return withAssetMetadata(result), nil
 	}
 
@@ -245,6 +249,7 @@ func (r *InstallRunner) Run(target string, opts Options) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, err
 	}
+	warnUnmatchedRenamePatterns(r.Stderr, opts.RenameFiles, result.ExtractedFiles)
 	return withAssetMetadata(result), nil
 }
 
@@ -282,6 +287,9 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 	if portableGUIArchiveExtractAll(url, opts) {
 		opts.All = true
 	}
+	// Read the file target before extraction, which creates the --to directory
+	// tree for an extract-all run.
+	fileTarget := explicitFileTarget(opts)
 	assetName := firstNonEmpty(downloaded.Filename, assetFilename(url))
 	extractor, err := SelectExtractorAs[Extractor](r.Service, assetName, tool, &opts)
 	if err != nil {
@@ -319,6 +327,12 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 			}
 			if err != nil {
 				return RunResult{}, err
+			}
+			if fileTarget != "" {
+				paths, err = collectSingleFileOutput(fileTarget, paths)
+				if err != nil {
+					return RunResult{}, err
+				}
 			}
 			if opts.IsGUI && opts.InstallMode == InstallModePortable && !opts.OutputExplicit {
 				paths = hoistPortableAppBundle(effectiveOutput(opts), opts.GuiTarget, paths)
@@ -407,8 +421,11 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 		return result, nil
 	}
 
+	// extract-all writes into a directory tree, so a file target only fits the
+	// single-file result; collectSingleFileOutput reports the other case.
+	pathAll := opts.All && fileTarget == ""
 	extract := func(file ExtractedFile, multiple bool) (string, error) {
-		out, err := outputPath(file, effectiveOutput(opts), opts.All, opts.Name, opts.OutputExplicit, opts.RenameFiles)
+		out, err := outputPath(file, effectiveOutput(opts), pathAll, opts.Name, opts.OutputExplicit, opts.RenameFiles)
 		if err != nil {
 			return "", err
 		}
@@ -427,6 +444,9 @@ func (r *InstallRunner) extractDownloadedBody(url, tool string, downloaded downl
 
 	if opts.All {
 		multiple := len(bins) > 1
+		if multiple && fileTarget != "" {
+			return RunResult{}, fileTargetMultipleFilesError(fileTarget, len(bins))
+		}
 		if multiple {
 			ccolor.Fprintln(output, "✅ Extracted files:")
 		}

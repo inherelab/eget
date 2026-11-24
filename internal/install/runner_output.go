@@ -1,11 +1,16 @@
 package install
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/gobwas/glob"
+	"github.com/gookit/goutil/x/ccolor"
 	"github.com/inherelab/eget/internal/filekind"
 	"github.com/inherelab/eget/internal/platform"
 	"github.com/inherelab/eget/internal/util"
@@ -128,7 +133,7 @@ func renamedOutputName(file ExtractedFile, renameFiles map[string]string) string
 	if len(renameFiles) == 0 {
 		return ""
 	}
-	for _, key := range []string{file.ArchiveName, file.Name, filepath.Base(file.ArchiveName), filepath.Base(file.Name)} {
+	for _, key := range renameFileKeys(file) {
 		if key == "" {
 			continue
 		}
@@ -142,7 +147,160 @@ func renamedOutputName(file ExtractedFile, renameFiles map[string]string) string
 			}
 		}
 	}
+	return renamedByGlobPattern(file, renameFiles)
+}
+
+func renameFileKeys(file ExtractedFile) []string {
+	return []string{file.ArchiveName, file.Name, filepath.Base(file.ArchiveName), filepath.Base(file.Name)}
+}
+
+// renamedByGlobPattern applies rename rules whose source carries a glob, using
+// the same matching rules as --file: the pattern matches the normalized archive
+// path or the file base name. Several matching rules resolve in sorted order so
+// the result does not depend on map iteration.
+func renamedByGlobPattern(file ExtractedFile, renameFiles map[string]string) string {
+	names := make([]string, 0, 2)
+	for _, name := range []string{file.ArchiveName, file.Name} {
+		if name == "" {
+			continue
+		}
+		names = append(names, archivePathForCompare(name))
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	sources := sortedRenameSources(renameFiles, true)
+	for _, source := range sources {
+		renamed := renameFiles[source]
+		pattern, err := glob.Compile(archivePathForCompare(source), '/')
+		if err != nil {
+			// Invalid patterns are rejected up front by validateRenamePatterns.
+			continue
+		}
+		for _, name := range names {
+			if pattern.Match(name) || pattern.Match(path.Base(name)) {
+				return renamed
+			}
+		}
+	}
 	return ""
+}
+
+// validateRenamePatterns rejects rename rules with an unusable glob instead of
+// silently leaving the renamed files untouched.
+func validateRenamePatterns(renameFiles map[string]string) error {
+	for _, source := range sortedRenameSources(renameFiles, true) {
+		if _, err := glob.Compile(archivePathForCompare(source), '/'); err != nil {
+			return fmt.Errorf("invalid rename pattern %q: %w", source, err)
+		}
+	}
+	return nil
+}
+
+// warnUnmatchedRenamePatterns reports rename rules that renamed nothing in this
+// run, so a typo or an unsupported pattern does not pass silently.
+func warnUnmatchedRenamePatterns(w io.Writer, renameFiles map[string]string, outputs []string) {
+	if w == nil || len(renameFiles) == 0 || len(outputs) == 0 {
+		return
+	}
+	targets := make(map[string]bool, len(outputs))
+	for _, out := range outputs {
+		if out == "" || out == "-" {
+			continue
+		}
+		targets[archivePathForCompare(filepath.Base(out))] = true
+	}
+	for _, source := range sortedRenameSources(renameFiles, false) {
+		if target := archivePathForCompare(filepath.Base(renameFiles[source])); targets[target] {
+			continue
+		}
+		ccolor.Fprintf(w, "<yellow>Warning: rename rule %q matched no extracted file</>\n", source)
+	}
+}
+
+// sortedRenameSources lists rename rule sources in a stable order. With
+// onlyGlob only rules that carry a glob are listed.
+func sortedRenameSources(renameFiles map[string]string, onlyGlob bool) []string {
+	sources := make([]string, 0, len(renameFiles))
+	for source, renamed := range renameFiles {
+		if renamed == "" || (onlyGlob && !renamePatternHasGlob(source)) {
+			continue
+		}
+		sources = append(sources, source)
+	}
+	sort.Strings(sources)
+	return sources
+}
+
+func renamePatternHasGlob(source string) bool {
+	return strings.ContainsAny(source, "*?[{")
+}
+
+// explicitFileTarget returns the --to path when the user named a file rather
+// than a directory: the target is explicit, is neither an existing directory nor
+// written with a trailing separator, and carries a file extension. A name
+// without an extension stays a directory, the way --extract-all and multi-pattern
+// --file targets have always been read.
+func explicitFileTarget(opts Options) string {
+	if !opts.OutputExplicit {
+		return ""
+	}
+	out := effectiveOutput(opts)
+	if out == "" || out == "-" || outputIsDirectoryTarget(out) {
+		return ""
+	}
+	if filepath.Ext(filepath.Base(out)) == "" {
+		return ""
+	}
+	return out
+}
+
+// collectSingleFileOutput moves the only extracted file to the file target the
+// user asked for. Extract-all always builds a directory tree first, so that tree
+// is dropped again once the file sits at the target path.
+func collectSingleFileOutput(target string, paths []string) ([]string, error) {
+	if len(paths) != 1 {
+		// The extract-all run filled a directory the file target never asked for.
+		_ = os.RemoveAll(target)
+		return nil, fileTargetMultipleFilesError(target, len(paths))
+	}
+	tmp := target + ".eget-extract"
+	if err := os.RemoveAll(tmp); err != nil {
+		return nil, err
+	}
+	if err := moveFile(paths[0], tmp); err != nil {
+		return nil, err
+	}
+	if err := os.RemoveAll(target); err != nil {
+		return nil, err
+	}
+	if err := moveFile(tmp, target); err != nil {
+		return nil, err
+	}
+	return []string{target}, nil
+}
+
+func fileTargetMultipleFilesError(target string, count int) error {
+	return fmt.Errorf("%s is a file target but %d files were extracted; use a directory target (with a trailing separator) or select one file with --file", target, count)
+}
+
+// moveFile renames src to dst and falls back to copy and remove when the two
+// paths live on different volumes or the destination already exists.
+func moveFile(src, dst string) error {
+	if src == dst {
+		return nil
+	}
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if err := copyFile(src, dst, info.Mode(), info.ModTime()); err != nil {
+		return err
+	}
+	return os.Remove(src)
 }
 
 func firstNonEmpty(values ...string) string {

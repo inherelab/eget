@@ -409,10 +409,10 @@ eget config set global.target ~/.local/bin
 
 - `--tag`: 指定发布版本标签，或标签模式；未提供时默认使用 `latest`。模式与 `--asset` 语法一致：`PRE:` / `SUF:` / `REG:`，普通值按锚定的前缀匹配（非子串包含）。标签模式会解析出标签匹配的最新 release，适合 monorepo 产品（仓库级 `latest` 指向别的产品时），例如 `eget install --tag PRE:cua-driver-rs-v trycua/cua`。使用模式安装会记录 `tag_policy = "pattern"`，因此 `update` 会重新解析最新匹配。普通标签会先尝试精确 release，再退化为锚定前缀匹配。优先匹配稳定版；若该产品只发布 pre-release（monorepo 常见做法，为保护仓库级 Latest 指针），会回退到最新 pre-release，因此标签模式不再需要 `-p`。
 - `--system`: 指定目标系统与架构，例如 `windows/amd64`、`linux/arm64`。
-- `--to`: 指定安装或下载输出路径；可传目录，也可传完整文件路径。
+- `--to`: 指定安装或下载输出路径；传已存在的目录或以分隔符结尾的路径表示输出目录，显式路径且带文件扩展名时按单个文件写入。配合 `--extract-all` 或多个 `--file` 模式时，若文件目标装不下全部结果会直接报错，不再静默创建同名目录。
 - `--file`: 指定归档内要提取的文件；支持逗号分隔多个文件或 glob 模式，例如 `README.md,LICENSE`。排除可用 `^`，例如 `*.exe,^*x86*,^*.sig`；只有排除项时（如 `^*.sig`）表示匹配除被排除条目外的全部文件。使用 `REG:<expr>` 添加 Go 正则包含规则，使用 `^REG:<expr>` 添加正则排除规则；正则同时匹配规范化后的归档路径和 basename。对 7z 可读取的 `.exe` 安装包使用时，需要系统 7z。
 - `--asset`: 指定资源过滤关键词；可用逗号分隔多个过滤条件。支持 `REG:` 前缀正则，例如 `REG:\\.deb$`。支持 `PRE:` 和 `SUF:` 前缀/后缀匹配，例如 `PRE:codex` 或 `SUF:.zip`。排除可用 `^`，例如 `^REG:...` 或 `^SUF:.sha256`。过滤条件可用 Go OS 前缀限定目标系统，例如 `windows:zip`、`linux:tar.gz`、`darwin:SUF:.zip`；仅当当前 `--system` 的 OS 匹配时生效。
-- `--rename`: 使用逗号分隔的 `from=to` 映射重命名解压文件，例如 `--rename "tool-windows-amd64.exe=tool.exe"`。可配合 `--file` 和 `--extract-all` 使用，并会被 `install --add` 持久化。
+- `--rename`: 使用逗号分隔的 `from=to` 映射重命名解压文件，例如 `--rename "tool-windows-amd64.exe=tool.exe"`。`from` 支持与 `--file` 相同的 glob 模式（匹配归档路径或 basename），因此 `--rename "MobaXterm_Personal_*.exe=MobaXterm.exe"` 可用；字面量键优先于 glob。非法 glob 与未命中任何文件的规则都会给出提示，不再静默跳过。可配合 `--file` 和 `--extract-all` 使用，并会被 `install --add` 持久化。
 - `--source`: 下载源码归档而不是预构建二进制。
 - `--extract-all`, `--ea`: 提取归档中的全部文件，而不是只选择一个目标文件。
 - `--strip-components N`: 解压全部文件时剥离归档内路径前 `N` 层，适用于归档内容被版本号顶层目录包裹的场景。
@@ -481,7 +481,7 @@ SourceForge 查询目标使用 `sourceforge:<project>`、`sourceforge:<project>/
 说明：
 
 - `install --name` 可用于指定单文件可执行资产的输出文件名，例如将 `chlog-windows-amd64.exe` 安装为 `chlog.exe`。
-- `install --rename` 可在解压多个文件时只重命名指定文件；配置字段为 `rename_files`，例如 `rename_files = { "codex-x86_64-pc-windows-msvc.exe" = "codex.exe" }`。
+- `install --rename` 可在解压多个文件时只重命名指定文件；配置字段为 `rename_files`，例如 `rename_files = { "codex-x86_64-pc-windows-msvc.exe" = "codex.exe" }`；配置中也支持 glob 键，例如 `rename_files = { "MobaXterm_Personal_*.exe" = "MobaXterm.exe" }`（适用于只匹配一个文件的情况）。
 - `install --add` 仅对 repo 目标生效，并在安装成功后追加托管包配置。
 - `global.gui_target` 只用于免安装 GUI 应用。`.msi`、`setup.exe` 等 GUI 安装器会被启动，但不会记录最终安装目录。对于文件名是产品/版本/平台格式而不是 setup 风格的 `.exe` 安装器，使用 `install_mode = "installer"`。
 - `download` 默认保存原始下载文件；只有设置了 `--file` 或 `--extract-all` 才会自动提取归档内容。

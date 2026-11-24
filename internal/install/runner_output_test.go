@@ -156,3 +156,120 @@ func TestOutputPathRejectsArchivePathTraversalForExtractAll(t *testing.T) {
 		t.Fatal("expected archive path traversal to be rejected")
 	}
 }
+
+func TestOutputPathAppliesGlobRenamePatternForExtractAll(t *testing.T) {
+	file := ExtractedFile{Name: "MobaXterm_Personal_26.6.exe", mode: 0o666}
+	got, err := outputPath(file, "bin", true, "", false, map[string]string{
+		"MobaXterm_Personal_*.exe": "MobaXterm.exe",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, filepath.Join("bin", "MobaXterm.exe"), got)
+}
+
+func TestOutputPathAppliesGlobRenamePatternOnArchivePath(t *testing.T) {
+	file := ExtractedFile{Name: "CygUtils.plugin", ArchiveName: "plugins/CygUtils.plugin", mode: 0o666}
+	got, err := outputPath(file, "bin", true, "", false, map[string]string{
+		"plugins/*.plugin": "CygUtils.plugin",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, filepath.Join("bin", "CygUtils.plugin"), got)
+}
+
+func TestOutputPathPrefersLiteralRenameOverGlobPattern(t *testing.T) {
+	file := ExtractedFile{Name: "MobaXterm_Personal_26.6.exe", mode: 0o666}
+	got, err := outputPath(file, "bin", true, "", false, map[string]string{
+		"*.exe":                       "any.exe",
+		"MobaXterm_Personal_26.6.exe": "MobaXterm.exe",
+	})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, filepath.Join("bin", "MobaXterm.exe"), got)
+}
+
+func TestValidateRenamePatternsRejectsInvalidGlob(t *testing.T) {
+	err := validateRenamePatterns(map[string]string{"MobaXterm_Personal_[*.exe": "MobaXterm.exe"})
+
+	if err == nil || !strings.Contains(err.Error(), "invalid rename pattern") {
+		t.Fatalf("expected invalid rename pattern error, got %v", err)
+	}
+	assert.NoErr(t, validateRenamePatterns(map[string]string{"MobaXterm_Personal_*.exe": "MobaXterm.exe"}))
+}
+
+func TestWarnUnmatchedRenamePatterns(t *testing.T) {
+	var buf bytes.Buffer
+
+	warnUnmatchedRenamePatterns(&buf, map[string]string{
+		"MobaXterm_Personal_*.exe": "MobaXterm.exe",
+		"missing-*.dll":            "missing.dll",
+	}, []string{filepath.Join("bin", "MobaXterm.exe")})
+
+	got := buf.String()
+	assert.NotContains(t, got, "MobaXterm_Personal_*.exe")
+	assert.Contains(t, got, "missing-*.dll")
+	assert.Contains(t, got, "matched no extracted file")
+}
+
+func TestExplicitFileTarget(t *testing.T) {
+	t.Run("file path", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "MobaXterm.exe")
+		assert.Eq(t, target, explicitFileTarget(Options{Output: target, OutputExplicit: true}))
+	})
+
+	t.Run("existing directory", func(t *testing.T) {
+		dir := t.TempDir()
+		assert.Eq(t, "", explicitFileTarget(Options{Output: dir, OutputExplicit: true}))
+	})
+
+	t.Run("extension-less path is a directory", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "dist")
+		assert.Eq(t, "", explicitFileTarget(Options{Output: target, OutputExplicit: true}))
+	})
+
+	t.Run("default output", func(t *testing.T) {
+		assert.Eq(t, "", explicitFileTarget(Options{Output: filepath.Join(t.TempDir(), "tool")}))
+	})
+
+	t.Run("stdout", func(t *testing.T) {
+		assert.Eq(t, "", explicitFileTarget(Options{Output: "-", OutputExplicit: true}))
+	})
+}
+
+func TestCollectSingleFileOutputMovesFileToTarget(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "MobaXterm.exe")
+	source := filepath.Join(target, "MobaXterm_Personal_26.6.exe")
+	assert.NoErr(t, os.MkdirAll(target, 0o755))
+	assert.NoErr(t, os.WriteFile(source, []byte("moba"), 0o644))
+
+	paths, err := collectSingleFileOutput(target, []string{source})
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{target}, paths)
+	info, err := os.Stat(target)
+	assert.NoErr(t, err)
+	assert.False(t, info.IsDir())
+	body, err := os.ReadFile(target)
+	assert.NoErr(t, err)
+	assert.Eq(t, "moba", string(body))
+	entries, err := os.ReadDir(root)
+	assert.NoErr(t, err)
+	assert.Eq(t, 1, len(entries))
+}
+
+func TestCollectSingleFileOutputRejectsMultipleFiles(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "MobaXterm.exe")
+	assert.NoErr(t, os.MkdirAll(target, 0o755))
+	assert.NoErr(t, os.WriteFile(filepath.Join(target, "a.exe"), []byte("a"), 0o644))
+
+	_, err := collectSingleFileOutput(target, []string{filepath.Join(target, "a.exe"), filepath.Join(target, "b.plugin")})
+
+	if err == nil || !strings.Contains(err.Error(), "is a file target but 2 files") {
+		t.Fatalf("expected file target error, got %v", err)
+	}
+	entries, readErr := os.ReadDir(root)
+	assert.NoErr(t, readErr)
+	assert.Eq(t, 0, len(entries))
+}
