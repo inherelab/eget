@@ -41,7 +41,9 @@ type InstallAllResult struct {
 	Result RunResult
 }
 
-type ReleaseInfoFunc func(repo, url string) (string, time.Time, error)
+// ReleaseInfoFunc resolves the tag and publish time of a release, honouring the
+// prerelease option of the install.
+type ReleaseInfoFunc func(repo, url string, includePrerelease bool) (string, time.Time, error)
 
 type Service struct {
 	Runner       Runner

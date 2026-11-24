@@ -60,7 +60,7 @@ func (s Service) installResolvedTarget(runTarget, recordTarget string, opts inst
 		tag = opts.Tag
 	}
 	if tag == "" && s.ReleaseInfo != nil && shouldFetchReleaseInfo(repo) {
-		if gotTag, gotDate, err := s.ReleaseInfo(repo, result.URL); err == nil {
+		if gotTag, gotDate, err := s.ReleaseInfo(repo, result.URL, opts.Prerelease); err == nil {
 			if tag == "" {
 				tag = gotTag
 			}

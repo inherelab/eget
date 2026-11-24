@@ -190,12 +190,12 @@ func newCLIService(noProxyOpt ...bool) (*cliService, error) {
 		Store:  store,
 		Config: &cfgService,
 		Now:    time.Now,
-		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+		ReleaseInfo: func(repo, url string, includePrerelease bool) (string, time.Time, error) {
 			if forgeTarget, err := forge.ParseTarget(repo); err == nil {
 				info, err := forge.LatestVersion(forgeTarget, client.NewHTTPGetter(defaultClientOpts))
 				return info.Tag, info.PublishedAt, err
 			}
-			return githubClient.LatestReleaseInfo(repo)
+			return githubClient.LatestReleaseInfo(repo, includePrerelease)
 		},
 		RepoMetadata: repoMetadata,
 	}

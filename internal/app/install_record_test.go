@@ -30,7 +30,7 @@ func TestInstallTargetRunsInstallFlowAndRecordsInstalledState(t *testing.T) {
 		Now: func() time.Time {
 			return now
 		},
-		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+		ReleaseInfo: func(repo, url string, _ bool) (string, time.Time, error) {
 			if repo != "junegunn/fzf" {
 				t.Fatalf("expected repo junegunn/fzf, got %q", repo)
 			}
@@ -119,7 +119,7 @@ func TestInstallTargetRecordsTagFromReleaseURLBeforeLatestFallback(t *testing.T)
 	svc := Service{
 		Runner: runner,
 		Store:  store,
-		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+		ReleaseInfo: func(repo, url string, _ bool) (string, time.Time, error) {
 			releaseInfoCalls++
 			return "v9.9.9", time.Unix(1710000000, 0).UTC(), nil
 		},
@@ -134,6 +134,34 @@ func TestInstallTargetRecordsTagFromReleaseURLBeforeLatestFallback(t *testing.T)
 		t.Fatalf("expected tag from release URL, got %q", store.entry.Tag)
 	}
 	assert.Eq(t, 0, releaseInfoCalls)
+}
+
+func TestInstallTargetForwardsPrereleaseToReleaseInfo(t *testing.T) {
+	gotPrerelease := false
+	runner := &fakeRunner{
+		result: RunResult{
+			// No /releases/download/<tag>/ segment: the tag has to come from the release lookup.
+			URL:            "https://example.com/linux-x64.tar.gz",
+			Tool:           "linux",
+			ExtractedFiles: []string{"./linux"},
+		},
+	}
+	store := &fakeInstalledStore{}
+	svc := Service{
+		Runner: runner,
+		Store:  store,
+		ReleaseInfo: func(repo, url string, includePrerelease bool) (string, time.Time, error) {
+			gotPrerelease = includePrerelease
+			return "v1.9.0", time.Unix(1710000000, 0).UTC(), nil
+		},
+	}
+
+	_, err := svc.InstallTarget("colitu/linux", install.Options{Prerelease: true})
+	if err != nil {
+		t.Fatalf("install target: %v", err)
+	}
+
+	assert.True(t, gotPrerelease, "expected the prerelease option to reach the release lookup")
 }
 
 func TestInstallTargetRecordsTagPolicy(t *testing.T) {
@@ -212,7 +240,7 @@ func TestInstallTargetRecordsForgeVersionFromReleaseInfo(t *testing.T) {
 	svc := Service{
 		Runner: runner,
 		Store:  store,
-		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+		ReleaseInfo: func(repo, url string, _ bool) (string, time.Time, error) {
 			if repo != "gitlab:gitlab.com/fdroid/fdroidserver" {
 				t.Fatalf("unexpected repo %q", repo)
 			}
@@ -243,7 +271,7 @@ func TestInstallTargetRecordsForgeTagFromOptionsBeforeLatestFallback(t *testing.
 	svc := Service{
 		Runner: runner,
 		Store:  store,
-		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+		ReleaseInfo: func(repo, url string, _ bool) (string, time.Time, error) {
 			return "v9.9.9", now.Add(-time.Hour), nil
 		},
 	}
@@ -270,7 +298,7 @@ func TestInstallTargetSkipsGitHubMetadataForTemplatePackage(t *testing.T) {
 	svc := Service{
 		Runner: runner,
 		Store:  store,
-		ReleaseInfo: func(repo, url string) (string, time.Time, error) {
+		ReleaseInfo: func(repo, url string, _ bool) (string, time.Time, error) {
 			t.Fatalf("template package should not request release info, got repo=%q url=%q", repo, url)
 			return "", time.Time{}, nil
 		},
