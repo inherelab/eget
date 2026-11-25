@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -135,36 +136,58 @@ func newestPublishedRelease(releases []Release) (Release, bool) {
 
 func (c *GitHubClient) LatestRelease(repo string, includePrerelease bool) (Release, error) {
 	if includePrerelease {
-		// The API lists releases by created_at, which is not the publish order: a
-		// release drafted early and published later would look older. Pick the
-		// newest published release from a window instead of the first item.
-		releases, err := c.ListReleases(repo, latestReleaseScanWindow, true)
-		if err != nil {
-			return Release{}, err
-		}
-		release, ok := newestPublishedRelease(releases)
-		if !ok {
-			return Release{}, fmt.Errorf("no releases found")
-		}
+		return c.newestScannedRelease(repo)
+	}
+	release, err := c.latestStableRelease(repo)
+	if err == nil {
 		return release, nil
 	}
+	if !isNotFoundError(err) {
+		return Release{}, err
+	}
+	// A repository that publishes prereleases only has no latest release at all:
+	// GitHub answers 404 for /releases/latest. Fall back to the newest published
+	// release so such a target stays installable and updatable.
+	return c.newestScannedRelease(repo)
+}
 
+// newestScannedRelease picks the newest published release from a window, because
+// the API lists releases by created_at rather than publish order: a release
+// drafted early and published later would look older.
+func (c *GitHubClient) newestScannedRelease(repo string) (Release, error) {
+	releases, err := c.ListReleases(repo, latestReleaseScanWindow, true)
+	if err != nil {
+		return Release{}, err
+	}
+	release, ok := newestPublishedRelease(releases)
+	if !ok {
+		return Release{}, fmt.Errorf("no releases found")
+	}
+	return release, nil
+}
+
+func (c *GitHubClient) latestStableRelease(repo string) (Release, error) {
 	var payload struct {
 		Tag         string `json:"tag_name"`
 		Name        string `json:"name"`
 		Prerelease  bool   `json:"prerelease"`
 		Assets      []any  `json:"assets"`
+		CreatedAt   string `json:"created_at"`
 		PublishedAt string `json:"published_at"`
 	}
-	if err := c.fetchJSON(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), "query", &payload); err != nil {
+	if err := c.fetchJSON(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), "latest tag check", &payload); err != nil {
 		return Release{}, err
+	}
+	publishedAt := parseRFC3339Time(payload.PublishedAt)
+	if publishedAt.IsZero() {
+		publishedAt = parseRFC3339Time(payload.CreatedAt)
 	}
 	return Release{
 		Tag:         payload.Tag,
 		Name:        payload.Name,
 		Prerelease:  payload.Prerelease,
 		AssetsCount: len(payload.Assets),
-		PublishedAt: parseRFC3339Time(payload.PublishedAt),
+		PublishedAt: publishedAt,
 	}, nil
 }
 
@@ -187,32 +210,15 @@ func (c *GitHubClient) ReleaseInfo(repo, tag string) (string, time.Time, error) 
 }
 
 func (c *GitHubClient) LatestReleaseInfo(repo string, includePrereleaseOpt ...bool) (string, time.Time, error) {
-	if len(includePrereleaseOpt) > 0 && includePrereleaseOpt[0] {
-		release, err := c.LatestRelease(repo, true)
-		if err != nil {
-			return "", time.Time{}, err
-		}
-		if release.Tag == "" {
-			return "", time.Time{}, fmt.Errorf("latest tag is empty")
-		}
-		return release.Tag, release.PublishedAt, nil
-	}
-
-	var payload struct {
-		Tag         string    `json:"tag_name"`
-		CreatedAt   time.Time `json:"created_at"`
-		PublishedAt time.Time `json:"published_at"`
-	}
-	if err := c.fetchJSON(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo), "latest tag check", &payload); err != nil {
+	includePrerelease := len(includePrereleaseOpt) > 0 && includePrereleaseOpt[0]
+	release, err := c.LatestRelease(repo, includePrerelease)
+	if err != nil {
 		return "", time.Time{}, err
 	}
-	if payload.Tag == "" {
+	if release.Tag == "" {
 		return "", time.Time{}, fmt.Errorf("latest tag is empty")
 	}
-	if payload.PublishedAt.IsZero() {
-		payload.PublishedAt = payload.CreatedAt
-	}
-	return payload.Tag, payload.PublishedAt, nil
+	return release.Tag, release.PublishedAt, nil
 }
 
 func (c *GitHubClient) ListReleases(repo string, limit int, includePrerelease bool) ([]Release, error) {
@@ -332,6 +338,25 @@ func (c *GitHubClient) SearchRepositories(query string, limit int, sort, order s
 	}, nil
 }
 
+// HTTPStatusError reports a non-200 API answer. Callers need the status to tell
+// a missing resource from a real failure: a repository that publishes
+// prereleases only has no latest release, so /releases/latest answers 404.
+type HTTPStatusError struct {
+	Action string
+	Code   int
+	Status string
+	Body   string
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("%s failed: %s: %s", e.Action, e.Status, e.Body)
+}
+
+func isNotFoundError(err error) bool {
+	var statusErr *HTTPStatusError
+	return errors.As(err, &statusErr) && statusErr.Code == http.StatusNotFound
+}
+
 func (c *GitHubClient) fetchJSON(rawURL, action string, target any) error {
 	resp, err := c.Get(rawURL)
 	if err != nil {
@@ -340,7 +365,12 @@ func (c *GitHubClient) fetchJSON(rawURL, action string, target any) error {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%s failed: %s: %s", action, resp.Status, strings.TrimSpace(string(body)))
+		return &HTTPStatusError{
+			Action: action,
+			Code:   resp.StatusCode,
+			Status: resp.Status,
+			Body:   strings.TrimSpace(string(body)),
+		}
 	}
 	return json.NewDecoder(resp.Body).Decode(target)
 }

@@ -170,6 +170,68 @@ func TestGitHubClientLatestReleaseInfoPicksNewestPublished(t *testing.T) {
 	assert.Eq(t, time.Date(2026, 11, 22, 8, 0, 0, 0, time.UTC), publishedAt)
 }
 
+// A repository that publishes prereleases only has no latest release: the API
+// answers 404 and eget has to fall back to the newest published release instead
+// of failing the install or the update check.
+func TestGitHubClientLatestReleaseInfoFallsBackToPrereleaseOnlyRepo(t *testing.T) {
+	var requested []string
+	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {
+		requested = append(requested, rawURL)
+		switch {
+		case strings.HasSuffix(rawURL, "/releases/latest"):
+			return jsonResponse(http.StatusNotFound, "404 Not Found", `{"message":"Not Found"}`), nil
+		default:
+			body := `[
+				{"tag_name":"v1.9.0","prerelease":true,"published_at":"2026-11-21T17:31:33Z"},
+				{"tag_name":"v1.8.0","prerelease":true,"published_at":"2026-11-21T14:33:13Z"}
+			]`
+			return jsonResponse(http.StatusOK, "200 OK", body), nil
+		}
+	})
+
+	tag, publishedAt, err := client.LatestReleaseInfo("colitu/linux")
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "v1.9.0", tag)
+	assert.Eq(t, time.Date(2026, 11, 21, 17, 31, 33, 0, time.UTC), publishedAt)
+	assert.Eq(t, 2, len(requested))
+	assert.Eq(t, "https://api.github.com/repos/colitu/linux/releases/latest", requested[0])
+	assert.Eq(t, "https://api.github.com/repos/colitu/linux/releases?per_page=30", requested[1])
+}
+
+func TestGitHubClientLatestReleaseFallsBackToNewestPublishedPrerelease(t *testing.T) {
+	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {
+		if strings.HasSuffix(rawURL, "/releases/latest") {
+			return jsonResponse(http.StatusNotFound, "404 Not Found", `{"message":"Not Found"}`), nil
+		}
+		body := `[
+			{"tag_name":"v1.9.0","prerelease":true,"published_at":"2026-11-21T17:31:33Z","assets":[{}]},
+			{"tag_name":"v1.10.0-rc.1","prerelease":true,"published_at":"2026-11-22T08:00:00Z","assets":[]}
+		]`
+		return jsonResponse(http.StatusOK, "200 OK", body), nil
+	})
+
+	release, err := client.LatestRelease("colitu/linux", false)
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "v1.10.0-rc.1", release.Tag)
+	assert.True(t, release.Prerelease)
+}
+
+// The 404 fallback must not hide real API failures such as rate limiting.
+func TestGitHubClientLatestReleaseInfoKeepsNonNotFoundError(t *testing.T) {
+	requested := 0
+	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {
+		requested++
+		return jsonResponse(http.StatusForbidden, "403 Forbidden", `{"message":"API rate limit exceeded"}`), nil
+	})
+
+	_, _, err := client.LatestReleaseInfo("colitu/linux")
+
+	assert.ErrMsgContains(t, err, "latest tag check failed: 403 Forbidden")
+	assert.Eq(t, 1, requested)
+}
+
 func TestGitHubClientReleaseInfoUsesTagEndpoint(t *testing.T) {
 	var requestedURL string
 	client := NewGitHubClientWithGetter(Options{}, func(rawURL string, opts Options) (*http.Response, error) {

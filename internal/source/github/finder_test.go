@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gookit/goutil/x/assert"
 )
 
 type fakeGetter struct {
@@ -103,6 +105,62 @@ func TestAssetFinderFindPrereleaseLatest(t *testing.T) {
 	if len(assets) != 1 || assets[0] != "https://example.com/rc1.tar.gz" {
 		t.Fatalf("assets = %#v", assets)
 	}
+}
+
+// A repository that publishes prereleases only has no latest release: the API
+// answers 404 and eget resolves the newest release instead of failing.
+func TestAssetFinderFindFallsBackWhenNoStableLatest(t *testing.T) {
+	getter := &fakeGetter{
+		responses: map[string]*http.Response{
+			"https://api.github.com/repos/colitu/linux/releases/latest":      jsonResponse(http.StatusNotFound, `{"message":"Not Found"}`),
+			"https://api.github.com/repos/colitu/linux/releases":             jsonResponse(http.StatusOK, `[{"tag_name":"v1.9.0","prerelease":true,"published_at":"2026-11-21T17:31:33Z"}]`),
+			"https://api.github.com/repos/colitu/linux/releases/tags/v1.9.0": jsonResponse(http.StatusOK, `{"tag_name":"v1.9.0","prerelease":true,"assets":[{"browser_download_url":"https://example.com/colitu.tar.gz"}],"published_at":"2026-11-21T17:31:33Z"}`),
+		},
+	}
+	finder := NewAssetFinder("colitu/linux", "latest", false, time.Time{})
+	finder.Getter = getter
+
+	assets, err := finder.Find()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, []string{"https://example.com/colitu.tar.gz"}, assets)
+	assert.Eq(t, "tags/v1.9.0", finder.Tag)
+}
+
+func TestAssetFinderGetLatestTagPicksNewestPublished(t *testing.T) {
+	getter := &fakeGetter{
+		responses: map[string]*http.Response{
+			"https://api.github.com/repos/inhere/markview/releases": jsonResponse(http.StatusOK, `[
+				{"tag_name":"v1.9.0","prerelease":true,"published_at":"2026-11-21T17:31:33Z"},
+				{"tag_name":"v1.10.0-rc.1","prerelease":true,"published_at":"2026-11-22T08:00:00Z"}
+			]`),
+			"https://api.github.com/repos/inhere/markview/releases/tags/v1.10.0-rc.1": jsonResponse(http.StatusOK, `{"assets":[{"browser_download_url":"https://example.com/rc1.tar.gz"}]}`),
+		},
+	}
+	finder := NewAssetFinder("inhere/markview", "latest", true, time.Time{})
+	finder.Getter = getter
+
+	assets, err := finder.Find()
+
+	assert.NoErr(t, err)
+	assert.Eq(t, "tags/v1.10.0-rc.1", finder.Tag)
+	assert.Eq(t, []string{"https://example.com/rc1.tar.gz"}, assets)
+}
+
+// Only a 404 (no stable release) falls back; real API failures still report.
+func TestAssetFinderFindKeepsServerErrorForLatest(t *testing.T) {
+	getter := &fakeGetter{
+		responses: map[string]*http.Response{
+			"https://api.github.com/repos/inhere/markview/releases/latest": jsonResponse(http.StatusInternalServerError, `{"message":"boom"}`),
+		},
+	}
+	finder := NewAssetFinder("inhere/markview", "latest", false, time.Time{})
+	finder.Getter = getter
+
+	_, err := finder.Find()
+
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "500")
 }
 
 func TestAssetFinderErrNoUpgrade(t *testing.T) {

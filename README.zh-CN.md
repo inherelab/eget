@@ -420,7 +420,7 @@ eget config set global.target ~/.local/bin
 - `--quiet`: 精简常规输出。
 - `--select-first`: 存在多个资源候选时不进入交互，自动选择第一项。
 
-`install` 和 `download` 还支持 GitHub 目标的 `--prerelease` / `-p`。使用默认 latest 时，会把预发布版本也纳入最新版本选择。
+`install` 和 `download` 还支持 GitHub 目标的 `--prerelease` / `-p`。使用默认 latest 时，会把预发布版本也纳入最新版本选择。当仓库完全没有稳定版 release 时，默认 `latest` 也会回退到最新的已发布版本，因此不加 `-p` 也能安装和检查更新；除此之外的 API 失败（限流、鉴权、网络等）仍会正常报错。
 
 `install` 和 `download` 还支持 SourceForge 目标的 `--fallback-versions N`。当最新版本目录没有匹配资产时，eget 会最多扫描 `N` 个更旧版本目录，并使用第一个能被当前 `--asset` / `--system` 过滤条件唯一匹配的文件。
 

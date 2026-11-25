@@ -143,6 +143,19 @@ func (f *AssetFinder) Find() ([]string, error) {
 		if strings.HasPrefix(f.Tag, "tags/") && resp.StatusCode == http.StatusNotFound {
 			return f.FindMatch()
 		}
+		// A repository that publishes prereleases only has no latest release, so
+		// /releases/latest answers 404. Resolve its newest release instead of
+		// failing the install; the resolved tag keeps the tags/ prefix so a
+		// missing tag still falls through to the release scan above.
+		if f.Tag == "latest" && resp.StatusCode == http.StatusNotFound {
+			tag, tagErr := f.getLatestTag()
+			if tagErr != nil {
+				return nil, tagErr
+			}
+			verbosef("github finder: no stable latest release, using %s", tag)
+			f.Tag = fmt.Sprintf("tags/%s", tag)
+			return f.Find()
+		}
 		return nil, &Error{Status: resp.Status, Code: resp.StatusCode, Body: body, URL: url}
 	}
 
@@ -372,7 +385,15 @@ func (f *AssetFinder) getLatestTag() (string, error) {
 		return "", fmt.Errorf("no releases found")
 	}
 
-	return releases[0].Tag, nil
+	// The API lists releases by created_at, which is not the publish order: a
+	// release drafted early and published later would look older.
+	newest := releases[0]
+	for _, release := range releases[1:] {
+		if release.PublishedAt.After(newest.PublishedAt) {
+			newest = release
+		}
+	}
+	return newest.Tag, nil
 }
 
 func releaseAssetURLs(items []releaseAsset) []string {

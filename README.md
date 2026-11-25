@@ -430,7 +430,7 @@ The target argument accepted by `install` and `download` can be:
 - `--quiet`: Reduce normal output.
 - `--select-first`: Select the first asset when multiple candidates remain without prompting.
 
-`install` and `download` also support `--prerelease` / `-p` for GitHub targets. With the default latest tag, it selects the newest release including prereleases.
+`install` and `download` also support `--prerelease` / `-p` for GitHub targets. With the default latest tag, it selects the newest release including prereleases. When a repository has no stable release at all, the default `latest` also resolves to its newest published release, so the target stays installable and updatable without `-p`; API failures other than that "no stable release" 404 are still reported.
 
 `install` and `download` also support `--fallback-versions N` for SourceForge targets. When the latest version folder does not contain a matching asset, eget scans up to `N` older version folders and uses the first folder where the current `--asset` / `--system` filters produce a single match.
 
