@@ -683,6 +683,7 @@ The current version has been restructured into an explicit subcommand CLI, with 
 - `internal/source/forge`: GitLab/Gitea/Forgejo asset discovery
 
 > For more details, see [docs/architecture.md](docs/architecture.md).
+> To reproduce or verify a report by hand (constructed installed records, local archive over a local HTTP server), see [docs/manual-testing.md](docs/manual-testing.md).
 
 ## References
 

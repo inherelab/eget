@@ -664,6 +664,7 @@ make test
 - `internal/source/forge`: GitLab/Gitea/Forgejo 资源查找
 
 > 更详细说明见 [docs/architecture.md](docs/architecture.md)。
+> 手工复现/验证问题（构造安装记录、本地归档 + 本地 HTTP 服务）见 [docs/manual-testing.md](docs/manual-testing.md)。
 
 ## 参考项目
 
